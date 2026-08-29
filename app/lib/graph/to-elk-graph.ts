@@ -9,10 +9,10 @@ export interface ToElkGraphOptions {
   treeMembers: TreeMember[]
 }
 
-const PERSON_WIDTH = 160
-const PERSON_HEIGHT = 80
-const UNION_WIDTH = 16
-const UNION_HEIGHT = 16
+export const PERSON_WIDTH = 160
+export const PERSON_HEIGHT = 80
+export const UNION_WIDTH = 16
+export const UNION_HEIGHT = 16
 
 const personNodeId = (personId: string): string => `person:${personId}`
 
