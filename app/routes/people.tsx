@@ -4,6 +4,7 @@ import { AddToTreeDialog } from "~/components/people/add-to-tree-dialog"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PeopleTable } from "~/components/people/people-table"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
+import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Input } from "~/components/ui/input"
@@ -19,6 +20,9 @@ export default function People() {
   const [formTarget, setFormTarget] = useState<{ person?: Person } | undefined>(undefined)
   const [deleteTarget, setDeleteTarget] = useState<Person | undefined>(undefined)
   const [addToTreeTarget, setAddToTreeTarget] = useState<Person | undefined>(undefined)
+  const [removeFromTreeTarget, setRemoveFromTreeTarget] = useState<Person | undefined>(
+    undefined
+  )
 
   const people = useSearchPeople(query, { includePlaceholders: showPlaceholders })
   const trees = useTrees()
@@ -73,6 +77,7 @@ export default function People() {
         onEdit={(person) => setFormTarget({ person })}
         onDelete={setDeleteTarget}
         onAddToTree={setAddToTreeTarget}
+        onRemoveFromTree={setRemoveFromTreeTarget}
       />
 
       {formTarget && (
@@ -96,6 +101,14 @@ export default function People() {
           open={!!addToTreeTarget}
           onOpenChange={(open) => !open && setAddToTreeTarget(undefined)}
           person={addToTreeTarget}
+        />
+      )}
+
+      {removeFromTreeTarget && (
+        <RemoveFromTreeDialog
+          open={!!removeFromTreeTarget}
+          onOpenChange={(open) => !open && setRemoveFromTreeTarget(undefined)}
+          person={removeFromTreeTarget}
         />
       )}
     </div>

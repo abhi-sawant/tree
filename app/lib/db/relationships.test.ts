@@ -6,6 +6,7 @@ import {
   SelfReferenceError,
   TooManyParentsError,
   addRelationship,
+  getImmediateFamilyIds,
   removeRelationship,
 } from "~/lib/db/relationships"
 
@@ -176,5 +177,63 @@ describe("removeRelationship", () => {
 
   it("is a no-op for a nonexistent id", async () => {
     await expect(removeRelationship(id())).resolves.toBeUndefined()
+  })
+})
+
+describe("getImmediateFamilyIds", () => {
+  it("returns an empty array for someone with no relationships", async () => {
+    expect(await getImmediateFamilyIds(id())).toEqual([])
+  })
+
+  it("includes parents", async () => {
+    const person = id()
+    const parentA = id()
+    const parentB = id()
+    await addRelationship({ type: "parent-child", from: parentA, to: person })
+    await addRelationship({ type: "parent-child", from: parentB, to: person })
+
+    expect(new Set(await getImmediateFamilyIds(person))).toEqual(
+      new Set([parentA, parentB])
+    )
+  })
+
+  it("includes spouses regardless of relationship direction", async () => {
+    const person = id()
+    const spouseAsTo = id()
+    const spouseAsFrom = id()
+    await addRelationship({ type: "spouse", from: spouseAsTo, to: person })
+    await addRelationship({ type: "spouse", from: person, to: spouseAsFrom })
+
+    expect(new Set(await getImmediateFamilyIds(person))).toEqual(
+      new Set([spouseAsTo, spouseAsFrom])
+    )
+  })
+
+  it("includes children", async () => {
+    const person = id()
+    const child = id()
+    await addRelationship({ type: "parent-child", from: person, to: child })
+
+    expect(await getImmediateFamilyIds(person)).toEqual([child])
+  })
+
+  it("dedupes and combines parents, spouses, and children (remarriage case)", async () => {
+    const person = id()
+    const parent = id()
+    const firstSpouse = id()
+    const secondSpouse = id()
+    const childWithFirst = id()
+    const childWithSecond = id()
+    await addRelationship({ type: "parent-child", from: parent, to: person })
+    await addRelationship({ type: "spouse", from: person, to: firstSpouse })
+    await addRelationship({ type: "spouse", from: person, to: secondSpouse })
+    await addRelationship({ type: "parent-child", from: person, to: childWithFirst })
+    await addRelationship({ type: "parent-child", from: firstSpouse, to: childWithFirst })
+    await addRelationship({ type: "parent-child", from: person, to: childWithSecond })
+    await addRelationship({ type: "parent-child", from: secondSpouse, to: childWithSecond })
+
+    expect(new Set(await getImmediateFamilyIds(person))).toEqual(
+      new Set([parent, firstSpouse, secondSpouse, childWithFirst, childWithSecond])
+    )
   })
 })
