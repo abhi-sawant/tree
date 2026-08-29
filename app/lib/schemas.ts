@@ -20,7 +20,11 @@ export const PersonSchema = z.object({
   updatedAt: z.number(),
 })
 
-export const PersonFormSchema = PersonSchema.omit({ id: true, createdAt: true, updatedAt: true })
+export const PersonFormSchema = PersonSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+})
 export type PersonFormValues = z.infer<typeof PersonFormSchema>
 
 export const RelationshipSchema = z.object({
@@ -31,6 +35,9 @@ export const RelationshipSchema = z.object({
   start: PartialDateSchema.optional(),
   end: PartialDateSchema.optional(),
 })
+
+export const RelationshipFormSchema = RelationshipSchema.omit({ id: true })
+export type RelationshipFormValues = z.infer<typeof RelationshipFormSchema>
 
 export const TreeSchema = z.object({
   id: z.string(),
