@@ -23,7 +23,8 @@ interface TreeHeaderProps {
   trees: Tree[]
 }
 
-type DialogTarget = "create" | "rename" | "delete" | "change-root" | "add-existing" | undefined
+type DialogTarget =
+  "create" | "rename" | "delete" | "change-root" | "add-existing" | undefined
 
 export function TreeHeader({ tree, trees }: TreeHeaderProps) {
   const navigate = useNavigate()
@@ -90,6 +91,9 @@ export function TreeHeader({ tree, trees }: TreeHeaderProps) {
         )}
         <Button variant="ghost" size="sm" render={<Link to="/people" />}>
           People
+        </Button>
+        <Button variant="ghost" size="sm" render={<Link to="/settings" />}>
+          Settings
         </Button>
       </div>
 
