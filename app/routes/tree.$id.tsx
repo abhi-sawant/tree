@@ -71,14 +71,16 @@ export default function TreeRoute() {
   }, [positions, treeMembers])
 
   const reactFlowGraph = useMemo(() => {
-    if (!graph || !mergedPositions || !people) return undefined
+    if (!graph || !mergedPositions || !people || !tree) return undefined
     return toReactFlowGraph({
       graph,
       positions: mergedPositions,
       people,
       unions,
+      treeId: tree.id,
+      overriddenNodeIds,
     })
-  }, [graph, mergedPositions, people, unions])
+  }, [graph, mergedPositions, people, unions, tree, overriddenNodeIds])
 
   // Keep showing the last successfully laid-out graph while a recompute is
   // in flight (triggered by any canvas edit), instead of unmounting the
@@ -137,7 +139,11 @@ export default function TreeRoute() {
     <ReactFlowProvider>
       <div className="flex h-svh w-full">
         <div className="h-full flex-1">
-          <TreeCanvas nodes={graphToRender.nodes} edges={graphToRender.edges} />
+          <TreeCanvas
+            treeId={tree.id}
+            nodes={graphToRender.nodes}
+            edges={graphToRender.edges}
+          />
         </div>
         <DetailPanel
           treeId={tree.id}

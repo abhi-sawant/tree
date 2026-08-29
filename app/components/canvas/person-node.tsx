@@ -1,7 +1,14 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react"
-import { UserRound } from "lucide-react"
+import { Pin, UserRound } from "lucide-react"
 
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "~/components/ui/context-menu"
+import { clearMemberPosition } from "~/lib/db/members"
 import { formatPartialDate } from "~/lib/partial-date"
 import { cn } from "~/lib/utils"
 import type { PersonNodeData } from "~/lib/layout/to-react-flow-graph"
@@ -9,7 +16,7 @@ import type { PersonNodeData } from "~/lib/layout/to-react-flow-graph"
 export type PersonNodeType = Node<PersonNodeData, "person">
 
 export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
-  const { person } = data
+  const { person, treeId, overridden } = data
   const name =
     [person.givenName, person.familyName].filter(Boolean).join(" ") || "Unnamed"
   const dates = [
@@ -19,7 +26,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
     .filter(Boolean)
     .join(" – ")
 
-  return (
+  const card = (
     <div
       className={cn(
         "flex h-full w-full items-center gap-2 rounded-md border border-border bg-card px-3 py-2 shadow-sm",
@@ -32,6 +39,9 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-medium">{name}</span>
           {person.isPlaceholder && <PlaceholderBadge />}
+          {overridden && (
+            <Pin className="size-3 shrink-0 text-muted-foreground" />
+          )}
         </div>
         {dates && (
           <span className="truncate text-xs text-muted-foreground">
@@ -41,5 +51,22 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
       </div>
       <Handle type="source" position={Position.Bottom} isConnectable={false} />
     </div>
+  )
+
+  if (!overridden) return card
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger className="relative h-full w-full">
+        {card}
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem
+          onClick={() => void clearMemberPosition(treeId, person.id)}
+        >
+          <Pin /> Reset position
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
