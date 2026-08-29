@@ -27,6 +27,10 @@ export function useTreeMembers(treeId: string | undefined): TreeMember[] | undef
   )
 }
 
+export function useRelationships(): Relationship[] | undefined {
+  return useLiveQuery(() => db.relationships.toArray(), [])
+}
+
 export function useRelationshipsForPerson(
   personId: string | undefined,
 ): Relationship[] | undefined {
