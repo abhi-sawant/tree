@@ -49,6 +49,8 @@ describe("toReactFlowGraph", () => {
       positions: { [`person:${a.id}`]: { x: 1, y: 2 } },
       people: [a],
       unions: [],
+      treeId,
+      overriddenNodeIds: [],
     })
 
     expect(nodes).toHaveLength(1)
@@ -57,7 +59,32 @@ describe("toReactFlowGraph", () => {
     expect(node.width).toBe(160)
     expect(node.height).toBe(80)
     expect(node.position).toEqual({ x: 1, y: 2 })
-    expect((node.data as PersonNodeData).person.givenName).toBe("Ada")
+    expect(node.draggable).toBe(true)
+    const data = node.data as PersonNodeData
+    expect(data.person.givenName).toBe("Ada")
+    expect(data.treeId).toBe(treeId)
+    expect(data.overridden).toBe(false)
+  })
+
+  it("flags a person node as overridden when its id is in overriddenNodeIds", () => {
+    const treeId = id()
+    const a = person({ givenName: "Ada" })
+    const graph = toElkGraph({
+      people: [a],
+      relationships: [],
+      treeMembers: [member(treeId, a.id)],
+    })
+
+    const { nodes } = toReactFlowGraph({
+      graph,
+      positions: { [`person:${a.id}`]: { x: 1, y: 2 } },
+      people: [a],
+      unions: [],
+      treeId,
+      overriddenNodeIds: [`person:${a.id}`],
+    })
+
+    expect((nodes[0].data as PersonNodeData).overridden).toBe(true)
   })
 
   it("maps a union node to type 'union', sized to match the ELK constants", () => {
@@ -89,12 +116,15 @@ describe("toReactFlowGraph", () => {
       positions: { [unionId]: { x: 5, y: 5 } },
       people: [a, b, child],
       unions,
+      treeId,
+      overriddenNodeIds: [],
     })
 
     const unionNode = nodes.find((n) => n.id === unionId)!
     expect(unionNode.type).toBe("union")
     expect(unionNode.width).toBe(16)
     expect(unionNode.height).toBe(16)
+    expect(unionNode.draggable).toBe(false)
     expect((unionNode.data as UnionNodeData).union).toMatchObject({
       kind: "real",
       parents: expect.arrayContaining([a.id, b.id]),
@@ -116,6 +146,8 @@ describe("toReactFlowGraph", () => {
       positions: {},
       people: [parent, child],
       unions: [],
+      treeId,
+      overriddenNodeIds: [],
     })
 
     expect(edges).toHaveLength(1)
@@ -154,6 +186,8 @@ describe("toReactFlowGraph", () => {
       positions: {},
       people,
       unions,
+      treeId,
+      overriddenNodeIds: [],
     })
 
     expect(nodes.filter((n) => n.type === "person")).toHaveLength(5)

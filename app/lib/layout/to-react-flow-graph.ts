@@ -14,6 +14,8 @@ import type { Person } from "~/lib/types"
 
 export interface PersonNodeData extends Record<string, unknown> {
   person: Person
+  treeId: string
+  overridden: boolean
 }
 
 export interface UnionNodeData extends Record<string, unknown> {
@@ -25,6 +27,8 @@ export interface ToReactFlowGraphOptions {
   positions: Record<string, NodePosition>
   people: Person[]
   unions: UnionNode[]
+  treeId: string
+  overriddenNodeIds: string[]
 }
 
 export interface ReactFlowGraph {
@@ -40,9 +44,12 @@ export function toReactFlowGraph({
   positions,
   people,
   unions,
+  treeId,
+  overriddenNodeIds,
 }: ToReactFlowGraphOptions): ReactFlowGraph {
   const peopleById = new Map(people.map((p) => [p.id, p]))
   const unionsById = new Map(unions.map((u) => [u.id, u]))
+  const overridden = new Set(overriddenNodeIds)
 
   const nodes: Node[] = (graph.children ?? []).flatMap((elkNode): Node[] => {
     const position = positions[elkNode.id] ?? { x: 0, y: 0 }
@@ -55,9 +62,14 @@ export function toReactFlowGraph({
           id: elkNode.id,
           type: "person",
           position,
-          data: { person } satisfies PersonNodeData,
+          data: {
+            person,
+            treeId,
+            overridden: overridden.has(elkNode.id),
+          } satisfies PersonNodeData,
           width: PERSON_WIDTH,
           height: PERSON_HEIGHT,
+          draggable: true,
         },
       ]
     }
@@ -72,6 +84,7 @@ export function toReactFlowGraph({
         data: { union } satisfies UnionNodeData,
         width: UNION_WIDTH,
         height: UNION_HEIGHT,
+        draggable: false,
       },
     ]
   })
