@@ -5,7 +5,7 @@ import {
   type AddAction,
 } from "~/components/canvas/add-relative-menu"
 import { RelativeForm } from "~/components/canvas/relative-form"
-import { PersonForm } from "~/components/people/person-form"
+import { PersonForm, type PhotoAction } from "~/components/people/person-form"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { PartialDateFields } from "~/components/people/partial-date-fields"
 import { Button } from "~/components/ui/button"
@@ -13,6 +13,7 @@ import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { resolveSelection } from "~/lib/canvas/resolve-selection"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { updatePerson } from "~/lib/db/people"
+import { removePersonPhoto, setPersonPhoto } from "~/lib/photos"
 import {
   addChildExisting,
   addChildNew,
@@ -145,8 +146,13 @@ function PersonDetail({
     (r) => r.type === "spouse" && (r.from === person.id || r.to === person.id)
   )
 
-  async function handleUpdatePerson(values: PersonFormValues) {
+  async function handleUpdatePerson(values: PersonFormValues, photoAction: PhotoAction) {
     await updatePerson(person.id, values)
+    if (photoAction.kind === "staged") {
+      await setPersonPhoto(person.id, photoAction.blob, photoAction.mime)
+    } else if (photoAction.kind === "removed") {
+      await removePersonPhoto(person.id)
+    }
   }
 
   return (
@@ -200,19 +206,22 @@ function PersonDetail({
               : [person.id]
           }
           showDates={action.kind === "add-spouse"}
-          onSubmitNew={async (values, dates) => {
+          onSubmitNew={async (values, dates, photoAction) => {
+            let created: Person | undefined
             if (action.kind === "add-parent")
-              await addParentNew(person.id, treeId, values)
+              created = await addParentNew(person.id, treeId, values)
             else if (action.kind === "add-spouse")
-              await addSpouseNew(person.id, treeId, values, dates)
+              created = await addSpouseNew(person.id, treeId, values, dates)
             else if (action.kind === "add-child")
-              await addChildNew(
+              created = await addChildNew(
                 { kind: "person", personId: person.id },
                 treeId,
                 values
               )
             else if (action.kind === "add-sibling")
-              await addSiblingNew(person.id, treeId, values)
+              created = await addSiblingNew(person.id, treeId, values)
+            if (created && photoAction.kind === "staged")
+              await setPersonPhoto(created.id, photoAction.blob, photoAction.mime)
             setAction(undefined)
           }}
           onSubmitExisting={async (picked, dates) => {
@@ -295,12 +304,14 @@ function UnionDetail({
           mode={action.mode}
           excludeIds={union.parents}
           recordMarriageNames={[nameA, nameB]}
-          onSubmitNew={async (values) => {
-            await addChildNew(
+          onSubmitNew={async (values, _dates, photoAction) => {
+            const created = await addChildNew(
               { kind: "union", parents: union.parents },
               treeId,
               values
             )
+            if (photoAction.kind === "staged")
+              await setPersonPhoto(created.id, photoAction.blob, photoAction.mime)
             setAction(undefined)
           }}
           onSubmitExisting={async (picked) => {

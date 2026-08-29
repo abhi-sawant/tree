@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import { PersonForm } from "~/components/people/person-form"
+import { PersonForm, type PhotoAction } from "~/components/people/person-form"
 import { PersonPicker } from "~/components/people/person-picker"
 import { Button } from "~/components/ui/button"
 import {
@@ -13,6 +13,7 @@ import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { createPerson } from "~/lib/db/people"
 import { createTree } from "~/lib/db/trees"
+import { setPersonPhoto } from "~/lib/photos"
 import type { PersonFormValues } from "~/lib/schemas"
 import type { Person, Tree } from "~/lib/types"
 
@@ -29,9 +30,12 @@ export function CreateTreeDialog({ open, onOpenChange, onCreated }: CreateTreeDi
   const [mode, setMode] = useState<RootMode>("new")
   const [pickedRoot, setPickedRoot] = useState<Person | undefined>(undefined)
 
-  async function handleCreateWithNewRoot(values: PersonFormValues) {
+  async function handleCreateWithNewRoot(values: PersonFormValues, photoAction: PhotoAction) {
     if (!name.trim()) return
     const root = await createPerson(values)
+    if (photoAction.kind === "staged") {
+      await setPersonPhoto(root.id, photoAction.blob, photoAction.mime)
+    }
     const tree = await createTree({ name: name.trim(), rootPersonId: root.id })
     reset()
     onCreated(tree)

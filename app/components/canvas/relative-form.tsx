@@ -1,7 +1,7 @@
 import { useState } from "react"
 
 import { PartialDateFields } from "~/components/people/partial-date-fields"
-import { PersonForm } from "~/components/people/person-form"
+import { PersonForm, type PhotoAction } from "~/components/people/person-form"
 import { PersonPicker } from "~/components/people/person-picker"
 import { Button } from "~/components/ui/button"
 import {
@@ -21,7 +21,8 @@ interface RelativeFormProps {
   recordMarriageNames?: [string, string]
   onSubmitNew?: (
     values: PersonFormValues,
-    dates: RelationshipDates
+    dates: RelationshipDates,
+    photoAction: PhotoAction
   ) => Promise<unknown>
   onSubmitExisting?: (
     person: Person,
@@ -100,10 +101,10 @@ export function RelativeForm({
   }
 
   if (mode === "new") {
-    async function handleSubmit(values: PersonFormValues) {
+    async function handleSubmit(values: PersonFormValues, photoAction: PhotoAction) {
       setError(undefined)
       try {
-        await onSubmitNew?.(values, dates)
+        await onSubmitNew?.(values, dates, photoAction)
       } catch (err) {
         setError(errorMessage(err))
       }
