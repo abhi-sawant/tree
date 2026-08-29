@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { exportFilename, slugify } from "~/lib/export/filenames"
+import { exportFilename, gedcomFilename, slugify } from "~/lib/export/filenames"
 
 describe("slugify", () => {
   it("lowercases and hyphenates spaces", () => {
@@ -30,5 +30,18 @@ describe("exportFilename", () => {
   it("supports svg and pdf extensions", () => {
     expect(exportFilename("Doe", "svg")).toMatch(/^doe-\d{4}-\d{2}-\d{2}\.svg$/)
     expect(exportFilename("Doe", "pdf")).toMatch(/^doe-\d{4}-\d{2}-\d{2}\.pdf$/)
+  })
+})
+
+describe("gedcomFilename", () => {
+  it("defaults to today's date with no tree name", () => {
+    const today = new Date().toISOString().slice(0, 10)
+    expect(gedcomFilename()).toBe(`family-tree-${today}.ged`)
+  })
+
+  it("accepts an injected date for deterministic output", () => {
+    expect(gedcomFilename(new Date("2026-01-05"))).toBe(
+      "family-tree-2026-01-05.ged"
+    )
   })
 })

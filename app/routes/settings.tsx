@@ -15,6 +15,8 @@ import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { triggerDownload } from "~/lib/download"
+import { gedcomFilename } from "~/lib/export/filenames"
+import { exportGedcom } from "~/lib/export/gedcom"
 import {
   InvalidBackupError,
   exportBackup,
@@ -36,6 +38,11 @@ export default function Settings() {
   async function handleExport() {
     const blob = await exportBackup()
     triggerDownload(blob, backupFilename())
+  }
+
+  async function handleExportGedcom() {
+    const blob = await exportGedcom()
+    triggerDownload(blob, gedcomFilename())
   }
 
   function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
@@ -85,6 +92,20 @@ export default function Settings() {
         </p>
         <div>
           <Button onClick={handleExport}>Export backup</Button>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-heading text-sm font-semibold tracking-wider uppercase">
+          Export GEDCOM
+        </h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          Download every person and relationship as a GEDCOM 5.5.1 file, for
+          use in other genealogy software. Always covers everyone in the pool,
+          not just the currently open tree.
+        </p>
+        <div>
+          <Button onClick={handleExportGedcom}>Export GEDCOM</Button>
         </div>
       </section>
 
