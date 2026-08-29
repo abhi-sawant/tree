@@ -20,6 +20,9 @@ export const PersonSchema = z.object({
   updatedAt: z.number(),
 })
 
+export const PersonFormSchema = PersonSchema.omit({ id: true, createdAt: true, updatedAt: true })
+export type PersonFormValues = z.infer<typeof PersonFormSchema>
+
 export const RelationshipSchema = z.object({
   id: z.string(),
   type: z.enum(["parent-child", "spouse"]),
