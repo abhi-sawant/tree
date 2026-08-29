@@ -54,6 +54,29 @@ async function getChildIds(parentId: string): Promise<string[]> {
   return rows.filter((r) => r.type === "parent-child").map((r) => r.to)
 }
 
+async function getSpouseIds(personId: string): Promise<string[]> {
+  const [asFrom, asTo] = await Promise.all([
+    db.relationships.where("from").equals(personId).toArray(),
+    db.relationships.where("to").equals(personId).toArray(),
+  ])
+  return [
+    ...asFrom.filter((r) => r.type === "spouse").map((r) => r.to),
+    ...asTo.filter((r) => r.type === "spouse").map((r) => r.from),
+  ]
+}
+
+// D11's "N people" source: parents + spouses + children, deduped. Used by the
+// "add existing person to tree" dialog to preview and pull in a person's
+// immediate family so they don't render as a disconnected island.
+export async function getImmediateFamilyIds(personId: string): Promise<string[]> {
+  const [parentIds, spouseIds, childIds] = await Promise.all([
+    getParentIds(personId),
+    getSpouseIds(personId),
+    getChildIds(personId),
+  ])
+  return [...new Set([...parentIds, ...spouseIds, ...childIds])]
+}
+
 async function isAncestor(target: string, start: string): Promise<boolean> {
   const seen = new Set<string>()
   let frontier = [start]

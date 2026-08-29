@@ -1,7 +1,10 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react"
 import { Pin, UserRound } from "lucide-react"
+import { useState } from "react"
 
+import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
+import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -17,6 +20,8 @@ export type PersonNodeType = Node<PersonNodeData, "person">
 
 export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
   const { person, treeId, overridden } = data
+  const [removeOpen, setRemoveOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const name =
     [person.givenName, person.familyName].filter(Boolean).join(" ") || "Unnamed"
   const dates = [
@@ -53,20 +58,36 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
     </div>
   )
 
-  if (!overridden) return card
-
   return (
-    <ContextMenu>
-      <ContextMenuTrigger className="relative h-full w-full">
-        {card}
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem
-          onClick={() => void clearMemberPosition(treeId, person.id)}
-        >
-          <Pin /> Reset position
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger className="relative h-full w-full">
+          {card}
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {overridden && (
+            <ContextMenuItem
+              onClick={() => void clearMemberPosition(treeId, person.id)}
+            >
+              <Pin /> Reset position
+            </ContextMenuItem>
+          )}
+          <ContextMenuItem onClick={() => setRemoveOpen(true)}>
+            Remove from tree
+          </ContextMenuItem>
+          <ContextMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+            Delete person…
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
+      <RemoveFromTreeDialog
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+        person={person}
+        treeId={treeId}
+      />
+      <DeletePersonDialog open={deleteOpen} onOpenChange={setDeleteOpen} person={person} />
+    </>
   )
 }

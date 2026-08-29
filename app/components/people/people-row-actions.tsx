@@ -14,6 +14,7 @@ interface PersonRowActionsProps {
   onEdit: (person: Person) => void
   onDelete: (person: Person) => void
   onAddToTree: (person: Person) => void
+  onRemoveFromTree: (person: Person) => void
 }
 
 export function PersonRowActions({
@@ -21,6 +22,7 @@ export function PersonRowActions({
   onEdit,
   onDelete,
   onAddToTree,
+  onRemoveFromTree,
 }: PersonRowActionsProps) {
   return (
     <DropdownMenu>
@@ -35,6 +37,9 @@ export function PersonRowActions({
       <DropdownMenuContent>
         <DropdownMenuItem onClick={() => onEdit(person)}>Edit</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAddToTree(person)}>Add to tree</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onRemoveFromTree(person)}>
+          Remove from tree
+        </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={() => onDelete(person)}>
           Delete
         </DropdownMenuItem>

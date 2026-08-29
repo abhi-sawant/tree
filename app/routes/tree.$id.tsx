@@ -11,6 +11,7 @@ import {
 } from "~/components/canvas/canvas-states"
 import { DetailPanel } from "~/components/canvas/detail-panel"
 import { TreeCanvas } from "~/components/canvas/tree-canvas"
+import { TreeHeader } from "~/components/trees/tree-header"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { personNodeId } from "~/lib/graph/node-ids"
@@ -21,6 +22,7 @@ import {
   useTreeMembers,
   useTrees,
 } from "~/lib/db/hooks"
+import { setLastTreeId } from "~/lib/last-tree"
 import { mergeLayoutPositions } from "~/lib/layout/merge-positions"
 import {
   toReactFlowGraph,
@@ -41,6 +43,10 @@ export default function TreeRoute() {
   useEffect(() => {
     select(null)
   }, [id, select])
+
+  useEffect(() => {
+    if (tree) setLastTreeId(tree.id)
+  }, [tree])
 
   const unions = useMemo(
     () =>
@@ -111,16 +117,22 @@ export default function TreeRoute() {
 
   if (!tree) {
     return (
-      <div className="h-svh w-full">
-        <TreeNotFoundState />
+      <div className="flex h-svh w-full flex-col">
+        <TreeHeader trees={trees} />
+        <div className="flex-1">
+          <TreeNotFoundState />
+        </div>
       </div>
     )
   }
 
   if (treeMembers.length === 0) {
     return (
-      <div className="h-svh w-full">
-        <EmptyTreeState treeName={tree.name} />
+      <div className="flex h-svh w-full flex-col">
+        <TreeHeader tree={tree} trees={trees} />
+        <div className="flex-1">
+          <EmptyTreeState treeName={tree.name} />
+        </div>
       </div>
     )
   }
@@ -129,28 +141,34 @@ export default function TreeRoute() {
 
   if (!graphToRender) {
     return (
-      <div className="h-svh w-full">
-        <CanvasLoadingState label="Laying out tree…" />
+      <div className="flex h-svh w-full flex-col">
+        <TreeHeader tree={tree} trees={trees} />
+        <div className="flex-1">
+          <CanvasLoadingState label="Laying out tree…" />
+        </div>
       </div>
     )
   }
 
   return (
     <ReactFlowProvider>
-      <div className="flex h-svh w-full">
-        <div className="h-full flex-1">
-          <TreeCanvas
+      <div className="flex h-svh w-full flex-col">
+        <TreeHeader tree={tree} trees={trees} />
+        <div className="flex flex-1 overflow-hidden">
+          <div className="h-full flex-1">
+            <TreeCanvas
+              treeId={tree.id}
+              nodes={graphToRender.nodes}
+              edges={graphToRender.edges}
+            />
+          </div>
+          <DetailPanel
             treeId={tree.id}
-            nodes={graphToRender.nodes}
-            edges={graphToRender.edges}
+            people={people}
+            relationships={relationships}
+            unions={unions}
           />
         </div>
-        <DetailPanel
-          treeId={tree.id}
-          people={people}
-          relationships={relationships}
-          unions={unions}
-        />
       </div>
     </ReactFlowProvider>
   )

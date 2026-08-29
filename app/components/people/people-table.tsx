@@ -18,6 +18,7 @@ interface PeopleTableProps {
   onEdit: (person: Person) => void
   onDelete: (person: Person) => void
   onAddToTree: (person: Person) => void
+  onRemoveFromTree: (person: Person) => void
 }
 
 export function PeopleTable({
@@ -26,6 +27,7 @@ export function PeopleTable({
   onEdit,
   onDelete,
   onAddToTree,
+  onRemoveFromTree,
 }: PeopleTableProps) {
   if (people.length === 0) {
     return <p className="py-8 text-center text-sm text-muted-foreground">No people found.</p>
@@ -72,6 +74,7 @@ export function PeopleTable({
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onAddToTree={onAddToTree}
+                  onRemoveFromTree={onRemoveFromTree}
                 />
               </TableCell>
             </TableRow>
