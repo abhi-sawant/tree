@@ -1,5 +1,6 @@
 import { db } from "~/lib/db/db"
 import { PersonFormSchema } from "~/lib/schemas"
+import { requestPersistentStorage } from "~/lib/storage"
 import type { Person, PartialDate } from "~/lib/types"
 
 export interface CreatePersonInput {
@@ -21,12 +22,18 @@ export async function createPerson(input: CreatePersonInput): Promise<Person> {
   }
   PersonFormSchema.parse(person)
   await db.people.add(person)
+  void requestPersistentStorage()
   return person
 }
 
-export type UpdatePersonInput = Partial<Omit<Person, "id" | "createdAt" | "updatedAt">>
+export type UpdatePersonInput = Partial<
+  Omit<Person, "id" | "createdAt" | "updatedAt">
+>
 
-export async function updatePerson(id: string, patch: UpdatePersonInput): Promise<Person> {
+export async function updatePerson(
+  id: string,
+  patch: UpdatePersonInput
+): Promise<Person> {
   const existing = await db.people.get(id)
   if (!existing) throw new Error(`Person not found: ${id}`)
 
@@ -46,7 +53,7 @@ export interface SearchPeopleOptions {
 
 export async function searchPeople(
   query: string,
-  options: SearchPeopleOptions = {},
+  options: SearchPeopleOptions = {}
 ): Promise<Person[]> {
   const { includePlaceholders = true } = options
   const normalized = query.trim().toLowerCase()
@@ -55,7 +62,8 @@ export async function searchPeople(
   return people.filter((person) => {
     if (!includePlaceholders && person.isPlaceholder) return false
     if (!normalized) return true
-    const fullName = `${person.givenName} ${person.familyName ?? ""}`.toLowerCase()
+    const fullName =
+      `${person.givenName} ${person.familyName ?? ""}`.toLowerCase()
     return fullName.includes(normalized)
   })
 }
@@ -66,9 +74,14 @@ export interface TreeRef {
 }
 
 export async function getTreesForPerson(personId: string): Promise<TreeRef[]> {
-  const memberships = await db.members.where("personId").equals(personId).toArray()
+  const memberships = await db.members
+    .where("personId")
+    .equals(personId)
+    .toArray()
   const trees = await db.trees.bulkGet(memberships.map((m) => m.treeId))
-  return trees.filter((tree) => tree !== undefined).map((tree) => ({ id: tree.id, name: tree.name }))
+  return trees
+    .filter((tree) => tree !== undefined)
+    .map((tree) => ({ id: tree.id, name: tree.name }))
 }
 
 export interface DeleteImpact {
@@ -82,7 +95,10 @@ export async function getDeleteImpact(personId: string): Promise<DeleteImpact> {
     getTreesForPerson(personId),
   ])
   return {
-    blockingTrees: blockingTrees.map((tree) => ({ id: tree.id, name: tree.name })),
+    blockingTrees: blockingTrees.map((tree) => ({
+      id: tree.id,
+      name: tree.name,
+    })),
     memberOfTrees,
   }
 }
@@ -108,11 +124,14 @@ export async function deletePerson(id: string): Promise<void> {
     db.photos,
     db.trees,
     async () => {
-      const rootTrees = await db.trees.where("rootPersonId").equals(id).toArray()
+      const rootTrees = await db.trees
+        .where("rootPersonId")
+        .equals(id)
+        .toArray()
       if (rootTrees.length > 0) {
         throw new PersonIsRootError(
           id,
-          rootTrees.map((tree) => ({ id: tree.id, name: tree.name })),
+          rootTrees.map((tree) => ({ id: tree.id, name: tree.name }))
         )
       }
 
@@ -124,6 +143,6 @@ export async function deletePerson(id: string): Promise<void> {
       if (person?.photoId) await db.photos.delete(person.photoId)
 
       await db.people.delete(id)
-    },
+    }
   )
 }

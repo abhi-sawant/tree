@@ -46,3 +46,8 @@ export interface Photo {
   blob: Blob
   mime: string
 }
+
+export interface AppMetaRow {
+  key: string
+  value: string
+}
