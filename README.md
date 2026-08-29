@@ -1,21 +1,40 @@
-# React Router + shadcn/ui
+# Family Tree Generator
 
-This is a template for a new React Router project with React, TypeScript, and shadcn/ui.
+A local-first family tree builder: draw and edit trees on an interactive canvas, browse people in a searchable list,
+and export to JSON, PNG/PDF, or GEDCOM. See [SPEC.md](./SPEC.md) for the full specification and [PLAN.md](./PLAN.md)
+for the implementation plan.
 
-## Adding components
+Client-only single-page app — all data lives in the browser (IndexedDB via Dexie). No backend, no accounts. Built
+to be installable as a PWA and to work fully offline.
 
-To add components to your app, run the following command:
+## Development
+
+```bash
+npm run dev
+```
+
+## Build
+
+Produces a static `build/client` bundle suitable for any static host.
+
+```bash
+npm run build
+```
+
+## Tests
+
+```bash
+npm run test
+```
+
+## Adding shadcn/ui components
 
 ```bash
 npx shadcn@latest add button
 ```
 
-This will place the ui components in the `components` directory.
-
-## Using components
-
-To use the components in your app, import them as follows:
+Components are placed in `app/components/ui` and imported as:
 
 ```tsx
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 ```
