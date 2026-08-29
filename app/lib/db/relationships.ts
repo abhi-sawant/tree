@@ -44,7 +44,7 @@ export class RelationshipCycleError extends Error {
   }
 }
 
-async function getParentIds(childId: string): Promise<string[]> {
+export async function getParentIds(childId: string): Promise<string[]> {
   const rows = await db.relationships.where("to").equals(childId).toArray()
   return rows.filter((r) => r.type === "parent-child").map((r) => r.from)
 }

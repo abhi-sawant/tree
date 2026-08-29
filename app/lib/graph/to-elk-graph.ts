@@ -1,6 +1,7 @@
 import type { ElkExtendedEdge, ElkNode } from "elkjs"
 
 import { deriveUnions } from "~/lib/graph/derive-unions"
+import { personNodeId } from "~/lib/graph/node-ids"
 import type { Person, Relationship, TreeMember } from "~/lib/types"
 
 export interface ToElkGraphOptions {
@@ -13,8 +14,6 @@ export const PERSON_WIDTH = 160
 export const PERSON_HEIGHT = 80
 export const UNION_WIDTH = 16
 export const UNION_HEIGHT = 16
-
-const personNodeId = (personId: string): string => `person:${personId}`
 
 export function toElkGraph({
   people,
