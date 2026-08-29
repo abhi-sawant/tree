@@ -18,11 +18,12 @@ const nodeTypes = { person: PersonNode, union: UnionNode }
 
 interface TreeCanvasProps {
   treeId: string
+  treeName: string
   nodes: Node[]
   edges: Edge[]
 }
 
-export function TreeCanvas({ treeId, nodes, edges }: TreeCanvasProps) {
+export function TreeCanvas({ treeId, treeName, nodes, edges }: TreeCanvasProps) {
   const select = useCanvasUIStore((s) => s.select)
 
   const handleNodeDragStop: OnNodeDrag = (_event, node) => {
@@ -47,7 +48,7 @@ export function TreeCanvas({ treeId, nodes, edges }: TreeCanvasProps) {
     >
       <Background />
       <Controls showInteractive={false} />
-      <TreeToolbar treeId={treeId} />
+      <TreeToolbar treeId={treeId} treeName={treeName} />
     </ReactFlow>
   )
 }

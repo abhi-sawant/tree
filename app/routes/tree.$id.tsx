@@ -158,6 +158,7 @@ export default function TreeRoute() {
           <div className="h-full flex-1">
             <TreeCanvas
               treeId={tree.id}
+              treeName={tree.name}
               nodes={graphToRender.nodes}
               edges={graphToRender.edges}
             />
