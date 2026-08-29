@@ -1,4 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks"
+import { useEffect, useState } from "react"
 
 import { db } from "~/lib/db/db"
 import { getTreesForPerson, searchPeople, type SearchPeopleOptions, type TreeRef } from "~/lib/db/people"
@@ -46,6 +47,23 @@ export function useRelationshipsForPerson(
 
 export function usePhoto(photoId: string | undefined): Photo | undefined {
   return useLiveQuery(() => (photoId ? db.photos.get(photoId) : undefined), [photoId])
+}
+
+export function usePhotoUrl(photoId: string | undefined): string | undefined {
+  const photo = usePhoto(photoId)
+  const [url, setUrl] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (!photo) {
+      setUrl(undefined)
+      return
+    }
+    const objectUrl = URL.createObjectURL(photo.blob)
+    setUrl(objectUrl)
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [photo?.id])
+
+  return url
 }
 
 export function useSearchPeople(

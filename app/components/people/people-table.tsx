@@ -1,3 +1,4 @@
+import { PersonAvatar } from "~/components/people/person-avatar"
 import { PersonRowActions } from "~/components/people/people-row-actions"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { Badge } from "~/components/ui/badge"
@@ -51,6 +52,7 @@ export function PeopleTable({
             <TableRow key={person.id}>
               <TableCell>
                 <div className="flex items-center gap-2">
+                  <PersonAvatar photoId={person.photoId} size="sm" />
                   {[person.givenName, person.familyName].filter(Boolean).join(" ")}
                   {person.isPlaceholder && <PlaceholderBadge />}
                 </div>

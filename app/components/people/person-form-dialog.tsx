@@ -1,4 +1,4 @@
-import { PersonForm } from "~/components/people/person-form"
+import { PersonForm, type PhotoAction } from "~/components/people/person-form"
 import {
   Dialog,
   DialogContent,
@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog"
 import { createPerson, updatePerson } from "~/lib/db/people"
+import { removePersonPhoto, setPersonPhoto } from "~/lib/photos"
 import type { PersonFormValues } from "~/lib/schemas"
 import type { Person } from "~/lib/types"
 
@@ -16,11 +17,12 @@ interface PersonFormDialogProps {
 }
 
 export function PersonFormDialog({ open, onOpenChange, person }: PersonFormDialogProps) {
-  async function handleSubmit(values: PersonFormValues) {
-    if (person) {
-      await updatePerson(person.id, values)
-    } else {
-      await createPerson(values)
+  async function handleSubmit(values: PersonFormValues, photoAction: PhotoAction) {
+    const saved = person ? await updatePerson(person.id, values) : await createPerson(values)
+    if (photoAction.kind === "staged") {
+      await setPersonPhoto(saved.id, photoAction.blob, photoAction.mime)
+    } else if (photoAction.kind === "removed") {
+      await removePersonPhoto(saved.id)
     }
     onOpenChange(false)
   }

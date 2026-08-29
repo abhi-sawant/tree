@@ -1,8 +1,9 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react"
-import { Pin, UserRound } from "lucide-react"
+import { Pin } from "lucide-react"
 import { useState } from "react"
 
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
+import { PersonAvatar } from "~/components/people/person-avatar"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import {
@@ -39,7 +40,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
       )}
     >
       <Handle type="target" position={Position.Top} isConnectable={false} />
-      <UserRound className="size-6 shrink-0 text-muted-foreground" />
+      <PersonAvatar photoId={person.photoId} size="sm" />
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-medium">{name}</span>
