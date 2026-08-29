@@ -157,7 +157,8 @@ describe("toReactFlowGraph", () => {
       .find((nid) => nid.startsWith("union:"))!
 
     // a is at x=0 (center 80), b is at x=300 (center 380) — true midpoint is 230.
-    // The ELK-reported union position (x=999) should be ignored in favor of that.
+    // Both sit on the same row (y=0). The ELK-reported union position
+    // (999, 60) should be ignored in favor of that shared row.
     const { nodes } = toReactFlowGraph({
       graph,
       positions: {
@@ -173,7 +174,61 @@ describe("toReactFlowGraph", () => {
 
     const unionNode = nodes.find((n) => n.id === unionId)!
     expect(unionNode.position.x).toBe(230 - 8) // minus half the union node's width
-    expect(unionNode.position.y).toBe(60) // y is left as ELK computed it
+    expect(unionNode.position.y).toBe(32) // vertically centered in the couple's row
+  })
+
+  it("routes a parent->union edge as a straight line into the side the parent sits on", () => {
+    const treeId = id()
+    const a = person()
+    const b = person()
+    const child = person()
+    const relationships = [
+      parentChild(a.id, child.id),
+      parentChild(b.id, child.id),
+      spouse(a.id, b.id),
+    ]
+    const graph = toElkGraph({
+      people: [a, b, child],
+      relationships,
+      treeMembers: [
+        member(treeId, a.id),
+        member(treeId, b.id),
+        member(treeId, child.id),
+      ],
+    })
+
+    const { unions } = deriveUnions([a, b, child], relationships)
+    const unionId = graph
+      .children!.map((n) => n.id)
+      .find((nid) => nid.startsWith("union:"))!
+
+    // a sits to the left of the union, b sits to the right.
+    const { edges } = toReactFlowGraph({
+      graph,
+      positions: {
+        [`person:${a.id}`]: { x: 0, y: 0 },
+        [`person:${b.id}`]: { x: 300, y: 0 },
+        [unionId]: { x: 200, y: 0 },
+      },
+      people: [a, b, child],
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+    })
+
+    const edgeFromA = edges.find((e) => e.source === `person:${a.id}`)!
+    expect(edgeFromA).toMatchObject({
+      sourceHandle: "right",
+      targetHandle: "left",
+      type: "straight",
+    })
+
+    const edgeFromB = edges.find((e) => e.source === `person:${b.id}`)!
+    expect(edgeFromB).toMatchObject({
+      sourceHandle: "left",
+      targetHandle: "right",
+      type: "straight",
+    })
   })
 
   it("falls back to the ELK-computed position when a parent's position is missing", () => {
@@ -227,6 +282,7 @@ describe("toReactFlowGraph", () => {
     expect(edges[0]).toMatchObject({
       source: `person:${parent.id}`,
       target: `person:${child.id}`,
+      sourceHandle: "bottom",
       type: "smoothstep",
     })
   })

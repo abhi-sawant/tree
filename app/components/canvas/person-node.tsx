@@ -40,6 +40,18 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
       )}
     >
       <Handle type="target" position={Position.Top} isConnectable={false} />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left"
+        isConnectable={false}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        isConnectable={false}
+      />
       <PersonAvatar photoId={person.photoId} size="sm" />
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
@@ -55,7 +67,12 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
           </span>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} isConnectable={false} />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        isConnectable={false}
+      />
     </div>
   )
 

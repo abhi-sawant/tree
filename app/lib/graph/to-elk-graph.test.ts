@@ -192,6 +192,108 @@ describe("toElkGraph", () => {
     }))
     expect(isAcyclic(nodeIds, edges)).toBe(true)
   })
+
+  it("(f) keeps two sibling unions' children as contiguous columns, not interleaved with another family", () => {
+    const treeId = id()
+    const grandparent = person()
+    const a = person()
+    const b = person()
+    const c = person()
+    const d = person()
+    const child1 = person()
+    const child2 = person()
+    const child3 = person()
+    const child4 = person()
+    const people = [grandparent, a, b, c, d, child1, child2, child3, child4]
+
+    const graph = toElkGraph({
+      people,
+      relationships: [
+        parentChild(grandparent.id, a.id),
+        parentChild(grandparent.id, c.id),
+        spouse(a.id, b.id),
+        parentChild(a.id, child1.id),
+        parentChild(b.id, child1.id),
+        parentChild(a.id, child2.id),
+        parentChild(b.id, child2.id),
+        spouse(c.id, d.id),
+        parentChild(c.id, child3.id),
+        parentChild(d.id, child3.id),
+        parentChild(c.id, child4.id),
+        parentChild(d.id, child4.id),
+      ],
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+
+    const nodeIds = graph.children!.map((n) => n.id)
+    const i1 = nodeIds.indexOf(`person:${child1.id}`)
+    const i2 = nodeIds.indexOf(`person:${child2.id}`)
+    const i3 = nodeIds.indexOf(`person:${child3.id}`)
+    const i4 = nodeIds.indexOf(`person:${child4.id}`)
+    expect(Math.abs(i1 - i2)).toBe(1)
+    expect(Math.abs(i3 - i4)).toBe(1)
+
+    // Every union->child edge for one union appears as a consecutive run.
+    const unionToChildEdges = graph.edges!.filter((e) =>
+      e.sources[0].startsWith("union:")
+    )
+    const runsByUnion = new Map<string, number>()
+    let lastSource: string | undefined
+    for (const edge of unionToChildEdges) {
+      if (edge.sources[0] !== lastSource) {
+        runsByUnion.set(
+          edge.sources[0],
+          (runsByUnion.get(edge.sources[0]) ?? 0) + 1
+        )
+        lastSource = edge.sources[0]
+      }
+    }
+    for (const runCount of runsByUnion.values()) {
+      expect(runCount).toBe(1)
+    }
+  })
+
+  it("(g) keeps half-siblings from two unions of the same parent from interleaving", () => {
+    const treeId = id()
+    const x = person()
+    const a = person()
+    const b = person()
+    const c1 = person()
+    const c2 = person()
+    const c3 = person()
+    const c4 = person()
+    const people = [x, a, b, c1, c2, c3, c4]
+
+    const graph = toElkGraph({
+      people,
+      relationships: [
+        spouse(x.id, a.id),
+        parentChild(x.id, c1.id),
+        parentChild(a.id, c1.id),
+        parentChild(x.id, c2.id),
+        parentChild(a.id, c2.id),
+        spouse(x.id, b.id),
+        parentChild(x.id, c3.id),
+        parentChild(b.id, c3.id),
+        parentChild(x.id, c4.id),
+        parentChild(b.id, c4.id),
+      ],
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+
+    const nodeIds = graph.children!.map((n) => n.id)
+    const i1 = nodeIds.indexOf(`person:${c1.id}`)
+    const i2 = nodeIds.indexOf(`person:${c2.id}`)
+    const i3 = nodeIds.indexOf(`person:${c3.id}`)
+    const i4 = nodeIds.indexOf(`person:${c4.id}`)
+    expect(Math.abs(i1 - i2)).toBe(1)
+    expect(Math.abs(i3 - i4)).toBe(1)
+
+    const group1 = [i1, i2].sort((n1, n2) => n1 - n2)
+    const group2 = [i3, i4].sort((n1, n2) => n1 - n2)
+    const overlaps = group1[0] < group2[1] && group2[0] < group1[1]
+    expect(overlaps).toBe(false)
+  })
 })
 
 describe("isAcyclic", () => {

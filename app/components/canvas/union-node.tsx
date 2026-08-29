@@ -35,7 +35,18 @@ export function UnionNode({ id, data, selected }: NodeProps<UnionNodeType>) {
   )
   const handles = (
     <>
-      <Handle type="target" position={Position.Top} isConnectable={false} />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        isConnectable={false}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right"
+        isConnectable={false}
+      />
       <Handle type="source" position={Position.Bottom} isConnectable={false} />
     </>
   )

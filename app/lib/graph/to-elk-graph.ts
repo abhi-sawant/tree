@@ -2,6 +2,7 @@ import type { ElkExtendedEdge, ElkNode } from "elkjs"
 
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { personNodeId } from "~/lib/graph/node-ids"
+import { orderFamilyGraph } from "~/lib/graph/order-family-graph"
 import type { Person, Relationship, TreeMember } from "~/lib/types"
 
 export interface ToElkGraphOptions {
@@ -31,27 +32,58 @@ export function toElkGraph({
     scopedRelationships
   )
 
-  const personNodes: ElkNode[] = scopedPeople.map((p) => ({
-    id: personNodeId(p.id),
+  // A union's children must render as a contiguous run of columns, or the
+  // connector lines dropping from that union cross over unrelated families'
+  // subtrees. ELK's crossing-minimization has no notion of "these are
+  // siblings" — it only respects whatever order it's given, and only when
+  // told to (considerModelOrder + forceNodeModelOrder, in run-layout.ts).
+  // orderFamilyGraph produces that family-grouped order; everything below
+  // sorts by rank in that order instead of raw array/relationship order.
+  const { personOrder, unionOrder } = orderFamilyGraph(
+    scopedPeople,
+    unions,
+    singleParentLinks,
+    twoParentLinks
+  )
+  const personRank = new Map(personOrder.map((personId, i) => [personId, i]))
+  const unionRank = new Map(unionOrder.map((unionId, i) => [unionId, i]))
+  const byPersonRank = (a: string, b: string) =>
+    (personRank.get(a) ?? 0) - (personRank.get(b) ?? 0)
+
+  const orderedUnions = [...unions].sort(
+    (a, b) => (unionRank.get(a.id) ?? 0) - (unionRank.get(b.id) ?? 0)
+  )
+  const orderedTwoParentLinks = [...twoParentLinks].sort((a, b) => {
+    const byUnion =
+      (unionRank.get(a.unionId) ?? 0) - (unionRank.get(b.unionId) ?? 0)
+    return byUnion !== 0 ? byUnion : byPersonRank(a.childId, b.childId)
+  })
+  const orderedSingleParentLinks = [...singleParentLinks].sort((a, b) => {
+    const byParent = byPersonRank(a.parentId, b.parentId)
+    return byParent !== 0 ? byParent : byPersonRank(a.childId, b.childId)
+  })
+
+  const personNodes: ElkNode[] = personOrder.map((personId) => ({
+    id: personNodeId(personId),
     width: PERSON_WIDTH,
     height: PERSON_HEIGHT,
   }))
 
-  const unionNodes: ElkNode[] = unions.map((u) => ({
+  const unionNodes: ElkNode[] = orderedUnions.map((u) => ({
     id: u.id,
     width: UNION_WIDTH,
     height: UNION_HEIGHT,
   }))
 
-  const parentToUnionEdges: ElkExtendedEdge[] = unions.flatMap((u) =>
-    u.parents.map((parentId) => ({
+  const parentToUnionEdges: ElkExtendedEdge[] = orderedUnions.flatMap((u) =>
+    [...u.parents].sort(byPersonRank).map((parentId) => ({
       id: `edge:${personNodeId(parentId)}->${u.id}`,
       sources: [personNodeId(parentId)],
       targets: [u.id],
     }))
   )
 
-  const unionToChildEdges: ElkExtendedEdge[] = twoParentLinks.map(
+  const unionToChildEdges: ElkExtendedEdge[] = orderedTwoParentLinks.map(
     ({ unionId, childId }) => ({
       id: `edge:${unionId}->${personNodeId(childId)}`,
       sources: [unionId],
@@ -59,7 +91,7 @@ export function toElkGraph({
     })
   )
 
-  const singleParentEdges: ElkExtendedEdge[] = singleParentLinks.map(
+  const singleParentEdges: ElkExtendedEdge[] = orderedSingleParentLinks.map(
     ({ parentId, childId }) => ({
       id: `edge:${personNodeId(parentId)}->${personNodeId(childId)}`,
       sources: [personNodeId(parentId)],
