@@ -1,3 +1,4 @@
+import { unionNodeId } from "~/lib/graph/node-ids"
 import type { PartialDate, Person, Relationship } from "~/lib/types"
 
 export interface UnionNode {
@@ -15,10 +16,6 @@ export interface DeriveUnionsResult {
   twoParentLinks: Array<{ unionId: string; childId: string }>
 }
 
-function unionKey(a: string, b: string): string {
-  return [a, b].sort().join(":")
-}
-
 // people is accepted per the Step 3 spec's signature for forward compatibility
 // (e.g. future display-name tie-breaks); the current algorithm only needs ids.
 export function deriveUnions(
@@ -34,7 +31,7 @@ export function deriveUnions(
   }
 
   const spouseRels = relationships.filter((r) => r.type === "spouse")
-  const unionsByKey = new Map<string, UnionNode>()
+  const unionsById = new Map<string, UnionNode>()
   const singleParentLinks: Array<{ parentId: string; childId: string }> = []
   const twoParentLinks: Array<{ unionId: string; childId: string }> = []
 
@@ -46,29 +43,29 @@ export function deriveUnions(
     if (parentIds.length !== 2) continue // malformed (0 or >2 parents) — ignore rather than throw
 
     const [a, b] = parentIds
-    const key = unionKey(a, b)
-    let union = unionsByKey.get(key)
+    const unionId = unionNodeId([a, b])
+    let union = unionsById.get(unionId)
     if (!union) {
       const spouseRel = spouseRels.find(
         (r) => (r.from === a && r.to === b) || (r.from === b && r.to === a)
       )
       union = spouseRel
         ? {
-            id: `union:${key}`,
+            id: unionId,
             kind: "real",
             parents: [a, b],
             relationshipId: spouseRel.id,
             start: spouseRel.start,
             end: spouseRel.end,
           }
-        : { id: `union:${key}`, kind: "implicit", parents: [a, b] }
-      unionsByKey.set(key, union)
+        : { id: unionId, kind: "implicit", parents: [a, b] }
+      unionsById.set(unionId, union)
     }
     twoParentLinks.push({ unionId: union.id, childId })
   }
 
   return {
-    unions: [...unionsByKey.values()],
+    unions: [...unionsById.values()],
     singleParentLinks,
     twoParentLinks,
   }

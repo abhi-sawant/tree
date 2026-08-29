@@ -1,3 +1,4 @@
+import { personNodeId } from "~/lib/graph/node-ids"
 import type { NodePosition } from "~/lib/layout/run-layout"
 import type { TreeMember } from "~/lib/types"
 
@@ -6,12 +7,12 @@ import type { TreeMember } from "~/lib/types"
 // the two don't need to agree on an exact contract for this to be safe.
 export function mergeLayoutPositions(
   elkPositions: Record<string, NodePosition>,
-  treeMembers: TreeMember[],
+  treeMembers: TreeMember[]
 ): Record<string, NodePosition> {
   const merged = { ...elkPositions }
   for (const member of treeMembers) {
     if (member.x !== undefined && member.y !== undefined) {
-      merged[`person:${member.personId}`] = { x: member.x, y: member.y }
+      merged[personNodeId(member.personId)] = { x: member.x, y: member.y }
     }
   }
   return merged

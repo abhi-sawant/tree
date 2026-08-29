@@ -25,10 +25,20 @@ export async function createTree(input: CreateTreeInput): Promise<Tree> {
   return tree
 }
 
-export async function addPersonToTree(treeId: string, personId: string): Promise<void> {
-  const [tree, person] = await Promise.all([db.trees.get(treeId), db.people.get(personId)])
+// Idempotent: a no-op when the person is already a member, so it's safe to
+// call unconditionally from every canvas add-relative action without
+// clobbering a saved x/y position override on someone already in this tree.
+export async function addPersonToTree(
+  treeId: string,
+  personId: string
+): Promise<void> {
+  const [tree, person] = await Promise.all([
+    db.trees.get(treeId),
+    db.people.get(personId),
+  ])
   if (!tree) throw new Error(`Tree not found: ${treeId}`)
   if (!person) throw new Error(`Person not found: ${personId}`)
 
-  await db.members.put({ treeId, personId })
+  const existing = await db.members.get([treeId, personId])
+  if (!existing) await db.members.put({ treeId, personId })
 }

@@ -1,7 +1,7 @@
 import "@xyflow/react/dist/style.css"
 
 import { ReactFlowProvider } from "@xyflow/react"
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router"
 
 import {
@@ -9,20 +9,44 @@ import {
   EmptyTreeState,
   TreeNotFoundState,
 } from "~/components/canvas/canvas-states"
+import { DetailPanel } from "~/components/canvas/detail-panel"
 import { TreeCanvas } from "~/components/canvas/tree-canvas"
+import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import { deriveUnions } from "~/lib/graph/derive-unions"
+import { personNodeId } from "~/lib/graph/node-ids"
 import { toElkGraph } from "~/lib/graph/to-elk-graph"
-import { usePeople, useRelationships, useTreeMembers, useTrees } from "~/lib/db/hooks"
+import {
+  usePeople,
+  useRelationships,
+  useTreeMembers,
+  useTrees,
+} from "~/lib/db/hooks"
 import { mergeLayoutPositions } from "~/lib/layout/merge-positions"
-import { toReactFlowGraph } from "~/lib/layout/to-react-flow-graph"
+import {
+  toReactFlowGraph,
+  type ReactFlowGraph,
+} from "~/lib/layout/to-react-flow-graph"
 import { useElkLayout } from "~/lib/layout/use-elk-layout"
 
 export default function TreeRoute() {
   const { id } = useParams()
+  const select = useCanvasUIStore((s) => s.select)
   const trees = useTrees()
   const tree = useMemo(() => trees?.find((t) => t.id === id), [trees, id])
   const treeMembers = useTreeMembers(id)
   const people = usePeople()
   const relationships = useRelationships()
+
+  // A node selected in a previously-open tree has no meaning in this one.
+  useEffect(() => {
+    select(null)
+  }, [id, select])
+
+  const unions = useMemo(
+    () =>
+      people && relationships ? deriveUnions(people, relationships).unions : [],
+    [people, relationships]
+  )
 
   const graph = useMemo(() => {
     if (!treeMembers || !people || !relationships || treeMembers.length === 0) {
@@ -35,8 +59,8 @@ export default function TreeRoute() {
     () =>
       (treeMembers ?? [])
         .filter((m) => m.x !== undefined && m.y !== undefined)
-        .map((m) => `person:${m.personId}`),
-    [treeMembers],
+        .map((m) => personNodeId(m.personId)),
+    [treeMembers]
   )
 
   const { status, positions } = useElkLayout(graph, overriddenNodeIds)
@@ -48,8 +72,27 @@ export default function TreeRoute() {
 
   const reactFlowGraph = useMemo(() => {
     if (!graph || !mergedPositions || !people) return undefined
-    return toReactFlowGraph({ graph, positions: mergedPositions, people })
-  }, [graph, mergedPositions, people])
+    return toReactFlowGraph({
+      graph,
+      positions: mergedPositions,
+      people,
+      unions,
+    })
+  }, [graph, mergedPositions, people, unions])
+
+  // Keep showing the last successfully laid-out graph while a recompute is
+  // in flight (triggered by any canvas edit), instead of unmounting the
+  // whole <TreeCanvas> on every mutation — that reset pan/zoom and flashed a
+  // full-screen "Laying out tree…" interstitial for what should be a
+  // sub-100ms in-place update. Only the very first load (no graph yet) still
+  // shows that interstitial.
+  const [lastGoodGraph, setLastGoodGraph] = useState<ReactFlowGraph>()
+  useEffect(() => {
+    if (status === "done" && reactFlowGraph) setLastGoodGraph(reactFlowGraph)
+  }, [status, reactFlowGraph])
+  useEffect(() => {
+    setLastGoodGraph(undefined)
+  }, [id])
 
   if (
     trees === undefined ||
@@ -80,7 +123,9 @@ export default function TreeRoute() {
     )
   }
 
-  if (status !== "done" || !reactFlowGraph) {
+  const graphToRender = reactFlowGraph ?? lastGoodGraph
+
+  if (!graphToRender) {
     return (
       <div className="h-svh w-full">
         <CanvasLoadingState label="Laying out tree…" />
@@ -90,8 +135,16 @@ export default function TreeRoute() {
 
   return (
     <ReactFlowProvider>
-      <div className="h-svh w-full">
-        <TreeCanvas nodes={reactFlowGraph.nodes} edges={reactFlowGraph.edges} />
+      <div className="flex h-svh w-full">
+        <div className="h-full flex-1">
+          <TreeCanvas nodes={graphToRender.nodes} edges={graphToRender.edges} />
+        </div>
+        <DetailPanel
+          treeId={tree.id}
+          people={people}
+          relationships={relationships}
+          unions={unions}
+        />
       </div>
     </ReactFlowProvider>
   )
