@@ -131,6 +131,79 @@ describe("toReactFlowGraph", () => {
     })
   })
 
+  it("centers a union node between its two parents' current positions, not wherever ELK placed it", () => {
+    const treeId = id()
+    const a = person()
+    const b = person()
+    const child = person()
+    const relationships = [
+      parentChild(a.id, child.id),
+      parentChild(b.id, child.id),
+      spouse(a.id, b.id),
+    ]
+    const graph = toElkGraph({
+      people: [a, b, child],
+      relationships,
+      treeMembers: [
+        member(treeId, a.id),
+        member(treeId, b.id),
+        member(treeId, child.id),
+      ],
+    })
+
+    const { unions } = deriveUnions([a, b, child], relationships)
+    const unionId = graph
+      .children!.map((n) => n.id)
+      .find((nid) => nid.startsWith("union:"))!
+
+    // a is at x=0 (center 80), b is at x=300 (center 380) — true midpoint is 230.
+    // The ELK-reported union position (x=999) should be ignored in favor of that.
+    const { nodes } = toReactFlowGraph({
+      graph,
+      positions: {
+        [`person:${a.id}`]: { x: 0, y: 0 },
+        [`person:${b.id}`]: { x: 300, y: 0 },
+        [unionId]: { x: 999, y: 60 },
+      },
+      people: [a, b, child],
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+    })
+
+    const unionNode = nodes.find((n) => n.id === unionId)!
+    expect(unionNode.position.x).toBe(230 - 8) // minus half the union node's width
+    expect(unionNode.position.y).toBe(60) // y is left as ELK computed it
+  })
+
+  it("falls back to the ELK-computed position when a parent's position is missing", () => {
+    const treeId = id()
+    const a = person()
+    const b = person()
+    const relationships = [spouse(a.id, b.id)]
+    const graph = toElkGraph({
+      people: [a, b],
+      relationships,
+      treeMembers: [member(treeId, a.id), member(treeId, b.id)],
+    })
+
+    const { unions } = deriveUnions([a, b], relationships)
+    const unionId = graph
+      .children!.map((n) => n.id)
+      .find((nid) => nid.startsWith("union:"))!
+
+    const { nodes } = toReactFlowGraph({
+      graph,
+      positions: { [unionId]: { x: 42, y: 7 } },
+      people: [a, b],
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+    })
+
+    expect(nodes.find((n) => n.id === unionId)!.position).toEqual({ x: 42, y: 7 })
+  })
+
   it("maps edges from the ELK edge's sources[0]/targets[0]", () => {
     const treeId = id()
     const parent = person()

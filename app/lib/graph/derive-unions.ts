@@ -64,6 +64,23 @@ export function deriveUnions(
     twoParentLinks.push({ unionId: union.id, childId })
   }
 
+  // A spouse relationship with no shared children (e.g. a childless marriage,
+  // or a step-parent's spouse) still needs a union node so the couple is wired
+  // into the graph and laid out next to each other — otherwise that spouse is
+  // a disconnected node with no edges at all.
+  for (const spouseRel of spouseRels) {
+    const unionId = unionNodeId([spouseRel.from, spouseRel.to])
+    if (unionsById.has(unionId)) continue
+    unionsById.set(unionId, {
+      id: unionId,
+      kind: "real",
+      parents: [spouseRel.from, spouseRel.to],
+      relationshipId: spouseRel.id,
+      start: spouseRel.start,
+      end: spouseRel.end,
+    })
+  }
+
   return {
     unions: [...unionsById.values()],
     singleParentLinks,

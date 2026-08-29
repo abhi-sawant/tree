@@ -151,6 +151,38 @@ describe("deriveUnions", () => {
     expect(orderAB.unions[0].id).toBe(orderBA.unions[0].id)
   })
 
+  it("a childless spouse relationship still produces a real union, with no child links", () => {
+    const a = id()
+    const b = id()
+    const marriage = spouse(a, b, { start: { year: 2020 } })
+
+    const result = deriveUnions([], [marriage])
+
+    expect(result.unions).toHaveLength(1)
+    expect(result.unions[0]).toMatchObject({
+      kind: "real",
+      relationshipId: marriage.id,
+      start: { year: 2020 },
+    })
+    expect(result.unions[0].parents.slice().sort()).toEqual([a, b].sort())
+    expect(result.twoParentLinks).toEqual([])
+    expect(result.singleParentLinks).toEqual([])
+  })
+
+  it("a spouse who is also a shared parent isn't double-counted into two unions", () => {
+    const a = id()
+    const b = id()
+    const child = id()
+    const marriage = spouse(a, b)
+
+    const result = deriveUnions(
+      [],
+      [parentChild(a, child), parentChild(b, child), marriage]
+    )
+
+    expect(result.unions).toHaveLength(1)
+  })
+
   it("silently skips a child with 3 recorded parents (malformed, pre-validation data)", () => {
     const a = id()
     const b = id()
