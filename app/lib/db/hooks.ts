@@ -1,6 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks"
 
 import { db } from "~/lib/db/db"
+import { getTreesForPerson, searchPeople, type SearchPeopleOptions, type TreeRef } from "~/lib/db/people"
 import type { Person, Photo, Relationship, Tree, TreeMember } from "~/lib/types"
 
 export function usePerson(id: string | undefined): Person | undefined {
@@ -41,4 +42,22 @@ export function useRelationshipsForPerson(
 
 export function usePhoto(photoId: string | undefined): Photo | undefined {
   return useLiveQuery(() => (photoId ? db.photos.get(photoId) : undefined), [photoId])
+}
+
+export function useSearchPeople(
+  query: string,
+  options?: SearchPeopleOptions,
+): Person[] | undefined {
+  return useLiveQuery(
+    () => searchPeople(query, options),
+    [query, options?.includePlaceholders],
+  )
+}
+
+export function useMembers(): TreeMember[] | undefined {
+  return useLiveQuery(() => db.members.toArray(), [])
+}
+
+export function useTreesForPerson(personId: string | undefined): TreeRef[] | undefined {
+  return useLiveQuery(() => (personId ? getTreesForPerson(personId) : []), [personId])
 }

@@ -1,3 +1,5 @@
+import { Link } from "react-router"
+
 import { Button } from "~/components/ui/button"
 
 export default function Home() {
@@ -8,7 +10,9 @@ export default function Home() {
           <h1 className="font-medium">Project ready!</h1>
           <p>You may now add components and start building.</p>
           <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
+          <Button className="mt-2" render={<Link to="/people" />}>
+            People
+          </Button>
         </div>
       </div>
     </div>
