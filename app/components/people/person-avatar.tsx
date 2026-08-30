@@ -5,7 +5,7 @@ import { cn } from "~/lib/utils"
 
 const sizeClasses = {
   sm: "size-6",
-  lg: "size-16",
+  lg: "size-26",
 } as const
 
 interface PersonAvatarProps {
@@ -14,7 +14,11 @@ interface PersonAvatarProps {
   className?: string
 }
 
-export function PersonAvatar({ photoId, size = "sm", className }: PersonAvatarProps) {
+export function PersonAvatar({
+  photoId,
+  size = "lg",
+  className,
+}: PersonAvatarProps) {
   const url = usePhotoUrl(photoId)
 
   if (url) {
@@ -22,10 +26,24 @@ export function PersonAvatar({ photoId, size = "sm", className }: PersonAvatarPr
       <img
         src={url}
         alt=""
-        className={cn(sizeClasses[size], "shrink-0 rounded-full object-cover", className)}
+        className={cn(
+          sizeClasses[size],
+          "shrink-0 rounded-full object-cover",
+          className
+        )}
       />
     )
   }
 
-  return <UserRound className={cn(sizeClasses[size], "shrink-0 text-muted-foreground", className)} />
+  return (
+    <img
+      src={"/user.png"}
+      alt=""
+      className={cn(
+        sizeClasses[size],
+        "shrink-0 rounded-full object-cover",
+        className
+      )}
+    />
+  )
 }

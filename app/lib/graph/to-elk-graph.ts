@@ -11,8 +11,8 @@ export interface ToElkGraphOptions {
   treeMembers: TreeMember[]
 }
 
-export const PERSON_WIDTH = 160
-export const PERSON_HEIGHT = 80
+export const PERSON_WIDTH = 200
+export const PERSON_HEIGHT = 200
 export const UNION_WIDTH = 16
 export const UNION_HEIGHT = 16
 
@@ -69,9 +69,46 @@ export function toElkGraph({
     height: PERSON_HEIGHT,
   }))
 
+  // A union node's ELK width is normally tiny (UNION_WIDTH) and its rendered
+  // size always is (toReactFlowGraph hardcodes UNION_WIDTH/UNION_HEIGHT
+  // regardless of what we tell ELK here) — but leaving it tiny for LAYOUT
+  // purposes means ELK reserves no room in the parents' row for however wide
+  // this union's own row of children (plus each child's own spouse) turns
+  // out to be. When one union's children need more columns than its own
+  // slot in the parents' row provides, ELK can end up sliding a *different*,
+  // narrower union into the leftover space directly above this one's
+  // children — which is what made an unrelated couple's connector look like
+  // it crossed into this family's territory. Sizing each union's ELK width
+  // to its own child-generation footprint reserves that room up front.
+  const childrenByUnion = new Map<string, string[]>()
+  for (const { unionId, childId } of twoParentLinks) {
+    const list = childrenByUnion.get(unionId) ?? []
+    list.push(childId)
+    childrenByUnion.set(unionId, list)
+  }
+  const hasSpouse = new Set<string>()
+  for (const u of unions) {
+    for (const parentId of u.parents) hasSpouse.add(parentId)
+  }
+  const CHILD_COLUMN_PITCH = PERSON_WIDTH + 40 // must track elk.spacing.nodeNode
+  const footprintWidth = (unionId: string): number => {
+    let slots = 0
+    for (const childId of childrenByUnion.get(unionId) ?? []) {
+      slots += hasSpouse.has(childId) ? 2 : 1
+    }
+    if (slots === 0) return UNION_WIDTH
+    // +1 extra slot of margin: ELK's node placement doesn't guarantee this
+    // wide union node stays vertically aligned with its own reserved
+    // footprint below (it can drift a bit while still avoiding overlaps
+    // within its own row) — the exact footprint closes the gap in every
+    // real tree we tested but a synthetic case still slipped through by a
+    // few dozen px, so this buffer absorbs that class of drift.
+    return (slots + 1) * CHILD_COLUMN_PITCH - 40
+  }
+
   const unionNodes: ElkNode[] = orderedUnions.map((u) => ({
     id: u.id,
-    width: UNION_WIDTH,
+    width: Math.max(UNION_WIDTH, footprintWidth(u.id)),
     height: UNION_HEIGHT,
   }))
 

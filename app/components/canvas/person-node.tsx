@@ -35,7 +35,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
   const card = (
     <div
       className={cn(
-        "flex h-full w-full items-center gap-2 rounded-md border border-border bg-card px-3 py-2 shadow-sm",
+        "flex flex-col items-center justify-center h-full w-full text-center gap-2 rounded-md border border-border bg-card px-3 py-2 shadow-sm",
         selected && "ring-2 ring-primary ring-offset-1"
       )}
     >
@@ -52,7 +52,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
         id="right"
         isConnectable={false}
       />
-      <PersonAvatar photoId={person.photoId} size="sm" />
+      <PersonAvatar photoId={person.photoId} size="lg" />
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-medium">{name}</span>
