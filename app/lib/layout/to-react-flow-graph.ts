@@ -121,6 +121,7 @@ export function toReactFlowGraph({
         sourceHandle: personIsLeft ? "right" : "left",
         targetHandle: personIsLeft ? "left" : "right",
         type: "straight",
+        style: { strokeWidth: 2, stroke: "var(--edge-spouse)" },
       }
     }
 
@@ -133,6 +134,7 @@ export function toReactFlowGraph({
       target,
       sourceHandle: source.startsWith(PERSON_PREFIX) ? "bottom" : undefined,
       type: "smoothstep",
+      style: { strokeWidth: 2, stroke: "var(--edge-parent-child)" },
     }
   })
 
