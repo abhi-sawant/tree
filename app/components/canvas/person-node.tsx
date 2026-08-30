@@ -19,8 +19,15 @@ import type { PersonNodeData } from "~/lib/layout/to-react-flow-graph"
 
 export type PersonNodeType = Node<PersonNodeData, "person">
 
+// Cycles through a fixed palette so generations keep reading as distinct
+// colors even in a tree deep enough to run past the palette's length —
+// distinguishing them exactly (vs. wrapping) would need an unbounded set of
+// colors, which stops being visually distinguishable well before this does.
+const GENERATION_LEVELS = 6
+
 export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
-  const { person, treeId, overridden } = data
+  const { person, treeId, overridden, generation } = data
+  const levelColor = `var(--level-${generation % GENERATION_LEVELS})`
   const [removeOpen, setRemoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const name =
@@ -35,9 +42,10 @@ export function PersonNode({ data, selected }: NodeProps<PersonNodeType>) {
   const card = (
     <div
       className={cn(
-        "flex flex-col items-center justify-center h-full w-full text-center gap-2 rounded-md border border-border bg-card px-3 py-2 shadow-sm",
+        "flex flex-col items-center justify-center h-full w-full text-center gap-2 rounded-md border-2 bg-card px-3 py-2 shadow-sm",
         selected && "ring-2 ring-primary ring-offset-1"
       )}
+      style={{ borderColor: levelColor }}
     >
       <Handle type="target" position={Position.Top} isConnectable={false} />
       <Handle

@@ -48,6 +48,7 @@ describe("toReactFlowGraph", () => {
       graph,
       positions: { [`person:${a.id}`]: { x: 1, y: 2 } },
       people: [a],
+      relationships: [],
       unions: [],
       treeId,
       overriddenNodeIds: [],
@@ -79,6 +80,7 @@ describe("toReactFlowGraph", () => {
       graph,
       positions: { [`person:${a.id}`]: { x: 1, y: 2 } },
       people: [a],
+      relationships: [],
       unions: [],
       treeId,
       overriddenNodeIds: [`person:${a.id}`],
@@ -115,6 +117,7 @@ describe("toReactFlowGraph", () => {
       graph,
       positions: { [unionId]: { x: 5, y: 5 } },
       people: [a, b, child],
+      relationships,
       unions,
       treeId,
       overriddenNodeIds: [],
@@ -167,6 +170,7 @@ describe("toReactFlowGraph", () => {
         [unionId]: { x: 999, y: 60 },
       },
       people: [a, b, child],
+      relationships,
       unions,
       treeId,
       overriddenNodeIds: [],
@@ -211,6 +215,7 @@ describe("toReactFlowGraph", () => {
         [unionId]: { x: 200, y: 0 },
       },
       people: [a, b, child],
+      relationships,
       unions,
       treeId,
       overriddenNodeIds: [],
@@ -251,6 +256,7 @@ describe("toReactFlowGraph", () => {
       graph,
       positions: { [unionId]: { x: 42, y: 7 } },
       people: [a, b],
+      relationships,
       unions,
       treeId,
       overriddenNodeIds: [],
@@ -263,9 +269,10 @@ describe("toReactFlowGraph", () => {
     const treeId = id()
     const parent = person()
     const child = person()
+    const relationships = [parentChild(parent.id, child.id)]
     const graph = toElkGraph({
       people: [parent, child],
-      relationships: [parentChild(parent.id, child.id)],
+      relationships,
       treeMembers: [member(treeId, parent.id), member(treeId, child.id)],
     })
 
@@ -273,6 +280,7 @@ describe("toReactFlowGraph", () => {
       graph,
       positions: {},
       people: [parent, child],
+      relationships,
       unions: [],
       treeId,
       overriddenNodeIds: [],
@@ -314,6 +322,7 @@ describe("toReactFlowGraph", () => {
       graph,
       positions: {},
       people,
+      relationships,
       unions,
       treeId,
       overriddenNodeIds: [],

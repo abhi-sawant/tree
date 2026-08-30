@@ -41,6 +41,12 @@
     --sidebar-ring: oklch(0.708 0 0);
     --edge-spouse: oklch(0.645 0.196 20.5);
     --edge-parent-child: oklch(0.6 0.15 250);
+    --level-0: oklch(0.64 0.15 145);
+    --level-1: oklch(0.62 0.19 260);
+    --level-2: oklch(0.65 0.19 320);
+    --level-3: oklch(0.7 0.15 90);
+    --level-4: oklch(0.6 0.16 200);
+    --level-5: oklch(0.65 0.2 30);
 }
 
 .dark {
@@ -77,6 +83,12 @@
     --sidebar-ring: oklch(0.556 0 0);
     --edge-spouse: oklch(0.704 0.191 22.216);
     --edge-parent-child: oklch(0.7 0.15 250);
+    --level-0: oklch(0.75 0.15 145);
+    --level-1: oklch(0.73 0.18 260);
+    --level-2: oklch(0.75 0.18 320);
+    --level-3: oklch(0.8 0.14 90);
+    --level-4: oklch(0.72 0.16 200);
+    --level-5: oklch(0.75 0.19 30);
 }
 
 @theme inline {

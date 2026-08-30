@@ -1,6 +1,7 @@
 import type { Edge, Node } from "@xyflow/react"
 import type { ElkNode } from "elkjs"
 
+import { computeGenerations } from "~/lib/graph/compute-generations"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { PERSON_PREFIX, UNION_PREFIX, personNodeId } from "~/lib/graph/node-ids"
 import {
@@ -10,12 +11,13 @@ import {
   UNION_WIDTH,
 } from "~/lib/graph/to-elk-graph"
 import type { NodePosition } from "~/lib/layout/run-layout"
-import type { Person } from "~/lib/types"
+import type { Person, Relationship } from "~/lib/types"
 
 export interface PersonNodeData extends Record<string, unknown> {
   person: Person
   treeId: string
   overridden: boolean
+  generation: number
 }
 
 export interface UnionNodeData extends Record<string, unknown> {
@@ -26,6 +28,7 @@ export interface ToReactFlowGraphOptions {
   graph: ElkNode
   positions: Record<string, NodePosition>
   people: Person[]
+  relationships: Relationship[]
   unions: UnionNode[]
   treeId: string
   overriddenNodeIds: string[]
@@ -43,6 +46,7 @@ export function toReactFlowGraph({
   graph,
   positions,
   people,
+  relationships,
   unions,
   treeId,
   overriddenNodeIds,
@@ -50,6 +54,7 @@ export function toReactFlowGraph({
   const peopleById = new Map(people.map((p) => [p.id, p]))
   const unionsById = new Map(unions.map((u) => [u.id, u]))
   const overridden = new Set(overriddenNodeIds)
+  const generations = computeGenerations(people, relationships)
 
   // ELK lays the union out in its own layer below the couple (it only ever
   // sees a person->union edge, one layer at a time). We want it sitting
@@ -80,6 +85,7 @@ export function toReactFlowGraph({
             person,
             treeId,
             overridden: overridden.has(elkNode.id),
+            generation: generations.get(person.id) ?? 0,
           } satisfies PersonNodeData,
           width: PERSON_WIDTH,
           height: PERSON_HEIGHT,

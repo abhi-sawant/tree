@@ -82,11 +82,12 @@ export default function TreeRoute() {
       graph,
       positions: mergedPositions,
       people,
+      relationships: relationships ?? [],
       unions,
       treeId: tree.id,
       overriddenNodeIds,
     })
-  }, [graph, mergedPositions, people, unions, tree, overriddenNodeIds])
+  }, [graph, mergedPositions, people, relationships, unions, tree, overriddenNodeIds])
 
   // Keep showing the last successfully laid-out graph while a recompute is
   // in flight (triggered by any canvas edit), instead of unmounting the
