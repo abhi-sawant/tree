@@ -85,3 +85,30 @@ export interface AppMetaRow {
   key: string
   value: string
 }
+
+// Why a snapshot was taken. Only used for display — retention treats all three
+// the same, because a scheme that protected one kind would need a rule for what
+// happens when the protected ones fill the quota.
+export type SnapshotReason = "auto" | "manual" | "pre-restore"
+
+// A point the data can be rolled back to, held in this browser rather than in a
+// file. Deliberately excludes photos: they are almost all of the bytes and
+// almost none of the risk, and keeping ten copies of every photo would multiply
+// storage use by ten right where §5.1 says the quota is the danger.
+export interface Snapshot {
+  id: string
+  createdAt: number
+  reason: SnapshotReason
+  // The same .zip envelope the manual backup writes, minus the photos, so a
+  // snapshot restores through exactly the code path an imported file does.
+  blob: Blob
+  size: number
+  // Denormalised so the list can be rendered without unzipping ten archives to
+  // find out what is in them.
+  counts: {
+    people: number
+    relationships: number
+    trees: number
+    members: number
+  }
+}

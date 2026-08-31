@@ -5,6 +5,7 @@ import { AppShell } from "~/components/shell/app-shell"
 import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { Button } from "~/components/ui/button"
 import { Toaster } from "~/components/ui/toast"
+import { useAutoSnapshots } from "~/lib/backup/use-auto-snapshots"
 import { usePeople, useRelationships, useTrees } from "~/lib/db/hooks"
 import { computeGenerations } from "~/lib/graph/compute-generations"
 import { deriveUnions } from "~/lib/graph/derive-unions"
@@ -15,6 +16,10 @@ import { watchSystemTheme } from "~/lib/ui/theme-store"
 export default function App() {
   // Document-level, so it belongs here rather than in any one view.
   useEffect(watchSystemTheme, [])
+  // Subscribes to every write in the app, so it has to outlive any one view —
+  // and has to be mounted above the early returns below, or a snapshot would
+  // stop being taken whenever the boot skeleton showed.
+  useAutoSnapshots()
 
   const trees = useTrees()
   const people = usePeople()
