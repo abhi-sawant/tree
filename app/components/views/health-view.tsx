@@ -1,5 +1,6 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 
+import { MergePeopleDialog } from "~/components/people/merge-people-dialog"
 import { Button } from "~/components/ui/button"
 import {
   findDuplicates,
@@ -46,6 +47,14 @@ export function HealthView({
   const duplicates = useMemo(
     () => findDuplicates(people, relationships),
     [people, relationships]
+  )
+
+  const peopleById = useMemo(
+    () => new Map(people.map((person) => [person.id, person])),
+    [people]
+  )
+  const [mergePair, setMergePair] = useState<[Person, Person] | undefined>(
+    undefined
   )
 
   function show(personId: string) {
@@ -111,6 +120,16 @@ export function HealthView({
         />
       )}
 
+      {mergePair && (
+        <MergePeopleDialog
+          open
+          onOpenChange={(open) => !open && setMergePair(undefined)}
+          person={mergePair[0]}
+          other={mergePair[1]}
+          onMerged={() => setMergePair(undefined)}
+        />
+      )}
+
       {duplicates.length > 0 && (
         <section className="flex flex-col gap-2">
           <SectionHeading>
@@ -128,6 +147,11 @@ export function HealthView({
                 candidate={candidate}
                 memberIds={memberIds}
                 onShow={show}
+                onMerge={() => {
+                  const a = peopleById.get(candidate.personIds[0])
+                  const b = peopleById.get(candidate.personIds[1])
+                  if (a && b) setMergePair([a, b])
+                }}
               />
             ))}
           </div>
@@ -214,10 +238,12 @@ function DuplicateRow({
   candidate,
   memberIds,
   onShow,
+  onMerge,
 }: {
   candidate: DuplicateCandidate
   memberIds: Set<string>
   onShow: (personId: string) => void
+  onMerge: () => void
 }) {
   return (
     <div className="flex flex-col gap-1.5 border border-b-0 border-border p-3 last:border-b">
@@ -240,6 +266,9 @@ function DuplicateRow({
               </Button>
             ) : null
           )}
+          <Button variant="outline" size="xs" onClick={onMerge}>
+            Merge
+          </Button>
         </div>
       </div>
       <p className="text-11 text-muted-foreground">
