@@ -21,6 +21,10 @@ export interface Person {
   // real: one is how the family knows them, the other is how the records do.
   maidenName?: string
   nickname?: string
+  // A token shared by everyone born in the same multiple birth. A shared token
+  // rather than a boolean so triplets work, and so the grouping survives one of
+  // the siblings being deleted.
+  multipleBirthGroup?: string
   sex?: Sex
   birth?: PartialDate
   death?: PartialDate

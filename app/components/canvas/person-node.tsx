@@ -5,7 +5,7 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react"
-import { Pin } from "lucide-react"
+import { Pin, Users } from "lucide-react"
 import { useState } from "react"
 
 import type { AddActionKind } from "~/components/canvas/add-relative-menu"
@@ -86,6 +86,12 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
         <div className="flex items-center gap-1.5">
           <span className="truncate text-xl font-semibold">{name}</span>
           {person.isPlaceholder && <PlaceholderBadge />}
+          {person.multipleBirthGroup && (
+            <Users
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-label="One of a multiple birth"
+            />
+          )}
           {overridden && (
             <Pin className="size-3 shrink-0 text-muted-foreground" />
           )}

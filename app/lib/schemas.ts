@@ -15,6 +15,7 @@ export const PersonSchema = z.object({
   familyName: z.string().optional(),
   maidenName: z.string().optional(),
   nickname: z.string().optional(),
+  multipleBirthGroup: z.string().optional(),
   sex: SexSchema.optional(),
   birth: PartialDateSchema.optional(),
   death: PartialDateSchema.optional(),

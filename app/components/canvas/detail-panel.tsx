@@ -36,7 +36,10 @@ import {
   type RelationshipDates,
 } from "~/lib/db/relationship-actions"
 import { removeRelationship } from "~/lib/db/relationships"
+import { Checkbox } from "~/components/ui/checkbox"
+import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
+import { setMultipleBirthGroup } from "~/lib/db/multiple-birth"
 import { SUBTYPE_OPTIONS } from "~/components/canvas/relative-form"
 import { personDisplayName } from "~/lib/person-name"
 import { formatPartialDate } from "~/lib/partial-date"
@@ -327,6 +330,12 @@ function PersonDetail({
               otherPersonId={(r) => r.to}
               people={people}
               onSelect={select}
+            />
+
+            <MultipleBirthEditor
+              person={person}
+              relationships={relationships}
+              people={people}
             />
 
             <AddRelativeMenu
@@ -796,6 +805,75 @@ function RelationshipList({
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// Siblings are offered as checkboxes rather than asking for a group name,
+// because a multiple birth is a relationship between specific people — the
+// shared token is storage, not something a user should ever have to think
+// about. Only full siblings-by-shared-parent are candidates, since anyone
+// without a parent in common cannot have been born alongside this person.
+function MultipleBirthEditor({
+  person,
+  relationships,
+  people,
+}: {
+  person: Person
+  relationships: Relationship[]
+  people: Map<string, Person>
+}) {
+  const siblingIds = useMemo(() => {
+    const parentIds = relationships
+      .filter((r) => r.type === "parent-child" && r.to === person.id)
+      .map((r) => r.from)
+    if (parentIds.length === 0) return []
+    const parents = new Set(parentIds)
+    return [
+      ...new Set(
+        relationships
+          .filter(
+            (r) =>
+              r.type === "parent-child" &&
+              parents.has(r.from) &&
+              r.to !== person.id
+          )
+          .map((r) => r.to)
+      ),
+    ]
+  }, [relationships, person.id])
+
+  if (siblingIds.length === 0) return null
+
+  const group = person.multipleBirthGroup
+  const inGroup = (id: string) =>
+    !!group && people.get(id)?.multipleBirthGroup === group
+
+  async function toggle(siblingId: string) {
+    const current = siblingIds.filter(inGroup)
+    const next = current.includes(siblingId)
+      ? current.filter((id) => id !== siblingId)
+      : [...current, siblingId]
+    await setMultipleBirthGroup(person.id, next)
+    toast(
+      next.length > 0 ? "Multiple birth recorded" : "Multiple birth cleared"
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+        Born together with
+      </p>
+      {siblingIds.map((siblingId) => (
+        <Label key={siblingId} className="text-xs">
+          <Checkbox
+            checked={inGroup(siblingId)}
+            onCheckedChange={() => void toggle(siblingId)}
+          />
+          {personName(people.get(siblingId))}
+        </Label>
+      ))}
     </div>
   )
 }

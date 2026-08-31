@@ -37,13 +37,44 @@ export function orderFamilyGraph(
     return aCreated !== bCreated ? aCreated - bCreated : aId.localeCompare(bId)
   }
 
+  // Twins must not be split apart by a sibling recorded between them: a
+  // multiple birth is one event, and seeing them side by side is the whole
+  // point of having recorded it. Each multiple-birth group sorts as a single
+  // block, anchored at the position its earliest member would have taken on
+  // its own — so the surrounding birth-order intent is preserved and only the
+  // group's own members are pulled together.
+  const sortSiblings = (ids: string[]): void => {
+    const anchorByGroup = new Map<string, string>()
+    for (const id of ids) {
+      const group = peopleById.get(id)?.multipleBirthGroup
+      if (!group) continue
+      const current = anchorByGroup.get(group)
+      if (current === undefined || compare(id, current) < 0) {
+        anchorByGroup.set(group, id)
+      }
+    }
+    if (anchorByGroup.size === 0) {
+      ids.sort(compare)
+      return
+    }
+
+    const anchorOf = (id: string): string => {
+      const group = peopleById.get(id)?.multipleBirthGroup
+      return (group && anchorByGroup.get(group)) || id
+    }
+    ids.sort((a, b) => {
+      const byAnchor = compare(anchorOf(a), anchorOf(b))
+      return byAnchor !== 0 ? byAnchor : compare(a, b)
+    })
+  }
+
   const childrenByUnion = new Map<string, string[]>()
   for (const { unionId, childId } of twoParentLinks) {
     const list = childrenByUnion.get(unionId) ?? []
     list.push(childId)
     childrenByUnion.set(unionId, list)
   }
-  for (const list of childrenByUnion.values()) list.sort(compare)
+  for (const list of childrenByUnion.values()) sortSiblings(list)
 
   const childrenByParent = new Map<string, string[]>()
   for (const { parentId, childId } of singleParentLinks) {
@@ -51,7 +82,7 @@ export function orderFamilyGraph(
     list.push(childId)
     childrenByParent.set(parentId, list)
   }
-  for (const list of childrenByParent.values()) list.sort(compare)
+  for (const list of childrenByParent.values()) sortSiblings(list)
 
   const unionsByParent = new Map<string, UnionNode[]>()
   for (const union of unions) {
