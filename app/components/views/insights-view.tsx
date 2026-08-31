@@ -2,6 +2,10 @@ import { useMemo } from "react"
 
 import { Button } from "~/components/ui/button"
 import {
+  findAnniversaries,
+  type Anniversary,
+} from "~/lib/analysis/anniversaries"
+import {
   computeStatistics,
   type NamedValue,
   type Statistics,
@@ -11,17 +15,26 @@ import { personNodeId } from "~/lib/graph/node-ids"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import type { Person, Relationship, Tree } from "~/lib/types"
 
+// How far ahead to look when nothing falls today. Roughly a month: far enough
+// that the section is rarely empty, near enough that what it shows is still
+// worth acting on.
+const UPCOMING_WINDOW_DAYS = 31
+
 interface InsightsViewProps {
   tree: Tree
   // Already narrowed to this tree's members by the shell.
   people: Person[]
   relationships: Relationship[]
+  // Injected so this can be reasoned about at a fixed date rather than
+  // depending on whenever the view happened to render.
+  today?: Date
 }
 
 export function InsightsView({
   tree,
   people,
   relationships,
+  today,
 }: InsightsViewProps) {
   const setView = useAppShellStore((s) => s.setView)
   const requestCenter = useCanvasUIStore((s) => s.requestCenter)
@@ -30,6 +43,20 @@ export function InsightsView({
     () => computeStatistics(people, relationships),
     [people, relationships]
   )
+
+  // Pinned to the day this view mounted; a fresh Date every render would keep
+  // re-running the search for no benefit.
+  const referenceDate = useMemo(() => today ?? new Date(), [today])
+
+  const { todays, upcoming } = useMemo(() => {
+    const all = findAnniversaries(people, relationships, referenceDate, {
+      withinDays: UPCOMING_WINDOW_DAYS,
+    })
+    return {
+      todays: all.filter((a) => a.daysUntil === 0),
+      upcoming: all.filter((a) => a.daysUntil > 0),
+    }
+  }, [people, relationships, referenceDate])
 
   function show(personId: string) {
     requestCenter(personNodeId(personId))
@@ -78,6 +105,31 @@ export function InsightsView({
               } with both a birth and a death year recorded.`
             : "No lifespan average yet — nobody has both a birth and a death year recorded."}
         </p>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <SectionHeading>
+          {todays.length > 0 ? "Today" : "Coming up"}
+        </SectionHeading>
+        {todays.length + upcoming.length === 0 ? (
+          <p className="border border-border p-3 text-13 text-muted-foreground">
+            No anniversaries in the next {UPCOMING_WINDOW_DAYS} days. Only exact
+            dates count — a bare year, or one recorded as approximate, has no
+            day to fall on.
+          </p>
+        ) : (
+          <div className="flex flex-col">
+            {(todays.length > 0 ? todays : upcoming).map(
+              (anniversary, index) => (
+                <AnniversaryRow
+                  key={`${anniversary.kind}:${anniversary.personIds.join(",")}:${index}`}
+                  anniversary={anniversary}
+                  onShow={show}
+                />
+              )
+            )}
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-2">
@@ -200,6 +252,57 @@ function Tile({
       <span className="font-heading text-10 font-semibold tracking-widest text-muted-foreground uppercase">
         {label}
       </span>
+    </div>
+  )
+}
+
+function anniversaryText(anniversary: Anniversary): string {
+  const { kind, yearsAgo, deceased } = anniversary
+  if (kind === "marriage") {
+    return yearsAgo !== undefined
+      ? `${yearsAgo} years married`
+      : "Wedding anniversary"
+  }
+  if (kind === "death") {
+    return yearsAgo !== undefined
+      ? `Died ${yearsAgo} ${yearsAgo === 1 ? "year" : "years"} ago`
+      : "Anniversary of their death"
+  }
+  if (yearsAgo === undefined) return "Birthday"
+  // With no "living" flag, a recorded death is the only thing that separates
+  // these two — and either one used in the wrong place reads badly.
+  return deceased ? `Would have turned ${yearsAgo}` : `Turns ${yearsAgo}`
+}
+
+function AnniversaryRow({
+  anniversary,
+  onShow,
+}: {
+  anniversary: Anniversary
+  onShow: (personId: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border border-b-0 border-border p-3 last:border-b">
+      <span className="w-18 shrink-0 font-heading text-10 font-semibold tracking-widest text-muted-foreground uppercase">
+        {anniversary.daysUntil === 0 ? "Today" : `In ${anniversary.daysUntil}d`}
+      </span>
+      <span className="min-w-0 flex-1 text-13">
+        <span className="font-medium">{anniversary.label}</span>
+        {" — "}
+        {anniversaryText(anniversary)}
+      </span>
+      <div className="ml-auto flex shrink-0 gap-1">
+        {anniversary.personIds.map((personId) => (
+          <Button
+            key={personId}
+            variant="outline"
+            size="xs"
+            onClick={() => onShow(personId)}
+          >
+            Show
+          </Button>
+        ))}
+      </div>
     </div>
   )
 }
