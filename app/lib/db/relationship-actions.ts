@@ -13,7 +13,12 @@ import {
   removeRelationship,
 } from "~/lib/db/relationships"
 import { addPersonToTree } from "~/lib/db/trees"
-import type { PartialDate, Person, Relationship } from "~/lib/types"
+import type {
+  ParentChildSubtype,
+  PartialDate,
+  Person,
+  Relationship,
+} from "~/lib/types"
 
 export interface RelationshipDates {
   start?: PartialDate
@@ -31,7 +36,8 @@ function targetParentIds(target: AddChildTarget): string[] {
 export async function addParentNew(
   childId: string,
   treeId: string,
-  parentInput: CreatePersonInput
+  parentInput: CreatePersonInput,
+  subtype?: ParentChildSubtype
 ): Promise<Person> {
   return db.transaction(
     "rw",
@@ -45,6 +51,7 @@ export async function addParentNew(
         type: "parent-child",
         from: parent.id,
         to: childId,
+        subtype,
       })
       await addPersonToTree(treeId, parent.id)
       return parent
@@ -55,7 +62,8 @@ export async function addParentNew(
 export async function addParentExisting(
   childId: string,
   treeId: string,
-  parentId: string
+  parentId: string,
+  subtype?: ParentChildSubtype
 ): Promise<void> {
   await db.transaction(
     "rw",
@@ -68,6 +76,7 @@ export async function addParentExisting(
         type: "parent-child",
         from: parentId,
         to: childId,
+        subtype,
       })
       await addPersonToTree(treeId, parentId)
     }
@@ -143,7 +152,8 @@ export async function recordMarriage(
 export async function addChildNew(
   target: AddChildTarget,
   treeId: string,
-  childInput: CreatePersonInput
+  childInput: CreatePersonInput,
+  subtype?: ParentChildSubtype
 ): Promise<Person> {
   return db.transaction(
     "rw",
@@ -158,6 +168,7 @@ export async function addChildNew(
           type: "parent-child",
           from: parentId,
           to: child.id,
+          subtype,
         })
       }
       await addPersonToTree(treeId, child.id)
@@ -169,7 +180,8 @@ export async function addChildNew(
 export async function addChildExisting(
   target: AddChildTarget,
   treeId: string,
-  childId: string
+  childId: string,
+  subtype?: ParentChildSubtype
 ): Promise<void> {
   await db.transaction(
     "rw",
@@ -183,6 +195,7 @@ export async function addChildExisting(
           type: "parent-child",
           from: parentId,
           to: childId,
+          subtype,
         })
       }
       await addPersonToTree(treeId, childId)
@@ -291,7 +304,30 @@ export async function updateRelationshipDates(
       type: relationship.type,
       from: relationship.from,
       to: relationship.to,
+      // Carried explicitly: this is a rebuild, not a patch, so any field left
+      // off here is silently dropped — editing a marriage date must not reset
+      // how the link came about.
+      subtype: relationship.subtype,
       ...dates,
+    })
+  })
+}
+
+// Same remove-then-add shape as updateRelationshipDates, and for the same
+// reason: relationships.ts deliberately has no update path.
+export async function updateRelationshipSubtype(
+  relationship: Relationship,
+  subtype: ParentChildSubtype | undefined
+): Promise<Relationship> {
+  return db.transaction("rw", db.relationships, async () => {
+    await removeRelationship(relationship.id)
+    return addRelationship({
+      type: relationship.type,
+      from: relationship.from,
+      to: relationship.to,
+      start: relationship.start,
+      end: relationship.end,
+      subtype,
     })
   })
 }

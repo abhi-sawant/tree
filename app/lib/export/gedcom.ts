@@ -1,10 +1,17 @@
 import { deriveUnions } from "~/lib/graph/derive-unions"
+import { sharedParentLinkSubtype } from "~/lib/graph/parent-links"
 import { partialDateToGedcomDate } from "~/lib/partial-date"
 import { db } from "~/lib/db/db"
 import { blobToBytes, zipEntries, type ZipEntries } from "~/lib/export/archive"
 import { gedcomFilename } from "~/lib/export/filenames"
 import { extensionForMime, gedcomFormForExtension } from "~/lib/export/mime"
-import type { PartialDate, Person, Relationship, Sex } from "~/lib/types"
+import type {
+  ParentChildSubtype,
+  PartialDate,
+  Person,
+  Relationship,
+  Sex,
+} from "~/lib/types"
 
 export const GEDCOM_MEDIA_DIR = "media"
 
@@ -177,6 +184,8 @@ function emitIndividual(
   xref: string,
   famcXref: string | undefined,
   famsXrefs: string[],
+  famcGroup: FamilyGroup | undefined,
+  relationships: Relationship[],
   media?: GedcomMedia
 ): string[] {
   return [
@@ -186,11 +195,36 @@ function emitIndividual(
     ...dateEventLines("BIRT", person.birth),
     ...dateEventLines("DEAT", person.death),
     ...noteLines(person.notes),
-    ...(famcXref ? [`1 FAMC ${famcXref}`] : []),
+    ...famcLines(famcXref, person, famcGroup, relationships),
     ...famsXrefs.map((famsXref) => `1 FAMS ${famsXref}`),
     // Last in the INDI record, matching the 5.5.1 substructure order.
     ...mediaLines(media),
   ]
+}
+
+// PEDI qualifies a child's FAMC link. 5.5.1 defines only adopted, birth, foster
+// and sealing, so "step" and "guardian" have nothing to map to and are omitted
+// rather than smuggled through as a non-standard value; "biological" is left
+// implicit, matching every other omit-what-is-the-default choice in this writer.
+const PEDI_BY_SUBTYPE: Partial<Record<ParentChildSubtype, string>> = {
+  adopted: "adopted",
+  foster: "foster",
+}
+
+function famcLines(
+  famcXref: string | undefined,
+  person: Person,
+  group: FamilyGroup | undefined,
+  relationships: Relationship[]
+): string[] {
+  if (!famcXref) return []
+  const subtype = group
+    ? sharedParentLinkSubtype(relationships, person.id, group.parents)
+    : undefined
+  const pedi = subtype ? PEDI_BY_SUBTYPE[subtype] : undefined
+  return pedi
+    ? [`1 FAMC ${famcXref}`, `2 PEDI ${pedi}`]
+    : [`1 FAMC ${famcXref}`]
 }
 
 function emitFamily(
@@ -232,6 +266,7 @@ export function buildGedcomText(
   // 2), so FAMC is a plain map. FAMS lists accumulate in familyGroups' order,
   // which is already ascending by xref (both are sorted by the same key).
   const famcByPerson = new Map<string, string>()
+  const famcGroupByPerson = new Map<string, FamilyGroup>()
   const famsByPerson = new Map<string, string[]>()
   for (const group of familyGroups) {
     const familyXref = familyXrefs.get(group.key)!
@@ -242,6 +277,7 @@ export function buildGedcomText(
     }
     for (const childId of group.children) {
       famcByPerson.set(childId, familyXref)
+      famcGroupByPerson.set(childId, group)
     }
   }
 
@@ -252,6 +288,8 @@ export function buildGedcomText(
       personXrefs.get(person.id)!,
       famcByPerson.get(person.id),
       famsByPerson.get(person.id) ?? [],
+      famcGroupByPerson.get(person.id),
+      relationships,
       media?.get(person.id)
     )
   )

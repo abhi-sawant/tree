@@ -31,11 +31,18 @@ export interface Person {
   updatedAt: number
 }
 
+// How a parent-child link came about. An absent subtype means biological, so
+// no backfill is needed and the common case stays the cheapest to store.
+// "step" and "guardian" have no GEDCOM 5.5.1 PEDI value and are not exported.
+export type ParentChildSubtype =
+  "biological" | "adopted" | "step" | "foster" | "guardian"
+
 export interface Relationship {
   id: string
   type: "parent-child" | "spouse"
   from: string // parent, or spouse A
   to: string // child, or spouse B
+  subtype?: ParentChildSubtype // parent-child only
   start?: PartialDate // marriage date
   end?: PartialDate // divorce / separation
 }

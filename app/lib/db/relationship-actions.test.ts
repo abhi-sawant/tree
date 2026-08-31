@@ -13,6 +13,7 @@ import {
   ensureParentsForSibling,
   recordMarriage,
   updateRelationshipDates,
+  updateRelationshipSubtype,
 } from "~/lib/db/relationship-actions"
 import { createPerson } from "~/lib/db/people"
 import { TooManyParentsError, addRelationship } from "~/lib/db/relationships"
@@ -312,6 +313,62 @@ describe("updateRelationshipDates", () => {
     expect(updated.type).toBe("spouse")
     expect(updated.start).toEqual({ year: 1991 })
     expect(updated.end).toEqual({ year: 2000 })
+  })
+
+  it("preserves the subtype (regression: the rebuild used to drop it)", async () => {
+    const parent = await createPerson({ givenName: "Parent" })
+    const child = await createPerson({ givenName: "Child" })
+    const original = await addRelationship({
+      type: "parent-child",
+      from: parent.id,
+      to: child.id,
+      subtype: "adopted",
+    })
+
+    const updated = await updateRelationshipDates(original, {
+      start: { year: 1995 },
+    })
+
+    expect(updated.subtype).toBe("adopted")
+  })
+})
+
+describe("updateRelationshipSubtype", () => {
+  it("replaces the subtype while keeping from/to/type and both dates", async () => {
+    const parent = await createPerson({ givenName: "Parent" })
+    const child = await createPerson({ givenName: "Child" })
+    const original = await addRelationship({
+      type: "parent-child",
+      from: parent.id,
+      to: child.id,
+      start: { year: 1980 },
+      end: { year: 1990 },
+    })
+
+    const updated = await updateRelationshipSubtype(original, "foster")
+
+    expect(await db.relationships.get(original.id)).toBeUndefined()
+    expect(updated.from).toBe(parent.id)
+    expect(updated.to).toBe(child.id)
+    expect(updated.type).toBe("parent-child")
+    expect(updated.start).toEqual({ year: 1980 })
+    expect(updated.end).toEqual({ year: 1990 })
+    expect(updated.subtype).toBe("foster")
+  })
+
+  it("clears the subtype back to the biological default", async () => {
+    const parent = await createPerson({ givenName: "Parent" })
+    const child = await createPerson({ givenName: "Child" })
+    const original = await addRelationship({
+      type: "parent-child",
+      from: parent.id,
+      to: child.id,
+      subtype: "step",
+    })
+
+    const updated = await updateRelationshipSubtype(original, undefined)
+
+    expect(updated.subtype).toBeUndefined()
   })
 })
 

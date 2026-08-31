@@ -4,6 +4,7 @@ import type { ElkNode } from "elkjs"
 import { computeGenerations } from "~/lib/graph/compute-generations"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { PERSON_PREFIX, UNION_PREFIX, personNodeId } from "~/lib/graph/node-ids"
+import { sharedParentLinkSubtype } from "~/lib/graph/parent-links"
 import {
   PERSON_HEIGHT,
   PERSON_WIDTH,
@@ -150,13 +151,33 @@ export function toReactFlowGraph({
     // A single-parent link (person->child, no union involved) still drops
     // straight down from the parent's bottom — that handle now needs an
     // explicit id since the person node has left/right handles too.
+    //
+    // The edge's own source/target already say which parents it represents, so
+    // the link's subtype is resolvable here without threading a separate
+    // relationship map through the layout: a union source means both of its
+    // parents, a person source means just that one.
+    const childId = target.slice(PERSON_PREFIX.length)
+    const parentIds = source.startsWith(UNION_PREFIX)
+      ? (unionsById.get(source)?.parents ?? [])
+      : [source.slice(PERSON_PREFIX.length)]
+    const subtype = sharedParentLinkSubtype(relationships, childId, parentIds)
+
     return {
       id: elkEdge.id,
       source,
       target,
       sourceHandle: source.startsWith(PERSON_PREFIX) ? "bottom" : undefined,
       type: "smoothstep",
-      style: { strokeWidth: edgeStrokeWidth, stroke: parentChildColor },
+      data: { subtype },
+      style: {
+        strokeWidth: edgeStrokeWidth,
+        stroke: parentChildColor,
+        // Dashed for any link that isn't by birth. The long dash distinguishes
+        // it at a glance from the short dash an ended marriage uses.
+        ...(subtype && subtype !== "biological"
+          ? { strokeDasharray: "7 5" }
+          : {}),
+      },
     }
   })
 

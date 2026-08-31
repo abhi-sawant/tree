@@ -1,6 +1,6 @@
 import { db } from "~/lib/db/db"
 import { RelationshipFormSchema } from "~/lib/schemas"
-import type { PartialDate, Relationship } from "~/lib/types"
+import type { ParentChildSubtype, PartialDate, Relationship } from "~/lib/types"
 
 export interface AddRelationshipInput {
   type: "parent-child" | "spouse"
@@ -8,6 +8,7 @@ export interface AddRelationshipInput {
   to: string
   start?: PartialDate
   end?: PartialDate
+  subtype?: ParentChildSubtype
 }
 
 export class SelfReferenceError extends Error {

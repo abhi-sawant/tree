@@ -32,11 +32,20 @@ export const PersonFormSchema = PersonSchema.omit({
 })
 export type PersonFormValues = z.infer<typeof PersonFormSchema>
 
+export const ParentChildSubtypeSchema = z.enum([
+  "biological",
+  "adopted",
+  "step",
+  "foster",
+  "guardian",
+])
+
 export const RelationshipSchema = z.object({
   id: z.string(),
   type: z.enum(["parent-child", "spouse"]),
   from: z.string(),
   to: z.string(),
+  subtype: ParentChildSubtypeSchema.optional(),
   start: PartialDateSchema.optional(),
   end: PartialDateSchema.optional(),
 })

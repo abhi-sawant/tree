@@ -316,6 +316,55 @@ describe("buildGedcomText", () => {
     expect(text).not.toContain("Ada")
   })
 
+  it("qualifies FAMC with PEDI when both parent links agree", () => {
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ann" }),
+        person({ id: "p-b", givenName: "Bob" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        { ...parentChild("p-a", "p-c"), subtype: "adopted" as const },
+        { ...parentChild("p-b", "p-c"), subtype: "adopted" as const },
+      ]
+    )
+    expect(text).toContain("1 FAMC @F1@\n2 PEDI adopted")
+  })
+
+  it("omits PEDI for subtypes 5.5.1 cannot express", () => {
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ann" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [{ ...parentChild("p-a", "p-c"), subtype: "step" as const }]
+    )
+    expect(text).toContain("1 FAMC @F1@")
+    expect(text).not.toContain("PEDI")
+  })
+
+  it("omits PEDI when the two parent links disagree", () => {
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ann" }),
+        person({ id: "p-b", givenName: "Bob" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        parentChild("p-a", "p-c"),
+        { ...parentChild("p-b", "p-c"), subtype: "adopted" as const },
+      ]
+    )
+    expect(text).toContain("1 FAMC @F1@")
+    expect(text).not.toContain("PEDI")
+  })
+
+  it("emits no PEDI for an ordinary biological link", () => {
+    expect(buildGedcomText(people, relationships)).not.toContain("PEDI")
+  })
+
   it("silently excludes a malformed 3-parent child without throwing", () => {
     const threeParents: Relationship[] = [
       parentChild("p-a", "p-child-a"),
