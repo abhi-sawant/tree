@@ -28,6 +28,7 @@ import { formatPartialDate } from "~/lib/partial-date"
 import { cn } from "~/lib/utils"
 import type { PersonNodeData } from "~/lib/layout/to-react-flow-graph"
 import { personDisplayName } from "~/lib/person-name"
+import { HANDLE, directionGeometry } from "~/lib/canvas/layout-direction"
 
 export type PersonNodeType = Node<PersonNodeData, "person">
 
@@ -40,6 +41,9 @@ const QUICK_ADD: Array<{ kind: AddActionKind; label: string }> = [
 
 export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   const { person, treeId, overridden, generation, onBloodline } = data
+  const geometry = directionGeometry(
+    useAppearanceStore((s) => s.settings.layoutDirection)
+  )
   const generationColors = useAppearanceStore(
     (s) => s.settings.generationColors
   )
@@ -71,17 +75,22 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
       )}
       style={{ borderLeftWidth: 3, borderLeftColor: levelColor }}
     >
-      <Handle type="target" position={Position.Top} isConnectable={false} />
       <Handle
-        type="source"
-        position={Position.Left}
-        id="left"
+        type="target"
+        position={geometry.inPosition}
+        id={HANDLE.in}
         isConnectable={false}
       />
       <Handle
         type="source"
-        position={Position.Right}
-        id="right"
+        position={geometry.crossStartPosition}
+        id={HANDLE.crossStart}
+        isConnectable={false}
+      />
+      <Handle
+        type="source"
+        position={geometry.crossEndPosition}
+        id={HANDLE.crossEnd}
         isConnectable={false}
       />
       <PersonAvatar photoId={person.photoId} size="card" sizePx={avatarSize} />
@@ -107,8 +116,8 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
       </div>
       <Handle
         type="source"
-        position={Position.Bottom}
-        id="bottom"
+        position={geometry.childrenPosition}
+        id={HANDLE.children}
         isConnectable={false}
       />
     </div>

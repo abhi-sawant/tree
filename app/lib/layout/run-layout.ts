@@ -1,5 +1,7 @@
 import type { ELK, ElkNode } from "elkjs"
 
+import type { LayoutDirection } from "~/lib/canvas/layout-direction"
+
 export interface NodePosition {
   x: number
   y: number
@@ -30,12 +32,18 @@ export const DEFAULT_LAYOUT_OPTIONS: Record<string, string> = {
 export function buildLayoutOptions({
   horizontalSpacing,
   verticalSpacing,
+  direction = "DOWN",
 }: {
   horizontalSpacing: number
   verticalSpacing: number
+  direction?: LayoutDirection
 }): Record<string, string> {
+  // The two spacings keep their names from the settings UI, but which axis each
+  // controls follows the direction: "between layers" is always generation to
+  // generation, and "nodeNode" is always sibling to sibling.
   return {
     ...DEFAULT_LAYOUT_OPTIONS,
+    "elk.direction": direction,
     "elk.layered.spacing.nodeNodeBetweenLayers": String(verticalSpacing),
     "elk.spacing.nodeNode": String(horizontalSpacing),
   }

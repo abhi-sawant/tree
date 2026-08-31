@@ -1,6 +1,7 @@
 import type { Node } from "@xyflow/react"
 import { describe, expect, it } from "vitest"
 
+import { HANDLE } from "~/lib/canvas/layout-direction"
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import {
   PERSON_HEIGHT,
@@ -241,15 +242,15 @@ describe("toReactFlowGraph", () => {
 
     const edgeFromA = edges.find((e) => e.source === `person:${a.id}`)!
     expect(edgeFromA).toMatchObject({
-      sourceHandle: "right",
-      targetHandle: "left",
+      sourceHandle: HANDLE.crossEnd,
+      targetHandle: HANDLE.crossStart,
       type: "straight",
     })
 
     const edgeFromB = edges.find((e) => e.source === `person:${b.id}`)!
     expect(edgeFromB).toMatchObject({
-      sourceHandle: "left",
-      targetHandle: "right",
+      sourceHandle: HANDLE.crossStart,
+      targetHandle: HANDLE.crossEnd,
       type: "straight",
     })
   })
@@ -311,7 +312,7 @@ describe("toReactFlowGraph", () => {
     expect(edges[0]).toMatchObject({
       source: `person:${parent.id}`,
       target: `person:${child.id}`,
-      sourceHandle: "bottom",
+      sourceHandle: HANDLE.children,
       type: "smoothstep",
     })
   })

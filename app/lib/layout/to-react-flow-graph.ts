@@ -1,6 +1,11 @@
 import type { Edge, Node } from "@xyflow/react"
 import type { ElkNode } from "elkjs"
 
+import {
+  HANDLE,
+  isVertical,
+  type LayoutDirection,
+} from "~/lib/canvas/layout-direction"
 import { computeGenerations } from "~/lib/graph/compute-generations"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { PERSON_PREFIX, UNION_PREFIX, personNodeId } from "~/lib/graph/node-ids"
@@ -39,6 +44,7 @@ export interface ToReactFlowGraphOptions {
   bloodlineNodeIds?: string[]
   personWidth?: number
   personHeight?: number
+  direction?: LayoutDirection
   edgeStrokeWidth?: number
   spouseColor?: string
   parentChildColor?: string
@@ -68,6 +74,7 @@ export function toReactFlowGraph({
   bloodlineNodeIds = [],
   personWidth = PERSON_WIDTH,
   personHeight = PERSON_HEIGHT,
+  direction = "DOWN",
   edgeStrokeWidth = 2,
   spouseColor = "var(--edge-spouse)",
   parentChildColor = "var(--edge-parent-child)",
@@ -90,6 +97,7 @@ export function toReactFlowGraph({
   // reads as a single horizontal line straight across, not a bent line
   // dropping to a dot below. Resolve every union's real position up front so
   // node placement and edge handle selection (below) agree on where it is.
+  const vertical = isVertical(direction)
   const resolvedPositions: Record<string, NodePosition> = { ...positions }
   for (const union of unions) {
     const elkPosition = positions[union.id]
@@ -155,9 +163,15 @@ export function toReactFlowGraph({
     // horizontal line, entering the union from whichever side this parent
     // actually sits on (the couple share a row, so their x order settles it).
     if (source.startsWith(PERSON_PREFIX) && target.startsWith(UNION_PREFIX)) {
-      const personX = resolvedPositions[source]?.x ?? 0
-      const unionX = resolvedPositions[target]?.x ?? 0
-      const personIsLeft = personX < unionX
+      // Whichever side of the union this parent sits on along the cross axis
+      // decides which pair of handles the marriage line uses.
+      const personCross = vertical
+        ? (resolvedPositions[source]?.x ?? 0)
+        : (resolvedPositions[source]?.y ?? 0)
+      const unionCross = vertical
+        ? (resolvedPositions[target]?.x ?? 0)
+        : (resolvedPositions[target]?.y ?? 0)
+      const personIsFirst = personCross < unionCross
       // An end date on the spouse relationship is a divorce or separation —
       // already stored, already carried through to UnionNode.end by
       // deriveUnions, and until now never shown.
@@ -167,8 +181,8 @@ export function toReactFlowGraph({
         id: elkEdge.id,
         source,
         target,
-        sourceHandle: personIsLeft ? "right" : "left",
-        targetHandle: personIsLeft ? "left" : "right",
+        sourceHandle: personIsFirst ? HANDLE.crossEnd : HANDLE.crossStart,
+        targetHandle: personIsFirst ? HANDLE.crossStart : HANDLE.crossEnd,
         type: "straight",
         // Lift the highlighted run above everything else, or a crossing edge
         // drawn later would cut through the glow.
@@ -203,7 +217,9 @@ export function toReactFlowGraph({
       id: elkEdge.id,
       source,
       target,
-      sourceHandle: source.startsWith(PERSON_PREFIX) ? "bottom" : undefined,
+      sourceHandle: source.startsWith(PERSON_PREFIX)
+        ? HANDLE.children
+        : undefined,
       type: "smoothstep",
       data: { subtype },
       zIndex: highlighted ? 1 : 0,
@@ -242,7 +258,11 @@ function unionPosition(
   const posB = positions[personNodeId(parentBId)]
   if (!posA || !posB) return elkPosition
 
-  const centerX = (posA.x + personWidth / 2 + posB.x + personWidth / 2) / 2
+  // The midpoint of the couple's two centres, which needs no direction branch:
+  // along the cross axis the two differ and this is the true midpoint, while
+  // along the main axis they share a coordinate and it collapses to the centre
+  // of their shared row (or column). Both are exactly what we want.
+  const centerX = (posA.x + posB.x) / 2 + personWidth / 2
   const centerY = (posA.y + posB.y) / 2 + personHeight / 2
   return { x: centerX - UNION_WIDTH / 2, y: centerY - UNION_HEIGHT / 2 }
 }

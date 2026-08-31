@@ -1,6 +1,8 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
+import type { LayoutDirection } from "~/lib/canvas/layout-direction"
+
 export const GENERATION_LEVELS = 6
 
 export interface AppearanceSettings {
@@ -10,6 +12,7 @@ export interface AppearanceSettings {
   horizontalSpacing: number
   verticalSpacing: number
   edgeStrokeWidth: number
+  layoutDirection: LayoutDirection
   spouseColor: string | null
   parentChildColor: string | null
   generationColors: (string | null)[]
@@ -26,6 +29,7 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   horizontalSpacing: 40,
   verticalSpacing: 90,
   edgeStrokeWidth: 2,
+  layoutDirection: "DOWN",
   spouseColor: null,
   parentChildColor: null,
   generationColors: Array.from({ length: GENERATION_LEVELS }, () => null),

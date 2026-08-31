@@ -87,6 +87,7 @@ export function TreeView({
       personWidth: appearance.personWidth,
       personHeight: appearance.personHeight,
       horizontalSpacing: appearance.horizontalSpacing,
+      direction: appearance.layoutDirection,
     })
   }, [
     scopedMembers,
@@ -95,6 +96,7 @@ export function TreeView({
     appearance.personWidth,
     appearance.personHeight,
     appearance.horizontalSpacing,
+    appearance.layoutDirection,
   ])
 
   const overriddenNodeIds = useMemo(
@@ -124,8 +126,13 @@ export function TreeView({
       buildLayoutOptions({
         horizontalSpacing: appearance.horizontalSpacing,
         verticalSpacing: appearance.verticalSpacing,
+        direction: appearance.layoutDirection,
       }),
-    [appearance.horizontalSpacing, appearance.verticalSpacing]
+    [
+      appearance.horizontalSpacing,
+      appearance.verticalSpacing,
+      appearance.layoutDirection,
+    ]
   )
 
   const { status, positions } = useElkLayout(
@@ -152,6 +159,7 @@ export function TreeView({
       bloodlineNodeIds,
       personWidth: appearance.personWidth,
       personHeight: appearance.personHeight,
+      direction: appearance.layoutDirection,
       edgeStrokeWidth: appearance.edgeStrokeWidth,
       spouseColor: resolveEdgeColor(appearance.spouseColor, "--edge-spouse"),
       parentChildColor: resolveEdgeColor(
@@ -171,6 +179,7 @@ export function TreeView({
     appearance.personWidth,
     appearance.personHeight,
     appearance.edgeStrokeWidth,
+    appearance.layoutDirection,
     appearance.spouseColor,
     appearance.parentChildColor,
   ])

@@ -11,6 +11,11 @@ import {
 } from "~/components/ui/dialog"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
+import { Select } from "~/components/ui/select"
+import {
+  directionLabel,
+  type LayoutDirection,
+} from "~/lib/canvas/layout-direction"
 import { getCssVariableHex } from "~/lib/canvas/appearance-resolve"
 import {
   GENERATION_LEVELS,
@@ -77,6 +82,33 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
         </DialogHeader>
 
         <div className="flex max-h-[60vh] flex-col gap-6 overflow-y-auto pr-1">
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>Layout</SectionHeading>
+            <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
+              Direction
+              <Select
+                value={settings.layoutDirection}
+                onChange={(e) =>
+                  setSetting(
+                    "layoutDirection",
+                    e.target.value as LayoutDirection
+                  )
+                }
+              >
+                {(["DOWN", "RIGHT"] as const).map((direction) => (
+                  <option key={direction} value={direction}>
+                    {directionLabel(direction)}
+                  </option>
+                ))}
+              </Select>
+            </Label>
+            <p className="text-11 leading-relaxed text-muted-foreground">
+              Left to right suits wide, shallow trees. Cards you have pinned by
+              hand keep their saved position in either direction — use Re-layout
+              to release them.
+            </p>
+          </section>
+
           <section className="grid grid-cols-2 gap-x-4 gap-y-3">
             {NUMERIC_FIELDS.map(({ key, label, min }) => (
               <Label
