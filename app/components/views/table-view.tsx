@@ -6,6 +6,7 @@ import {
   PeopleTable,
   type RelativeCounts,
 } from "~/components/people/people-table"
+import { MergePeopleDialog } from "~/components/people/merge-people-dialog"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import { Checkbox } from "~/components/ui/checkbox"
@@ -44,6 +45,7 @@ export function TableView({
   const [removeFromTreeTarget, setRemoveFromTreeTarget] = useState<
     Person | undefined
   >(undefined)
+  const [mergeTarget, setMergeTarget] = useState<Person | undefined>(undefined)
 
   const setView = useAppShellStore((s) => s.setView)
   const requestCenter = useCanvasUIStore((s) => s.requestCenter)
@@ -129,6 +131,7 @@ export function TableView({
         onDelete={setDeleteTarget}
         onAddToTree={setAddToTreeTarget}
         onRemoveFromTree={setRemoveFromTreeTarget}
+        onMerge={setMergeTarget}
       />
 
       {formTarget && (
@@ -160,6 +163,15 @@ export function TableView({
           open={!!removeFromTreeTarget}
           onOpenChange={(open) => !open && setRemoveFromTreeTarget(undefined)}
           person={removeFromTreeTarget}
+        />
+      )}
+
+      {mergeTarget && (
+        <MergePeopleDialog
+          open={!!mergeTarget}
+          onOpenChange={(open) => !open && setMergeTarget(undefined)}
+          person={mergeTarget}
+          onMerged={() => setMergeTarget(undefined)}
         />
       )}
     </div>

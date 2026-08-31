@@ -45,6 +45,7 @@ interface PeopleTableProps {
   onDelete: (person: Person) => void
   onAddToTree: (person: Person) => void
   onRemoveFromTree: (person: Person) => void
+  onMerge: (person: Person) => void
 }
 
 export function PeopleTable({
@@ -57,6 +58,7 @@ export function PeopleTable({
   onDelete,
   onAddToTree,
   onRemoveFromTree,
+  onMerge,
 }: PeopleTableProps) {
   const generationColors = useAppearanceStore(
     (s) => s.settings.generationColors
@@ -145,6 +147,7 @@ export function PeopleTable({
                   onDelete={onDelete}
                   onAddToTree={onAddToTree}
                   onRemoveFromTree={onRemoveFromTree}
+                  onMerge={onMerge}
                 />
               </TableCell>
             </TableRow>

@@ -32,3 +32,8 @@ export function backupFilename(date: Date = new Date()): string {
 export function gedcomZipFilename(date: Date = new Date()): string {
   return `family-tree-gedcom-${date.toISOString().slice(0, 10)}.zip`
 }
+
+// Same whole-pool scope as the GEDCOM and backup exports, so again no tree name.
+export function anniversariesIcsFilename(date: Date = new Date()): string {
+  return `family-tree-anniversaries-${date.toISOString().slice(0, 10)}.ics`
+}

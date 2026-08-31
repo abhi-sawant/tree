@@ -16,6 +16,7 @@ interface PersonRowActionsProps {
   onDelete: (person: Person) => void
   onAddToTree: (person: Person) => void
   onRemoveFromTree: (person: Person) => void
+  onMerge: (person: Person) => void
 }
 
 export function PersonRowActions({
@@ -25,6 +26,7 @@ export function PersonRowActions({
   onDelete,
   onAddToTree,
   onRemoveFromTree,
+  onMerge,
 }: PersonRowActionsProps) {
   return (
     <DropdownMenu>
@@ -48,6 +50,9 @@ export function PersonRowActions({
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onRemoveFromTree(person)}>
           Remove from tree
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onMerge(person)}>
+          Merge with…
         </DropdownMenuItem>
         <DropdownMenuItem
           variant="destructive"

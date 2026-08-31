@@ -15,8 +15,13 @@ import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { getLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
-import { gedcomFilename, gedcomZipFilename } from "~/lib/export/filenames"
+import {
+  anniversariesIcsFilename,
+  gedcomFilename,
+  gedcomZipFilename,
+} from "~/lib/export/filenames"
 import { exportGedcom, exportGedcomZip } from "~/lib/export/gedcom"
+import { exportAnniversariesIcs } from "~/lib/export/ics"
 import {
   InvalidBackupError,
   importBackup,
@@ -70,6 +75,16 @@ export function SettingsView({
       toast("GEDCOM and photos exported")
     } catch {
       toast("GEDCOM export failed — nothing was downloaded")
+    }
+  }
+
+  async function handleExportIcs() {
+    try {
+      const blob = await exportAnniversariesIcs()
+      triggerDownload(blob, anniversariesIcsFilename())
+      toast("Anniversaries exported")
+    } catch {
+      toast("Calendar export failed — nothing was downloaded")
     }
   }
 
@@ -148,7 +163,9 @@ export function SettingsView({
           device. GEDCOM is for other genealogy software: the .zip carries
           photos alongside the .ged, the plain .ged is text only. PNG and PDF
           capture the open canvas — export those from the Tree view's Export
-          menu.
+          menu. The .ics file holds birthdays and wedding anniversaries as
+          yearly repeating all-day events, for any calendar app; it needs a full
+          date, so people recorded with only a year are left out.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button disabled={exportingBackup} onClick={onExportBackup}>
@@ -162,6 +179,9 @@ export function SettingsView({
           </Button>
           <Button variant="outline" onClick={() => void handleExportGedcom()}>
             GEDCOM 5.5.1 (no photos)
+          </Button>
+          <Button variant="outline" onClick={() => void handleExportIcs()}>
+            Anniversaries (.ics)
           </Button>
         </div>
       </section>
