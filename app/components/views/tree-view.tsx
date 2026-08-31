@@ -9,6 +9,7 @@ import {
 import { DetailPanel } from "~/components/canvas/detail-panel"
 import { TreeCanvas } from "~/components/canvas/tree-canvas"
 import { bloodlineToRoot } from "~/lib/canvas/bloodline"
+import { computeColorIndices } from "~/lib/canvas/color-groups"
 import { filterHiddenGenerations } from "~/lib/canvas/filter-generations"
 import { personIdsInFocus } from "~/lib/canvas/focus-scope"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
@@ -121,6 +122,17 @@ export function TreeView({
     return [...line.personIds.map(personNodeId), ...line.unionIds]
   }, [showBloodline, selectedNodeId, relationships, tree.rootPersonId])
 
+  const colorIndices = useMemo(
+    () =>
+      computeColorIndices({
+        people,
+        relationships,
+        mode: appearance.colorBy,
+        rootPersonId: tree.rootPersonId,
+      }),
+    [people, relationships, appearance.colorBy, tree.rootPersonId]
+  )
+
   const layoutOptions = useMemo(
     () =>
       buildLayoutOptions({
@@ -157,6 +169,7 @@ export function TreeView({
       treeId: tree.id,
       overriddenNodeIds,
       bloodlineNodeIds,
+      colorIndices,
       personWidth: appearance.personWidth,
       personHeight: appearance.personHeight,
       direction: appearance.layoutDirection,
@@ -177,6 +190,7 @@ export function TreeView({
     tree.id,
     overriddenNodeIds,
     bloodlineNodeIds,
+    colorIndices,
     appearance.personWidth,
     appearance.personHeight,
     appearance.edgeStrokeWidth,

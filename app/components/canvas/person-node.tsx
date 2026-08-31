@@ -40,7 +40,7 @@ const QUICK_ADD: Array<{ kind: AddActionKind; label: string }> = [
 ]
 
 export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
-  const { person, treeId, overridden, generation, onBloodline } = data
+  const { person, treeId, overridden, colorIndex, onBloodline } = data
   const geometry = directionGeometry(
     useAppearanceStore((s) => s.settings.layoutDirection)
   )
@@ -50,7 +50,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   const avatarSize = useAppearanceStore((s) => s.settings.avatarSize)
   const showPhoto = useAppearanceStore((s) => s.settings.showPhoto)
   const showDates = useAppearanceStore((s) => s.settings.showDates)
-  const levelColor = resolveGenerationColor(generation, generationColors)
+  const levelColor = resolveGenerationColor(colorIndex, generationColors)
   const requestAddRelative = useCanvasUIStore((s) => s.requestAddRelative)
   // The node array is controlled, so React Flow's own `selected` prop never
   // makes it back onto these nodes — the canvas UI store is the one source

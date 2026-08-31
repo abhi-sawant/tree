@@ -13,6 +13,7 @@ import { Checkbox } from "~/components/ui/checkbox"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
+import { COLOR_BY_OPTIONS, type ColorBy } from "~/lib/canvas/color-groups"
 import { EDGE_ROUTINGS, type EdgeRouting } from "~/lib/canvas/edge-routing"
 import {
   directionLabel,
@@ -199,12 +200,27 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
           </section>
 
           <section className="flex flex-col gap-2.5">
-            <SectionHeading>Generation colors</SectionHeading>
+            <SectionHeading>Card colors</SectionHeading>
+            <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
+              Group cards by
+              <Select
+                value={settings.colorBy}
+                onChange={(e) =>
+                  setSetting("colorBy", e.target.value as ColorBy)
+                }
+              >
+                {COLOR_BY_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </Label>
             <div className="flex flex-wrap gap-4">
               {settings.generationColors.map((color, i) => (
                 <ColorField
                   key={i}
-                  label={`Gen ${i + 1}`}
+                  label={`Group ${i + 1}`}
                   value={color ?? defaultGenerationHex[i]}
                   onChange={(next) => setGenerationColor(i, next)}
                   onReset={() => setGenerationColor(i, null)}
@@ -212,6 +228,11 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
                 />
               ))}
             </div>
+            <p className="text-11 leading-relaxed text-muted-foreground">
+              These colours are used for whichever grouping is chosen. By branch
+              they mark the lines descending from each of the root person&apos;s
+              children; by surname the commonest surname takes the first colour.
+            </p>
           </section>
         </div>
 

@@ -24,7 +24,11 @@ export interface PersonNodeData extends Record<string, unknown> {
   person: Person
   treeId: string
   overridden: boolean
+  // Which generation the person sits in. Drives the generation filter and the
+  // toolbar, and is not the same thing as colourIndex — colouring can be keyed
+  // on something else entirely.
   generation: number
+  colorIndex: number
   onBloodline: boolean
 }
 
@@ -43,6 +47,9 @@ export interface ToReactFlowGraphOptions {
   overriddenNodeIds: string[]
   // Node ids (people and unions) on the highlighted bloodline, if any.
   bloodlineNodeIds?: string[]
+  // Palette index per person. Defaults to their generation, which is what the
+  // canvas coloured by before this was configurable.
+  colorIndices?: Map<string, number>
   personWidth?: number
   personHeight?: number
   direction?: LayoutDirection
@@ -74,6 +81,7 @@ export function toReactFlowGraph({
   treeId,
   overriddenNodeIds,
   bloodlineNodeIds = [],
+  colorIndices,
   personWidth = PERSON_WIDTH,
   personHeight = PERSON_HEIGHT,
   direction = "DOWN",
@@ -131,6 +139,8 @@ export function toReactFlowGraph({
             treeId,
             overridden: overridden.has(elkNode.id),
             generation: generations.get(person.id) ?? 0,
+            colorIndex:
+              colorIndices?.get(person.id) ?? generations.get(person.id) ?? 0,
             onBloodline: bloodline.has(elkNode.id),
           } satisfies PersonNodeData,
           width: personWidth,
