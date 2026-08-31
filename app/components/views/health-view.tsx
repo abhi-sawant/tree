@@ -2,6 +2,10 @@ import { useMemo } from "react"
 
 import { Button } from "~/components/ui/button"
 import {
+  findDuplicates,
+  type DuplicateCandidate,
+} from "~/lib/analysis/duplicates"
+import {
   countBySeverity,
   validate,
   type Finding,
@@ -39,6 +43,11 @@ export function HealthView({
     [people, relationships, memberships]
   )
 
+  const duplicates = useMemo(
+    () => findDuplicates(people, relationships),
+    [people, relationships]
+  )
+
   function show(personId: string) {
     requestCenter(personNodeId(personId))
     setView("tree")
@@ -63,6 +72,7 @@ export function HealthView({
         <div className="flex items-center gap-4 border border-border p-3">
           <Tally severity="error" count={counts.error} />
           <Tally severity="warning" count={counts.warning} />
+          <Tally severity="duplicate" count={duplicates.length} />
           <span className="ml-auto text-xs text-muted-foreground">
             {people.length} {people.length === 1 ? "person" : "people"} checked
           </span>
@@ -75,10 +85,10 @@ export function HealthView({
         </p>
       </section>
 
-      {findings.length === 0 && (
+      {findings.length === 0 && duplicates.length === 0 && (
         <p className="border border-border p-4 text-13">
-          Nothing to report. Every recorded date is consistent, and every person
-          has a birth year and a tree.
+          Nothing to report. Every recorded date is consistent, every person has
+          a birth year and a tree, and no two records look like the same person.
         </p>
       )}
 
@@ -99,6 +109,29 @@ export function HealthView({
           memberIds={memberIds}
           onShow={show}
         />
+      )}
+
+      {duplicates.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <SectionHeading>
+            Possible duplicates ({duplicates.length})
+          </SectionHeading>
+          <p className="text-12-5 leading-relaxed text-muted-foreground">
+            People who may have been recorded twice, most likely first. These
+            are guesses — there is no identity to match on, so nothing here is
+            merged for you.
+          </p>
+          <div className="flex flex-col">
+            {duplicates.map((candidate) => (
+              <DuplicateRow
+                key={candidate.personIds.join(":")}
+                candidate={candidate}
+                memberIds={memberIds}
+                onShow={show}
+              />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   )
@@ -177,18 +210,60 @@ function FindingSection({
   )
 }
 
-function Tally({ severity, count }: { severity: Severity; count: number }) {
+function DuplicateRow({
+  candidate,
+  memberIds,
+  onShow,
+}: {
+  candidate: DuplicateCandidate
+  memberIds: Set<string>
+  onShow: (personId: string) => void
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 border border-b-0 border-border p-3 last:border-b">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span className="min-w-0 flex-1 text-13">
+          <span className="font-medium">{candidate.labels[0]}</span>
+          {" and "}
+          <span className="font-medium">{candidate.labels[1]}</span>
+        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          {candidate.personIds.map((personId, index) =>
+            memberIds.has(personId) ? (
+              <Button
+                key={personId}
+                variant="outline"
+                size="xs"
+                onClick={() => onShow(personId)}
+              >
+                Show {index + 1}
+              </Button>
+            ) : null
+          )}
+        </div>
+      </div>
+      <p className="text-11 text-muted-foreground">
+        {candidate.reasons.join(" · ")}
+      </p>
+    </div>
+  )
+}
+
+const TALLY_LABELS: Record<TallyKind, [singular: string, plural: string]> = {
+  error: ["error", "errors"],
+  warning: ["warning", "warnings"],
+  duplicate: ["possible duplicate", "possible duplicates"],
+}
+
+type TallyKind = Severity | "duplicate"
+
+function Tally({ severity, count }: { severity: TallyKind; count: number }) {
+  const [singular, plural] = TALLY_LABELS[severity]
   return (
     <div className="flex items-baseline gap-1.5">
       <span className="font-heading text-lg font-semibold">{count}</span>
       <span className="font-heading text-10 font-semibold tracking-widest text-muted-foreground uppercase">
-        {severity === "error"
-          ? count === 1
-            ? "error"
-            : "errors"
-          : count === 1
-            ? "warning"
-            : "warnings"}
+        {count === 1 ? singular : plural}
       </span>
     </div>
   )
