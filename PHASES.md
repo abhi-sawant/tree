@@ -3,7 +3,7 @@
 **Purpose:** a self-contained handoff document. Anyone (or any new session) picking up this work
 should be able to read only this file plus `SPEC.md` and continue without re-deriving anything.
 
-**Status:** Phases 1–3 complete. Phase 4 (Durability) is next.
+**Status:** Phases 1–4 complete. Phase 5 (Fast entry) is next.
 
 ---
 
@@ -87,7 +87,8 @@ A repo-wide format is a reasonable thing to do — but on its own commit, not in
 - `CreatePersonInput` is derived from `PersonFormSchema`, so a new `Person` field only needs adding
   in `app/lib/schemas.ts` to flow through every create path.
 - **Dexie only versions indexes.** Optional non-indexed fields need no `version()` bump. The schema
-  is currently at `version(3)` (added the `sex` index).
+  is currently at `version(5)`: `version(3)` added the `sex` index, and Phase 4 added two *new
+  stores* — `snapshots` (v4) and `backupTargets` (v5) — which do need a bump, unlike a new field.
 - **No backup envelope bump needed for additive optional fields.** They flow through `PersonSchema`,
   so existing v1/v2 backups still validate. Old builds importing a new backup drop unknown fields
   (Zod strips them), which is acceptable.
@@ -129,7 +130,7 @@ These are load-bearing. Later phases should stay consistent with them.
 | 1 | Model fidelity & the validator | 7 | ✅ Complete, merged (PR #15) |
 | 2 | Derived insight | 5 | ✅ Complete on `feat/v2-phase-2` |
 | 3 | Canvas navigation & readability | 7 | ✅ Complete on `feat/v2-phase-3` |
-| 4 | Durability | 5 | Not started |
+| 4 | Durability | 5 | ✅ Complete on `feat/v2-phase-4` |
 | 5 | Fast entry | 7 | Not started |
 | 6 | Media & output | 5 | Not started |
 | 7 | Polish & reach | 3 | Not started |
@@ -301,20 +302,149 @@ with no flash.
 **High-contrast mode.** It needs a third palette of real colour choices, and inventing values here
 would mean guessing at what ought to be designed. Left undone rather than half-done.
 
-## Phase 4 — Durability
+## Phase 4 — Durability ✅
+
+On `feat/v2-phase-4`. 5 commits, 703 tests passing.
 
 **Why:** the real risk in this app. `SPEC.md §5.1` — IndexedDB is evictable, and two hours of data
 entry can vanish silently.
 
-| # | Feature | Notes |
+| # | Feature | Commit |
 |---|---|---|
-| 4.1 | Local-folder auto-backup | File System Access API: `showDirectoryPicker`, persist the handle in IndexedDB, re-write the envelope on significant change. **Stays offline — local disk, not network.** Chromium-only, so manual export remains the fallback. This is the real answer to `§5.1`. |
-| 4.2 | Rolling local snapshots | Last N compressed envelopes in IndexedDB (`fflate` already ships) with restore-to-point. Survives reloads, unlike an in-memory undo stack. |
-| 4.3 | Backup staleness nudge | Last-export date is already tracked (`app/lib/db/app-meta.ts`). Quiet inline banner past ~30 days with unexported changes. Not a modal, not a nag. |
-| 4.4 | Multi-tab safety | Two tabs on the same IndexedDB clobber each other's assumptions. At minimum detect via `BroadcastChannel` and warn. |
-| 4.5 | Storage breakdown | `navigator.storage.estimate()` is unused — `app/lib/storage.ts` only wraps `persist`/`persisted`. Show quota vs usage, largest photos, a re-compress action. Serves `§5.2`'s "make the risk legible". |
+| 4.5 | Storage breakdown | `d629586` |
+| 4.2 | Rolling local snapshots | `7852134` |
+| 4.1 | Local-folder auto-backup | `0bc2b7e` |
+| 4.3 | Backup staleness nudge | `7ae7dcc` |
+| 4.4 | Multi-tab safety | `1ec8306` |
 
----
+Built in dependency order rather than numbered order: 4.5 is self-contained, 4.2 introduces the
+change signal that 4.1 and 4.3 both consume, and 4.4 gates 4.1 and 4.2 once they exist.
+
+### New modules
+
+`app/lib/storage-breakdown.ts` · `app/lib/relative-time.ts` · `app/lib/db/photo-sizes.ts` ·
+`app/lib/db/change-signal.ts` · `app/lib/db/tab-presence.ts` · `app/lib/db/use-tab-presence.ts` ·
+`app/lib/db/use-change-stamp.ts` · `app/lib/backup/schedule.ts` · `app/lib/backup/snapshots.ts` ·
+`app/lib/backup/file-system-access.ts` · `app/lib/backup/folder-backup.ts` ·
+`app/lib/backup/staleness.ts` · `app/lib/backup/use-auto-snapshots.ts` ·
+`app/lib/backup/use-folder-backup.ts` · `app/lib/backup/use-backup-nudge.ts` ·
+`app/components/views/storage-panel.tsx` · `app/components/views/snapshots-panel.tsx` ·
+`app/components/views/backup-folder-panel.tsx` · `app/components/shell/backup-nudge.tsx` ·
+`app/components/shell/tab-notice.tsx`
+
+### The change signal — read this before adding anything change-driven
+
+`app/lib/db/change-signal.ts` sits in **Dexie's DBCore middleware**, installed in `db.ts`, not in the
+`lib/db/*` helpers. The convention says every mutation goes through those helpers, but "meant to" is
+not a guarantee and a durability feature that misses writes is worse than none — a test proves the
+middleware catches a stray `db.people.put` from outside the helpers.
+
+Three properties any new consumer must respect:
+
+1. **It fires per low-level operation, not per transaction.** One bulk write is dozens of signals.
+   Always debounce through `createChangeScheduler`; never do work directly in a listener.
+2. **It fires before the transaction commits.** An aborted transaction can signal a change that never
+   landed. That asymmetry is the safe one — a spurious signal costs redundant work, a missed one
+   costs the change — but a consumer must be idempotent.
+3. **Writes to `BOOKKEEPING_TABLES` (`appMeta`, `snapshots`, `backupTargets`) are excluded.** Anything
+   new that records facts *about* the data rather than the data itself belongs on that list, or it
+   will feed itself in a loop.
+
+A throwing listener is swallowed on purpose: letting it propagate would reject the write it was
+notified about, turning a broken banner into lost data.
+
+### Judgement calls to preserve
+
+- **Snapshots exclude photos; the folder backup includes them.** They answer different questions. A
+  snapshot guards against a wrong merge or a mistaken delete, where photos are nearly all of the
+  bytes and nearly none of the risk — ten copies of every photo would multiply storage use by ten in
+  the one place `§5.1` names as the danger. Photo-less, a snapshot of a large tree DEFLATEs to a few
+  kilobytes (461 B for two people, live). The folder backup is a real backup and carries everything.
+- **The consequence is stated rather than hidden:** `deletePerson` deletes the person's photo too, so
+  a snapshot restore brings them back without their picture. `applyBackup(parsed, {photos: "keep"})`
+  clears the dangling `photoId` instead of leaving the database inconsistent.
+- **`applyBackup` is the single definition of "replace everything",** extracted from `importBackup`
+  and shared with `restoreSnapshot`, so a file import and a rollback cannot drift apart.
+- **"Newest N" alone is not a retention policy.** Auto-snapshots firing per edit would put all ten
+  inside the last minute, with the state from before the damage already pruned.
+  `MIN_AUTO_INTERVAL_MS` (10 min) is what makes ten of them span the two-hour session `§5.1`
+  describes. An empty pool is never snapshotted — the first person added would otherwise burn a slot
+  on restoring the app to empty.
+- **A restore is itself undoable.** `restoreSnapshot` parses the archive *before* taking its
+  pre-restore snapshot, so a damaged one fails without disturbing retention.
+- **The folder backup writes one file per calendar day and never deletes.** A fixed filename leaves
+  no history; rotating with `removeEntry` would mean this app deleting files out of a folder the
+  user owns, where a month-old backup is worth more than a tidy directory. `createWritable` renames
+  on close, so a crash mid-write leaves yesterday's archive intact rather than a truncated file that
+  looks like a backup and isn't.
+- **Folder permission cannot be re-acquired silently.** A stored handle comes back at `"prompt"`
+  after a browser restart and `requestPermission` needs a user gesture, so `getFolderStatus` only
+  ever *queries* and reconnecting is a button. A failed write is recorded on the target row: a
+  folder on an unplugged drive fails every time, and a silent no-op is indistinguishable from a
+  working backup — the worst failure mode this feature could have.
+- **A successful folder write sets `lastExportDate`,** because the bytes that landed are the same
+  envelope a manual export produces. 4.3 depends on that being true.
+- **The staleness nudge needs a stamped change date, not a derived one.** `max(Person.updatedAt)` is
+  wrong twice: `Relationship` has no timestamps, so marrying two existing people is invisible; and
+  deleting the most recently edited person moves the maximum *backwards*, making a destructive change
+  look freshly backed up. `useChangeStamp` writes `lastChangeDate` off the change signal instead.
+- **The nudge stays quiet whenever the data is ambiguous.** A clock that moved backwards, or an
+  export with no recorded change date, both read as "not stale". Silence is the right way to be
+  wrong about a nudge — this is the Phase 1 validator rule ("never assert what the data doesn't
+  settle") applied to a banner. Dismissal holds 7 days and is cleared outright by an export.
+- **Multi-tab distinguishes two very different situations.** A second tab is not a problem —
+  liveQuery keeps both in step — so it gets a quiet grey line. A *restore* in another tab is a
+  problem: the other tab's next edit would write dead records back over the restored ones, so that
+  gets a destructive-coloured banner which **latches** and demands a reload.
+- **Presence is a heartbeat with expiry, not register/deregister.** A force-quit tab never says
+  goodbye, and a peer that lingered for ever would stop the survivor from ever becoming leader —
+  the safety net would switch itself off after a crash, exactly when it is needed. `pagehide`'s
+  farewell is an optimisation nothing depends on.
+- **Leader election is lowest-id-wins after a join grace.** Any total order works; what matters is
+  that every tab computes the same answer from the same set with no negotiation. A browser without
+  `BroadcastChannel` degrades to permanent leadership, so backups still run rather than being
+  disabled by a missing detection mechanism.
+- **The storage panel reports two numbers and refuses to reconcile them.** `estimate()` covers the
+  whole origin and is padded on purpose; the photo total is measured exactly. Presenting either as
+  "the size of your family data" would be a precise-looking lie. Orphaned photos are *reported*, not
+  swept up — deleting a blob whose owner might still be recoverable is not this feature's call.
+- **Re-compression refuses to spend quality for nothing.** Uploads have been capped at 800px/q0.8
+  since Phase 0, so `shouldKeepRecompressed` keeps the original below a 5% saving, and a photo that
+  fails to decode is left exactly as it was. The batch is sequential: thirty concurrent bitmap
+  decodes is how a phone browser tab gets killed, which is the data loss this phase exists to stop.
+- **No off switch on snapshots.** An option to disable the app's own safety net is one people turn
+  off and regret, and at kilobytes per snapshot there is nothing to save by it. The total is shown
+  and individual snapshots can be deleted.
+- **The nudge banner uses `--primary`, not a warning colour.** There is no warning token in the
+  palette, and Phase 3 already declined to invent colour values rather than guess at what ought to
+  be designed. It isn't an error anyway.
+
+### Testing note
+
+`vitest.setup.ts`'s `structuredClone` shim needed one narrow extension. Browsers clone a
+`FileSystemDirectoryHandle` natively; Node has no notion of it, and any test double is made of
+functions, which never clone. Rather than pass all functions through — which would hide real
+`DataCloneError`s — a test tags one object with the `OPAQUE_CLONE` marker and it rides the same
+by-reference path the Blobs already do. A test asserts that round trip, so a drift in the contract
+fails with a clear message instead of an opaque error in twenty places.
+
+### Verified live
+
+Exercised end to end against a real tree in Chromium, then restored the browser profile to its
+starting state. Confirmed: the storage panel reads 38 KB of 2.7 GB with the one photo attributed to
+its owner; a manual snapshot of two people is 461 B against an 8 KB photo library; an edit made 39
+seconds after a snapshot correctly produces **no** auto-snapshot, the 10-minute floor holding; a
+rollback removes a person added after the snapshot, writes a `pre-restore` point automatically, and
+leaves the photo table untouched with a still-valid `photoId`; restoring *that* brings the person
+back, so the undo is genuinely bidirectional; a second tab makes both show "Also open in another
+tab"; a restore in one tab replaces that line in the other with the red "everything here is out of
+date" banner; and a backdated export date produces "Your last backup was 60 days ago", which
+`Later` dismisses and persists.
+
+### Deferred from this phase
+
+**Nothing.** All five features shipped. The one thing deliberately *not* built is an option to turn
+snapshots off — see the judgement call above.
 
 ## Phase 5 — Fast entry
 
