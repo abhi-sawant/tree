@@ -137,6 +137,10 @@ export function toReactFlowGraph({
       const personX = resolvedPositions[source]?.x ?? 0
       const unionX = resolvedPositions[target]?.x ?? 0
       const personIsLeft = personX < unionX
+      // An end date on the spouse relationship is a divorce or separation —
+      // already stored, already carried through to UnionNode.end by
+      // deriveUnions, and until now never shown.
+      const ended = !!unionsById.get(target)?.end
       return {
         id: elkEdge.id,
         source,
@@ -144,7 +148,13 @@ export function toReactFlowGraph({
         sourceHandle: personIsLeft ? "right" : "left",
         targetHandle: personIsLeft ? "left" : "right",
         type: "straight",
-        style: { strokeWidth: edgeStrokeWidth, stroke: spouseColor },
+        style: {
+          strokeWidth: edgeStrokeWidth,
+          stroke: spouseColor,
+          // Short dashes, distinct from the long dash a non-biological
+          // parent-child link uses, so the two never read as the same thing.
+          ...(ended ? { strokeDasharray: "3 3" } : {}),
+        },
       }
     }
 

@@ -40,8 +40,12 @@ function parentChild(
   return { id: id(), type: "parent-child", from, to, subtype }
 }
 
-function spouse(from: string, to: string): Relationship {
-  return { id: id(), type: "spouse", from, to }
+function spouse(
+  from: string,
+  to: string,
+  overrides: Partial<Relationship> = {}
+): Relationship {
+  return { id: id(), type: "spouse", from, to, ...overrides }
 }
 
 describe("toReactFlowGraph", () => {
@@ -437,5 +441,52 @@ describe("toReactFlowGraph parent-child edge subtypes", () => {
     for (const edge of marriageEdges) {
       expect(edge.style?.strokeDasharray).toBeUndefined()
     }
+  })
+})
+
+describe("toReactFlowGraph marriage edges", () => {
+  function marriageEdges(spouseOverrides: Partial<Relationship>) {
+    const treeId = id()
+    const a = person({ givenName: "A" })
+    const b = person({ givenName: "B" })
+    const relationships = [spouse(a.id, b.id, spouseOverrides)]
+    const people = [a, b]
+    const { unions } = deriveUnions(people, relationships)
+    const graph = toElkGraph({
+      people,
+      relationships,
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+    const { edges } = toReactFlowGraph({
+      graph,
+      positions: {},
+      people,
+      relationships,
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+    })
+    return edges.filter((e) => e.target.startsWith("union:"))
+  }
+
+  it("dashes both halves of the line for a marriage with an end date", () => {
+    const edges = marriageEdges({ start: { year: 1980 }, end: { year: 1995 } })
+    expect(edges).toHaveLength(2)
+    for (const edge of edges) {
+      expect(edge.style?.strokeDasharray).toBe("3 3")
+    }
+  })
+
+  it("leaves an ongoing marriage solid", () => {
+    for (const edge of marriageEdges({ start: { year: 1980 } })) {
+      expect(edge.style?.strokeDasharray).toBeUndefined()
+    }
+  })
+
+  it("uses a different dash from a non-biological parent-child link", () => {
+    // The two must stay visually distinguishable — an ended marriage and an
+    // adoption mean entirely different things.
+    const ended = marriageEdges({ end: { year: 1995 } })[0]
+    expect(ended.style?.strokeDasharray).not.toBe("7 5")
   })
 })
