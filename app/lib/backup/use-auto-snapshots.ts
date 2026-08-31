@@ -14,8 +14,13 @@ export const SNAPSHOT_DEBOUNCE_MS = 4000
 // createAutoSnapshot (which decides whether the change was worth a snapshot) and
 // createChangeScheduler (which decides when) — this only wires them to the
 // change signal and to the page's lifecycle.
-export function useAutoSnapshots(): void {
+//
+// `enabled` is the multi-tab leadership flag. Two tabs both snapshotting would
+// mostly be absorbed by the ten-minute floor, but the pair that slipped through
+// would each burn a retention slot on the same moment in time.
+export function useAutoSnapshots(enabled: boolean = true): void {
   useEffect(() => {
+    if (!enabled) return
     // Only the first failure is reported. A browser that is out of quota will
     // fail every single time, and a toast per edit would be the nagging §5.2
     // explicitly rules out — while staying silent about a broken safety net
@@ -56,5 +61,5 @@ export function useAutoSnapshots(): void {
       window.removeEventListener("pagehide", onPageHide)
       scheduler.cancel()
     }
-  }, [])
+  }, [enabled])
 }

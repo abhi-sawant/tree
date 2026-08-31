@@ -14,8 +14,13 @@ export const FOLDER_DEBOUNCE_MS = 20_000
 // separate subscriptions rather than one because they answer different
 // questions — a snapshot is cheap and frequent, a folder write is expensive and
 // rare — and collapsing them would force the cheaper one onto the slower cadence.
-export function useFolderBackup(): void {
+//
+// `enabled` is the multi-tab leadership flag, and it matters more here than it
+// does for snapshots: two tabs deflating every photo and writing the same file
+// is the most expensive thing this app can be made to do twice.
+export function useFolderBackup(enabled: boolean = true): void {
   useEffect(() => {
+    if (!enabled) return
     // As with snapshots, only the first failure is reported. An ejected drive
     // fails on every write, and a toast per edit is the nagging §5.2 rules out.
     // The Settings panel keeps showing the recorded error regardless.
@@ -65,5 +70,5 @@ export function useFolderBackup(): void {
       window.removeEventListener("pagehide", flushNow)
       scheduler.cancel()
     }
-  }, [])
+  }, [enabled])
 }

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react"
 import { AppSidebar } from "~/components/shell/app-sidebar"
 import { AppTopbar } from "~/components/shell/app-topbar"
 import { BackupNudgeBanner } from "~/components/shell/backup-nudge"
+import { TabNotice } from "~/components/shell/tab-notice"
 import { CommandPalette } from "~/components/shell/command-palette"
 import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
@@ -20,6 +21,7 @@ import { triggerDownload } from "~/lib/download"
 import { backupFilename } from "~/lib/export/filenames"
 import { exportBackup } from "~/lib/export/json"
 import type { UnionNode } from "~/lib/graph/derive-unions"
+import type { TabPresenceState } from "~/lib/db/use-tab-presence"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import { toast } from "~/lib/ui/toast-store"
 import type { Person, Relationship, Tree } from "~/lib/types"
@@ -31,6 +33,7 @@ interface AppShellProps {
   relationships: Relationship[]
   unions: UnionNode[]
   generations: Map<string, number>
+  tabs: TabPresenceState
 }
 
 export function AppShell({
@@ -40,6 +43,7 @@ export function AppShell({
   relationships,
   unions,
   generations,
+  tabs,
 }: AppShellProps) {
   const view = useAppShellStore((s) => s.view)
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
@@ -141,6 +145,11 @@ export function AppShell({
           exportingBackup={exportingBackup}
         />
 
+        <TabNotice
+          peerCount={tabs.peerCount}
+          dataReplaced={tabs.dataReplaced}
+        />
+
         <BackupNudgeBanner
           verdict={backupNudge.verdict}
           exporting={exportingBackup}
@@ -185,6 +194,7 @@ export function AppShell({
             onExportBackup={() => void handleExportBackup()}
             exportingBackup={exportingBackup}
             exportToken={exportToken}
+            tabId={tabs.tabId}
           />
         )}
       </div>

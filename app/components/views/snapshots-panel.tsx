@@ -19,6 +19,7 @@ import {
   type SnapshotSummary,
 } from "~/lib/backup/snapshots"
 import { useSnapshots } from "~/lib/db/hooks"
+import { announceDataReplaced } from "~/lib/db/use-tab-presence"
 import { formatWhen } from "~/lib/relative-time"
 import { formatBytes } from "~/lib/storage-breakdown"
 import { toast } from "~/lib/ui/toast-store"
@@ -30,7 +31,13 @@ const REASON_LABEL: Record<SnapshotReason, string> = {
   "pre-restore": "Before a restore",
 }
 
-export function SnapshotsPanel() {
+interface SnapshotsPanelProps {
+  // This tab's identity, so a rollback can tell the other tabs their view of
+  // the data no longer exists.
+  tabId: string
+}
+
+export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
   const snapshots = useSnapshots()
   const [taking, setTaking] = useState(false)
   const [pending, setPending] = useState<SnapshotSummary | undefined>(undefined)
@@ -59,6 +66,8 @@ export function SnapshotsPanel() {
     setRestoring(true)
     try {
       const result = await restoreSnapshot(pending.id)
+      // Announced before the reload below tears this tab's channel down.
+      announceDataReplaced(tabId)
       // A reload destroys any toast before it renders, and every open view is
       // now showing data that no longer exists — same reasoning as the backup
       // import path in settings-view.

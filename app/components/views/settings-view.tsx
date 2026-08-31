@@ -31,6 +31,7 @@ import {
   importBackup,
   type ImportBackupResult,
 } from "~/lib/export/json"
+import { announceDataReplaced } from "~/lib/db/use-tab-presence"
 import { isStoragePersisted } from "~/lib/storage"
 import {
   THEME_OPTIONS,
@@ -43,12 +44,16 @@ interface SettingsViewProps {
   onExportBackup: () => void
   exportingBackup?: boolean
   exportToken: number
+  // This tab's identity, so a restore can tell the other tabs their view of the
+  // data no longer exists.
+  tabId: string
 }
 
 export function SettingsView({
   onExportBackup,
   exportingBackup,
   exportToken,
+  tabId,
 }: SettingsViewProps) {
   const [inputKey, setInputKey] = useState(0)
   const [pendingFile, setPendingFile] = useState<File | undefined>(undefined)
@@ -118,6 +123,9 @@ export function SettingsView({
     setImporting(true)
     try {
       const imported = await importBackup(pendingFile)
+      // Every other tab is now showing people who no longer exist. Told before
+      // this tab reloads, because the reload tears down its channel.
+      announceDataReplaced(tabId)
       // Reloading destroys any toast before it can render, so a partial
       // restore has to be reported in the dialog the user is already looking
       // at. The clean case keeps the original straight-to-reload behaviour.
@@ -192,7 +200,7 @@ export function SettingsView({
 
       <section className="flex flex-col gap-2.5">
         <SectionHeading>Snapshots</SectionHeading>
-        <SnapshotsPanel />
+        <SnapshotsPanel tabId={tabId} />
       </section>
 
       <section className="flex flex-col gap-2.5">
