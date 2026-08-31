@@ -9,8 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
+import { Checkbox } from "~/components/ui/checkbox"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
+import { Select } from "~/components/ui/select"
+import { COLOR_BY_OPTIONS, type ColorBy } from "~/lib/canvas/color-groups"
+import { EDGE_ROUTINGS, type EdgeRouting } from "~/lib/canvas/edge-routing"
+import {
+  directionLabel,
+  type LayoutDirection,
+} from "~/lib/canvas/layout-direction"
 import { getCssVariableHex } from "~/lib/canvas/appearance-resolve"
 import {
   GENERATION_LEVELS,
@@ -77,6 +85,78 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
         </DialogHeader>
 
         <div className="flex max-h-[60vh] flex-col gap-6 overflow-y-auto pr-1">
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>Layout</SectionHeading>
+            <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
+              Direction
+              <Select
+                value={settings.layoutDirection}
+                onChange={(e) =>
+                  setSetting(
+                    "layoutDirection",
+                    e.target.value as LayoutDirection
+                  )
+                }
+              >
+                {(["DOWN", "RIGHT"] as const).map((direction) => (
+                  <option key={direction} value={direction}>
+                    {directionLabel(direction)}
+                  </option>
+                ))}
+              </Select>
+            </Label>
+            <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
+              Connector shape
+              <Select
+                value={settings.edgeRouting}
+                onChange={(e) =>
+                  setSetting("edgeRouting", e.target.value as EdgeRouting)
+                }
+              >
+                {EDGE_ROUTINGS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </Label>
+            <p className="text-11 leading-relaxed text-muted-foreground">
+              Left to right suits wide, shallow trees. Cards you have pinned by
+              hand keep their saved position in either direction — use Re-layout
+              to release them. Connector shape applies to parent–child lines; a
+              marriage line is always drawn straight across between the couple.
+            </p>
+          </section>
+
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>What each card shows</SectionHeading>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <Label className="text-sm font-normal normal-case">
+                <Checkbox
+                  checked={settings.showPhoto}
+                  onCheckedChange={(checked) =>
+                    setSetting("showPhoto", checked === true)
+                  }
+                />
+                Photo
+              </Label>
+              <Label className="text-sm font-normal normal-case">
+                <Checkbox
+                  checked={settings.showDates}
+                  onCheckedChange={(checked) =>
+                    setSetting("showDates", checked === true)
+                  }
+                />
+                Dates
+              </Label>
+            </div>
+            <p className="text-11 leading-relaxed text-muted-foreground">
+              Turning both off leaves a name-only card, which fits far more of a
+              large tree on screen — shrink the card size below to take
+              advantage of it.
+            </p>
+          </section>
+
           <section className="grid grid-cols-2 gap-x-4 gap-y-3">
             {NUMERIC_FIELDS.map(({ key, label, min }) => (
               <Label
@@ -120,12 +200,27 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
           </section>
 
           <section className="flex flex-col gap-2.5">
-            <SectionHeading>Generation colors</SectionHeading>
+            <SectionHeading>Card colors</SectionHeading>
+            <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
+              Group cards by
+              <Select
+                value={settings.colorBy}
+                onChange={(e) =>
+                  setSetting("colorBy", e.target.value as ColorBy)
+                }
+              >
+                {COLOR_BY_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </Label>
             <div className="flex flex-wrap gap-4">
               {settings.generationColors.map((color, i) => (
                 <ColorField
                   key={i}
-                  label={`Gen ${i + 1}`}
+                  label={`Group ${i + 1}`}
                   value={color ?? defaultGenerationHex[i]}
                   onChange={(next) => setGenerationColor(i, next)}
                   onReset={() => setGenerationColor(i, null)}
@@ -133,6 +228,11 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
                 />
               ))}
             </div>
+            <p className="text-11 leading-relaxed text-muted-foreground">
+              These colours are used for whichever grouping is chosen. By branch
+              they mark the lines descending from each of the root person&apos;s
+              children; by surname the commonest surname takes the first colour.
+            </p>
           </section>
         </div>
 

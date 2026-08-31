@@ -1,5 +1,6 @@
 import type { ElkExtendedEdge, ElkNode } from "elkjs"
 
+import { isVertical, type LayoutDirection } from "~/lib/canvas/layout-direction"
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { personNodeId } from "~/lib/graph/node-ids"
 import { orderFamilyGraph } from "~/lib/graph/order-family-graph"
@@ -12,6 +13,7 @@ export interface ToElkGraphOptions {
   personWidth?: number
   personHeight?: number
   horizontalSpacing?: number
+  direction?: LayoutDirection
 }
 
 export const PERSON_WIDTH = 250
@@ -26,7 +28,12 @@ export function toElkGraph({
   personWidth = PERSON_WIDTH,
   personHeight = PERSON_HEIGHT,
   horizontalSpacing = 40,
+  direction = "DOWN",
 }: ToElkGraphOptions): ElkNode {
+  // Children spread along the cross axis, which is horizontal top-to-bottom and
+  // vertical left-to-right — so the footprint a union has to reserve is a width
+  // in one direction and a height in the other.
+  const vertical = isVertical(direction)
   const memberIds = new Set(treeMembers.map((m) => m.personId))
   const scopedPeople = people.filter((p) => memberIds.has(p.id))
   const scopedRelationships = relationships.filter(
@@ -96,7 +103,10 @@ export function toElkGraph({
   for (const u of unions) {
     for (const parentId of u.parents) hasSpouse.add(parentId)
   }
-  const childColumnPitch = personWidth + horizontalSpacing // must track elk.spacing.nodeNode
+  // Must track elk.spacing.nodeNode. The card's extent along the cross axis is
+  // its width laid out top-to-bottom, its height laid out left-to-right.
+  const childColumnPitch =
+    (vertical ? personWidth : personHeight) + horizontalSpacing
   const footprintWidth = (unionId: string): number => {
     let slots = 0
     for (const childId of childrenByUnion.get(unionId) ?? []) {
@@ -112,11 +122,14 @@ export function toElkGraph({
     return (slots + 1) * childColumnPitch - horizontalSpacing
   }
 
-  const unionNodes: ElkNode[] = orderedUnions.map((u) => ({
-    id: u.id,
-    width: Math.max(UNION_WIDTH, footprintWidth(u.id)),
-    height: UNION_HEIGHT,
-  }))
+  const unionNodes: ElkNode[] = orderedUnions.map((u) => {
+    const footprint = Math.max(UNION_WIDTH, footprintWidth(u.id))
+    return {
+      id: u.id,
+      width: vertical ? footprint : UNION_WIDTH,
+      height: vertical ? UNION_HEIGHT : footprint,
+    }
+  })
 
   const parentToUnionEdges: ElkExtendedEdge[] = orderedUnions.flatMap((u) =>
     [...u.parents].sort(byPersonRank).map((parentId) => ({

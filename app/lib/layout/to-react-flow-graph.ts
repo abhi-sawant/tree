@@ -1,6 +1,12 @@
 import type { Edge, Node } from "@xyflow/react"
 import type { ElkNode } from "elkjs"
 
+import type { EdgeRouting } from "~/lib/canvas/edge-routing"
+import {
+  HANDLE,
+  isVertical,
+  type LayoutDirection,
+} from "~/lib/canvas/layout-direction"
 import { computeGenerations } from "~/lib/graph/compute-generations"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { PERSON_PREFIX, UNION_PREFIX, personNodeId } from "~/lib/graph/node-ids"
@@ -18,11 +24,17 @@ export interface PersonNodeData extends Record<string, unknown> {
   person: Person
   treeId: string
   overridden: boolean
+  // Which generation the person sits in. Drives the generation filter and the
+  // toolbar, and is not the same thing as colourIndex — colouring can be keyed
+  // on something else entirely.
   generation: number
+  colorIndex: number
+  onBloodline: boolean
 }
 
 export interface UnionNodeData extends Record<string, unknown> {
   union: UnionNode
+  onBloodline: boolean
 }
 
 export interface ToReactFlowGraphOptions {
@@ -33,8 +45,15 @@ export interface ToReactFlowGraphOptions {
   unions: UnionNode[]
   treeId: string
   overriddenNodeIds: string[]
+  // Node ids (people and unions) on the highlighted bloodline, if any.
+  bloodlineNodeIds?: string[]
+  // Palette index per person. Defaults to their generation, which is what the
+  // canvas coloured by before this was configurable.
+  colorIndices?: Map<string, number>
   personWidth?: number
   personHeight?: number
+  direction?: LayoutDirection
+  edgeRouting?: EdgeRouting
   edgeStrokeWidth?: number
   spouseColor?: string
   parentChildColor?: string
@@ -44,6 +63,11 @@ export interface ReactFlowGraph {
   nodes: Node[]
   edges: Edge[]
 }
+
+// Not user-customisable, unlike the relationship colours: this is a transient
+// selection cue, and letting it be recoloured to match one of them would defeat
+// the whole point of it standing out.
+const BLOODLINE_COLOR = "var(--primary)"
 
 // People/unions missing from the current data (or otherwise deleted)
 // shouldn't happen for nodes toElkGraph produced, but a defensive skip is
@@ -56,8 +80,12 @@ export function toReactFlowGraph({
   unions,
   treeId,
   overriddenNodeIds,
+  bloodlineNodeIds = [],
+  colorIndices,
   personWidth = PERSON_WIDTH,
   personHeight = PERSON_HEIGHT,
+  direction = "DOWN",
+  edgeRouting = "smoothstep",
   edgeStrokeWidth = 2,
   spouseColor = "var(--edge-spouse)",
   parentChildColor = "var(--edge-parent-child)",
@@ -65,7 +93,14 @@ export function toReactFlowGraph({
   const peopleById = new Map(people.map((p) => [p.id, p]))
   const unionsById = new Map(unions.map((u) => [u.id, u]))
   const overridden = new Set(overriddenNodeIds)
+  const bloodline = new Set(bloodlineNodeIds)
   const generations = computeGenerations(people, relationships)
+
+  // An edge is on the bloodline only when *both* of its ends are. The other
+  // parent of a union on the path is never in the set, so their half of the
+  // marriage line correctly stays unhighlighted.
+  const onBloodline = (source: string, target: string) =>
+    bloodline.size > 0 && bloodline.has(source) && bloodline.has(target)
 
   // ELK lays the union out in its own layer below the couple (it only ever
   // sees a person->union edge, one layer at a time). We want it sitting
@@ -73,6 +108,7 @@ export function toReactFlowGraph({
   // reads as a single horizontal line straight across, not a bent line
   // dropping to a dot below. Resolve every union's real position up front so
   // node placement and edge handle selection (below) agree on where it is.
+  const vertical = isVertical(direction)
   const resolvedPositions: Record<string, NodePosition> = { ...positions }
   for (const union of unions) {
     const elkPosition = positions[union.id]
@@ -103,6 +139,9 @@ export function toReactFlowGraph({
             treeId,
             overridden: overridden.has(elkNode.id),
             generation: generations.get(person.id) ?? 0,
+            colorIndex:
+              colorIndices?.get(person.id) ?? generations.get(person.id) ?? 0,
+            onBloodline: bloodline.has(elkNode.id),
           } satisfies PersonNodeData,
           width: personWidth,
           height: personHeight,
@@ -118,7 +157,10 @@ export function toReactFlowGraph({
         id: elkNode.id,
         type: "union",
         position,
-        data: { union } satisfies UnionNodeData,
+        data: {
+          union,
+          onBloodline: bloodline.has(elkNode.id),
+        } satisfies UnionNodeData,
         width: UNION_WIDTH,
         height: UNION_HEIGHT,
         draggable: false,
@@ -134,23 +176,33 @@ export function toReactFlowGraph({
     // horizontal line, entering the union from whichever side this parent
     // actually sits on (the couple share a row, so their x order settles it).
     if (source.startsWith(PERSON_PREFIX) && target.startsWith(UNION_PREFIX)) {
-      const personX = resolvedPositions[source]?.x ?? 0
-      const unionX = resolvedPositions[target]?.x ?? 0
-      const personIsLeft = personX < unionX
+      // Whichever side of the union this parent sits on along the cross axis
+      // decides which pair of handles the marriage line uses.
+      const personCross = vertical
+        ? (resolvedPositions[source]?.x ?? 0)
+        : (resolvedPositions[source]?.y ?? 0)
+      const unionCross = vertical
+        ? (resolvedPositions[target]?.x ?? 0)
+        : (resolvedPositions[target]?.y ?? 0)
+      const personIsFirst = personCross < unionCross
       // An end date on the spouse relationship is a divorce or separation —
       // already stored, already carried through to UnionNode.end by
       // deriveUnions, and until now never shown.
       const ended = !!unionsById.get(target)?.end
+      const highlighted = onBloodline(source, target)
       return {
         id: elkEdge.id,
         source,
         target,
-        sourceHandle: personIsLeft ? "right" : "left",
-        targetHandle: personIsLeft ? "left" : "right",
+        sourceHandle: personIsFirst ? HANDLE.crossEnd : HANDLE.crossStart,
+        targetHandle: personIsFirst ? HANDLE.crossStart : HANDLE.crossEnd,
         type: "straight",
+        // Lift the highlighted run above everything else, or a crossing edge
+        // drawn later would cut through the glow.
+        zIndex: highlighted ? 1 : 0,
         style: {
-          strokeWidth: edgeStrokeWidth,
-          stroke: spouseColor,
+          strokeWidth: highlighted ? edgeStrokeWidth * 2.5 : edgeStrokeWidth,
+          stroke: highlighted ? BLOODLINE_COLOR : spouseColor,
           // Short dashes, distinct from the long dash a non-biological
           // parent-child link uses, so the two never read as the same thing.
           ...(ended ? { strokeDasharray: "3 3" } : {}),
@@ -172,16 +224,21 @@ export function toReactFlowGraph({
       : [source.slice(PERSON_PREFIX.length)]
     const subtype = sharedParentLinkSubtype(relationships, childId, parentIds)
 
+    const highlighted = onBloodline(source, target)
+
     return {
       id: elkEdge.id,
       source,
       target,
-      sourceHandle: source.startsWith(PERSON_PREFIX) ? "bottom" : undefined,
-      type: "smoothstep",
+      sourceHandle: source.startsWith(PERSON_PREFIX)
+        ? HANDLE.children
+        : undefined,
+      type: edgeRouting,
       data: { subtype },
+      zIndex: highlighted ? 1 : 0,
       style: {
-        strokeWidth: edgeStrokeWidth,
-        stroke: parentChildColor,
+        strokeWidth: highlighted ? edgeStrokeWidth * 2.5 : edgeStrokeWidth,
+        stroke: highlighted ? BLOODLINE_COLOR : parentChildColor,
         // Dashed for any link that isn't by birth. The long dash distinguishes
         // it at a glance from the short dash an ended marriage uses.
         ...(subtype && subtype !== "biological"
@@ -214,7 +271,11 @@ function unionPosition(
   const posB = positions[personNodeId(parentBId)]
   if (!posA || !posB) return elkPosition
 
-  const centerX = (posA.x + personWidth / 2 + posB.x + personWidth / 2) / 2
+  // The midpoint of the couple's two centres, which needs no direction branch:
+  // along the cross axis the two differ and this is the true midpoint, while
+  // along the main axis they share a coordinate and it collapses to the centre
+  // of their shared row (or column). Both are exactly what we want.
+  const centerX = (posA.x + posB.x) / 2 + personWidth / 2
   const centerY = (posA.y + posB.y) / 2 + personHeight / 2
   return { x: centerX - UNION_WIDTH / 2, y: centerY - UNION_HEIGHT / 2 }
 }

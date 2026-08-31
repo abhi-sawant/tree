@@ -52,10 +52,12 @@ export function AppShell({
   const resetHiddenGenerations = useCanvasUIStore(
     (s) => s.resetHiddenGenerations
   )
+  const clearFocus = useCanvasUIStore((s) => s.clearFocus)
   useEffect(() => {
     select(null)
     resetHiddenGenerations()
-  }, [tree.id, select, resetHiddenGenerations])
+    clearFocus()
+  }, [tree.id, select, resetHiddenGenerations, clearFocus])
 
   const [createTreeOpen, setCreateTreeOpen] = useState(false)
   const [addPersonOpen, setAddPersonOpen] = useState(false)

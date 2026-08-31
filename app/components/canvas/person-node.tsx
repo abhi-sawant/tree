@@ -28,6 +28,7 @@ import { formatPartialDate } from "~/lib/partial-date"
 import { cn } from "~/lib/utils"
 import type { PersonNodeData } from "~/lib/layout/to-react-flow-graph"
 import { personDisplayName } from "~/lib/person-name"
+import { HANDLE, directionGeometry } from "~/lib/canvas/layout-direction"
 
 export type PersonNodeType = Node<PersonNodeData, "person">
 
@@ -39,12 +40,17 @@ const QUICK_ADD: Array<{ kind: AddActionKind; label: string }> = [
 ]
 
 export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
-  const { person, treeId, overridden, generation } = data
+  const { person, treeId, overridden, colorIndex, onBloodline } = data
+  const geometry = directionGeometry(
+    useAppearanceStore((s) => s.settings.layoutDirection)
+  )
   const generationColors = useAppearanceStore(
     (s) => s.settings.generationColors
   )
   const avatarSize = useAppearanceStore((s) => s.settings.avatarSize)
-  const levelColor = resolveGenerationColor(generation, generationColors)
+  const showPhoto = useAppearanceStore((s) => s.settings.showPhoto)
+  const showDates = useAppearanceStore((s) => s.settings.showDates)
+  const levelColor = resolveGenerationColor(colorIndex, generationColors)
   const requestAddRelative = useCanvasUIStore((s) => s.requestAddRelative)
   // The node array is controlled, so React Flow's own `selected` prop never
   // makes it back onto these nodes — the canvas UI store is the one source
@@ -64,24 +70,38 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
     <div
       className={cn(
         "flex h-full w-full flex-col items-center justify-center gap-2.5 border border-neutral-500 bg-card px-3 text-center",
+        // A softer ring than the selection one, so the selected card still
+        // reads as the selected card within a highlighted line.
+        onBloodline && !selected && "ring-2 ring-primary/40",
         selected && "ring-2 ring-primary"
       )}
       style={{ borderLeftWidth: 3, borderLeftColor: levelColor }}
     >
-      <Handle type="target" position={Position.Top} isConnectable={false} />
       <Handle
-        type="source"
-        position={Position.Left}
-        id="left"
+        type="target"
+        position={geometry.inPosition}
+        id={HANDLE.in}
         isConnectable={false}
       />
       <Handle
         type="source"
-        position={Position.Right}
-        id="right"
+        position={geometry.crossStartPosition}
+        id={HANDLE.crossStart}
         isConnectable={false}
       />
-      <PersonAvatar photoId={person.photoId} size="card" sizePx={avatarSize} />
+      <Handle
+        type="source"
+        position={geometry.crossEndPosition}
+        id={HANDLE.crossEnd}
+        isConnectable={false}
+      />
+      {showPhoto && (
+        <PersonAvatar
+          photoId={person.photoId}
+          size="card"
+          sizePx={avatarSize}
+        />
+      )}
       <div className="flex min-w-0 flex-col gap-px">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-xl font-semibold">{name}</span>
@@ -96,7 +116,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
             <Pin className="size-3 shrink-0 text-muted-foreground" />
           )}
         </div>
-        {dates && (
+        {showDates && dates && (
           <span className="truncate text-sm text-muted-foreground">
             {dates}
           </span>
@@ -104,8 +124,8 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
       </div>
       <Handle
         type="source"
-        position={Position.Bottom}
-        id="bottom"
+        position={geometry.childrenPosition}
+        id={HANDLE.children}
         isConnectable={false}
       />
     </div>

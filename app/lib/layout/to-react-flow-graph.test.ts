@@ -1,5 +1,7 @@
+import type { Node } from "@xyflow/react"
 import { describe, expect, it } from "vitest"
 
+import { HANDLE } from "~/lib/canvas/layout-direction"
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import {
   PERSON_HEIGHT,
@@ -240,15 +242,15 @@ describe("toReactFlowGraph", () => {
 
     const edgeFromA = edges.find((e) => e.source === `person:${a.id}`)!
     expect(edgeFromA).toMatchObject({
-      sourceHandle: "right",
-      targetHandle: "left",
+      sourceHandle: HANDLE.crossEnd,
+      targetHandle: HANDLE.crossStart,
       type: "straight",
     })
 
     const edgeFromB = edges.find((e) => e.source === `person:${b.id}`)!
     expect(edgeFromB).toMatchObject({
-      sourceHandle: "left",
-      targetHandle: "right",
+      sourceHandle: HANDLE.crossStart,
+      targetHandle: HANDLE.crossEnd,
       type: "straight",
     })
   })
@@ -310,7 +312,7 @@ describe("toReactFlowGraph", () => {
     expect(edges[0]).toMatchObject({
       source: `person:${parent.id}`,
       target: `person:${child.id}`,
-      sourceHandle: "bottom",
+      sourceHandle: HANDLE.children,
       type: "smoothstep",
     })
   })
@@ -488,5 +490,165 @@ describe("toReactFlowGraph marriage edges", () => {
     // adoption mean entirely different things.
     const ended = marriageEdges({ end: { year: 1995 } })[0]
     expect(ended.style?.strokeDasharray).not.toBe("7 5")
+  })
+})
+
+describe("toReactFlowGraph bloodline highlighting", () => {
+  // mum + dad -> kid, so the kid's link is drawn through a union dot. The
+  // fixture is built first and rendered second, because the node ids fed in as
+  // the bloodline are the ones generated here.
+  function fixture() {
+    const treeId = id()
+    const mum = person({ givenName: "Mum" })
+    const dad = person({ givenName: "Dad" })
+    const kid = person({ givenName: "Kid" })
+    const people = [mum, dad, kid]
+    const relationships = [
+      spouse(mum.id, dad.id),
+      parentChild(mum.id, kid.id),
+      parentChild(dad.id, kid.id),
+    ]
+    const { unions } = deriveUnions(people, relationships)
+    const graph = toElkGraph({
+      people,
+      relationships,
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+    return { treeId, people, relationships, unions, graph, mum, dad, kid }
+  }
+
+  function render(f: ReturnType<typeof fixture>, bloodlineNodeIds?: string[]) {
+    return toReactFlowGraph({
+      graph: f.graph,
+      positions: {},
+      people: f.people,
+      relationships: f.relationships,
+      unions: f.unions,
+      treeId: f.treeId,
+      overriddenNodeIds: [],
+      bloodlineNodeIds,
+    })
+  }
+
+  // The line runs mum -> union -> kid, deliberately leaving dad off it.
+  function lineOf(f: ReturnType<typeof fixture>): string[] {
+    return [`person:${f.mum.id}`, f.unions[0].id, `person:${f.kid.id}`]
+  }
+
+  function flagOf(nodes: Node[], nodeId: string): boolean {
+    const node = nodes.find((n) => n.id === nodeId)
+    expect(node).toBeDefined()
+    return (node!.data as PersonNodeData | UnionNodeData).onBloodline
+  }
+
+  it("highlights nothing when no bloodline is given", () => {
+    const f = fixture()
+    const { nodes, edges } = render(f)
+    for (const node of nodes) expect(flagOf(nodes, node.id)).toBe(false)
+    for (const edge of edges) expect(edge.zIndex).toBe(0)
+  })
+
+  it("marks every node on the line, including the union", () => {
+    const f = fixture()
+    const { nodes } = render(f, lineOf(f))
+    expect(flagOf(nodes, `person:${f.mum.id}`)).toBe(true)
+    expect(flagOf(nodes, f.unions[0].id)).toBe(true)
+    expect(flagOf(nodes, `person:${f.kid.id}`)).toBe(true)
+  })
+
+  it("leaves the off-line parent unmarked", () => {
+    const f = fixture()
+    const { nodes } = render(f, lineOf(f))
+    expect(flagOf(nodes, `person:${f.dad.id}`)).toBe(false)
+  })
+
+  it("highlights only the on-line half of the marriage line", () => {
+    // Both halves run person -> union, but only the parent actually on the
+    // line is in the set, so the other half must stay plain.
+    const f = fixture()
+    const { edges } = render(f, lineOf(f))
+    const unionId = f.unions[0].id
+    const mumEdge = edges.find(
+      (e) => e.source === `person:${f.mum.id}` && e.target === unionId
+    )
+    const dadEdge = edges.find(
+      (e) => e.source === `person:${f.dad.id}` && e.target === unionId
+    )
+    expect(mumEdge?.zIndex).toBe(1)
+    expect(dadEdge?.zIndex).toBe(0)
+  })
+
+  it("thickens and recolours the highlighted run", () => {
+    const f = fixture()
+    const { edges } = render(f, lineOf(f))
+    const childEdge = edges.find((e) => e.target === `person:${f.kid.id}`)
+    expect(childEdge?.style?.stroke).toBe("var(--primary)")
+    expect(childEdge?.style?.strokeWidth).toBe(5)
+  })
+})
+
+describe("toReactFlowGraph edge routing", () => {
+  function edgesFor(
+    edgeRouting?: "smoothstep" | "step" | "straight" | "default"
+  ) {
+    const treeId = id()
+    const parent = person({ givenName: "Parent" })
+    const child = person({ givenName: "Child" })
+    const people = [parent, child]
+    const relationships = [parentChild(parent.id, child.id)]
+    const { unions } = deriveUnions(people, relationships)
+    const graph = toElkGraph({
+      people,
+      relationships,
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+    return toReactFlowGraph({
+      graph,
+      positions: {},
+      people,
+      relationships,
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+      edgeRouting,
+    }).edges
+  }
+
+  it("defaults to rounded steps, matching the shipped look", () => {
+    expect(edgesFor()[0].type).toBe("smoothstep")
+  })
+
+  it("applies the chosen routing to parent-child lines", () => {
+    expect(edgesFor("straight")[0].type).toBe("straight")
+    expect(edgesFor("default")[0].type).toBe("default")
+    expect(edgesFor("step")[0].type).toBe("step")
+  })
+
+  it("always draws a marriage line straight, whatever the routing", () => {
+    // The marriage line is a short connector between a couple and their union
+    // dot; curving it reads as a relationship, which it is not.
+    const treeId = id()
+    const a = person()
+    const b = person()
+    const people = [a, b]
+    const relationships = [spouse(a.id, b.id)]
+    const { unions } = deriveUnions(people, relationships)
+    const graph = toElkGraph({
+      people,
+      relationships,
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+    const { edges } = toReactFlowGraph({
+      graph,
+      positions: {},
+      people,
+      relationships,
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+      edgeRouting: "default",
+    })
+    expect(edges).toHaveLength(2)
+    for (const edge of edges) expect(edge.type).toBe("straight")
   })
 })

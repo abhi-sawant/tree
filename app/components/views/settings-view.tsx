@@ -13,6 +13,7 @@ import {
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
+import { Select } from "~/components/ui/select"
 import { getLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
 import {
@@ -28,6 +29,11 @@ import {
   type ImportBackupResult,
 } from "~/lib/export/json"
 import { isStoragePersisted } from "~/lib/storage"
+import {
+  THEME_OPTIONS,
+  useThemeStore,
+  type ThemePreference,
+} from "~/lib/ui/theme-store"
 import { toast } from "~/lib/ui/toast-store"
 
 interface SettingsViewProps {
@@ -77,6 +83,9 @@ export function SettingsView({
       toast("GEDCOM export failed — nothing was downloaded")
     }
   }
+
+  const theme = useThemeStore((s) => s.theme)
+  const setTheme = useThemeStore((s) => s.setTheme)
 
   async function handleExportIcs() {
     try {
@@ -152,6 +161,27 @@ export function SettingsView({
         <p className="text-12-5 leading-relaxed text-muted-foreground">
           Everything lives in this browser. Nothing is uploaded — export a
           backup regularly.
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-2.5">
+        <SectionHeading>Appearance</SectionHeading>
+        <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
+          Theme
+          <Select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as ThemePreference)}
+          >
+            {THEME_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </Label>
+        <p className="text-12-5 leading-relaxed text-muted-foreground">
+          Saved in this browser and applied before the page paints, so switching
+          to dark doesn&apos;t flash white on every load.
         </p>
       </section>
 

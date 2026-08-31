@@ -1,6 +1,10 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
+import type { ColorBy } from "~/lib/canvas/color-groups"
+import type { EdgeRouting } from "~/lib/canvas/edge-routing"
+import type { LayoutDirection } from "~/lib/canvas/layout-direction"
+
 export const GENERATION_LEVELS = 6
 
 export interface AppearanceSettings {
@@ -10,6 +14,11 @@ export interface AppearanceSettings {
   horizontalSpacing: number
   verticalSpacing: number
   edgeStrokeWidth: number
+  layoutDirection: LayoutDirection
+  edgeRouting: EdgeRouting
+  showPhoto: boolean
+  showDates: boolean
+  colorBy: ColorBy
   spouseColor: string | null
   parentChildColor: string | null
   generationColors: (string | null)[]
@@ -26,6 +35,11 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   horizontalSpacing: 40,
   verticalSpacing: 90,
   edgeStrokeWidth: 2,
+  layoutDirection: "DOWN",
+  edgeRouting: "smoothstep",
+  showPhoto: true,
+  showDates: true,
+  colorBy: "generation",
   spouseColor: null,
   parentChildColor: null,
   generationColors: Array.from({ length: GENERATION_LEVELS }, () => null),

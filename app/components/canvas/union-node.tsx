@@ -1,4 +1,4 @@
-import { Handle, Position, type Node, type NodeProps } from "@xyflow/react"
+import { Handle, type Node, type NodeProps } from "@xyflow/react"
 import { Heart } from "lucide-react"
 
 import {
@@ -12,10 +12,15 @@ import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import { resolveEdgeColor } from "~/lib/canvas/appearance-resolve"
 import { cn } from "~/lib/utils"
 import type { UnionNodeData } from "~/lib/layout/to-react-flow-graph"
+import { HANDLE, directionGeometry } from "~/lib/canvas/layout-direction"
 
 export type UnionNodeType = Node<UnionNodeData, "union">
 
 export function UnionNode({ id, data }: NodeProps<UnionNodeType>) {
+  const onBloodline = data.onBloodline
+  const geometry = directionGeometry(
+    useAppearanceStore((s) => s.settings.layoutDirection)
+  )
   const select = useCanvasUIStore((s) => s.select)
   const selected = useCanvasUIStore((s) => s.selectedNodeId === id)
   const requestRecordMarriage = useCanvasUIStore((s) => s.requestRecordMarriage)
@@ -36,6 +41,7 @@ export function UnionNode({ id, data }: NodeProps<UnionNodeType>) {
     <div
       className={cn(
         "h-full w-full rounded-full",
+        onBloodline && !selected && "ring-2 ring-primary/40",
         selected && "ring-3 ring-primary"
       )}
       style={
@@ -50,17 +56,21 @@ export function UnionNode({ id, data }: NodeProps<UnionNodeType>) {
     <>
       <Handle
         type="target"
-        position={Position.Left}
-        id="left"
+        position={geometry.crossStartPosition}
+        id={HANDLE.crossStart}
         isConnectable={false}
       />
       <Handle
         type="target"
-        position={Position.Right}
-        id="right"
+        position={geometry.crossEndPosition}
+        id={HANDLE.crossEnd}
         isConnectable={false}
       />
-      <Handle type="source" position={Position.Bottom} isConnectable={false} />
+      <Handle
+        type="source"
+        position={geometry.childrenPosition}
+        isConnectable={false}
+      />
     </>
   )
 

@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
 import type { AddActionKind } from "~/components/canvas/add-relative-menu"
+import type { FocusMode, FocusScope } from "~/lib/canvas/focus-scope"
 
 interface PendingMarriage {
   parents: [string, string]
@@ -43,6 +44,21 @@ interface CanvasUIState {
   hiddenGenerations: number[]
   toggleGeneration: (generation: number) => void
   resetHiddenGenerations: () => void
+
+  // Narrows the canvas to one person's lineage. Unlike hiddenGenerations this
+  // is applied *before* layout (see tree-view), so the remaining people lay out
+  // compactly instead of keeping the gaps left by everyone removed.
+  // Whether to glow the line of descent from the selected person to the tree
+  // root. Off by default: selection already draws a ring, and glowing a whole
+  // path on every click would be noise rather than information.
+  showBloodline: boolean
+  toggleBloodline: () => void
+
+  focus: FocusScope | null
+  setFocus: (focus: FocusScope) => void
+  setFocusMode: (mode: FocusMode) => void
+  setFocusDepth: (generations: number) => void
+  clearFocus: () => void
 }
 
 export const useCanvasUIStore = create<CanvasUIState>((set) => ({
@@ -62,6 +78,22 @@ export const useCanvasUIStore = create<CanvasUIState>((set) => ({
   requestCenter: (nodeId) =>
     set({ selectedNodeId: nodeId, pendingCenterNodeId: nodeId }),
   clearPendingCenter: () => set({ pendingCenterNodeId: null }),
+
+  showBloodline: false,
+  toggleBloodline: () =>
+    set((state) => ({ showBloodline: !state.showBloodline })),
+
+  focus: null,
+  setFocus: (focus) => set({ focus }),
+  // Changing one dimension of an existing focus keeps the other two, so the
+  // toolbar's mode and depth menus don't each need the whole scope.
+  setFocusMode: (mode) =>
+    set((state) => (state.focus ? { focus: { ...state.focus, mode } } : state)),
+  setFocusDepth: (generations) =>
+    set((state) =>
+      state.focus ? { focus: { ...state.focus, generations } } : state
+    ),
+  clearFocus: () => set({ focus: null }),
 
   hiddenGenerations: [],
   toggleGeneration: (generation) =>

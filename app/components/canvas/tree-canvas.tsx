@@ -22,12 +22,14 @@ import {
 } from "~/lib/canvas/appearance-resolve"
 import { setMemberPosition } from "~/lib/db/members"
 import { parseNodeId } from "~/lib/graph/node-ids"
+import type { Person } from "~/lib/types"
 
 const nodeTypes = { person: PersonNode, union: UnionNode }
 
 interface TreeCanvasProps {
   treeId: string
   generationCount: number
+  people: Person[]
   nodes: Node[]
   edges: Edge[]
 }
@@ -35,6 +37,7 @@ interface TreeCanvasProps {
 export function TreeCanvas({
   treeId,
   generationCount,
+  people,
   nodes,
   edges,
 }: TreeCanvasProps) {
@@ -95,7 +98,11 @@ export function TreeCanvas({
         size={1}
         color="var(--canvas-dot)"
       />
-      <TreeToolbar treeId={treeId} generationCount={generationCount} />
+      <TreeToolbar
+        treeId={treeId}
+        generationCount={generationCount}
+        people={people}
+      />
       <Panel position="bottom-left">
         <div className="flex gap-3 border border-border bg-card px-2.5 py-2">
           {legend.map((item) => (
