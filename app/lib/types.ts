@@ -1,3 +1,5 @@
+import type { BackupDirectoryHandle } from "~/lib/backup/file-system-access"
+
 export type PartialDate = {
   year?: number
   month?: number
@@ -111,4 +113,24 @@ export interface Snapshot {
     trees: number
     members: number
   }
+}
+
+// The folder on disk the app mirrors a backup into. A single row: mirroring to
+// two folders at once would double the write cost for a second copy on the same
+// machine, which is not what the risk in §5.1 is about.
+export interface BackupTarget {
+  id: string
+  // Structured-clonable, so the browser can hand the same directory back after
+  // a reload. The permission to *use* it does not survive with it — see
+  // folder-backup.ts.
+  handle: BackupDirectoryHandle
+  // Cached from handle.name so the folder can still be named in the UI while
+  // permission is lapsed and the handle can't be touched.
+  name: string
+  chosenAt: number
+  lastWriteAt?: number
+  lastWriteBytes?: number
+  // The last failure, kept so a folder on an unplugged drive says so instead of
+  // silently doing nothing.
+  lastError?: string
 }

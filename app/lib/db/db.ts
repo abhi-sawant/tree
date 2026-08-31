@@ -3,6 +3,7 @@ import Dexie, { type Table } from "dexie"
 import { dataChangeMiddleware } from "~/lib/db/change-signal"
 import type {
   AppMetaRow,
+  BackupTarget,
   Person,
   Photo,
   Relationship,
@@ -19,6 +20,7 @@ export class FamilyTreeDB extends Dexie {
   photos!: Table<Photo, string>
   appMeta!: Table<AppMetaRow, string>
   snapshots!: Table<Snapshot, string>
+  backupTargets!: Table<BackupTarget, string>
 
   constructor() {
     super("FamilyTreeDB")
@@ -43,6 +45,12 @@ export class FamilyTreeDB extends Dexie {
     // because retention only ever asks for these in date order.
     this.version(4).stores({
       snapshots: "id, createdAt",
+    })
+    // Another new store. Holds at most one row, but a keyed table is still the
+    // right shape: a directory handle is an opaque structured-clonable object,
+    // which appMeta's string `value` cannot hold.
+    this.version(5).stores({
+      backupTargets: "id",
     })
 
     // Installed here rather than at the app root so that anything importing

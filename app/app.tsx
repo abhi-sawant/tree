@@ -6,6 +6,7 @@ import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { Button } from "~/components/ui/button"
 import { Toaster } from "~/components/ui/toast"
 import { useAutoSnapshots } from "~/lib/backup/use-auto-snapshots"
+import { useFolderBackup } from "~/lib/backup/use-folder-backup"
 import { usePeople, useRelationships, useTrees } from "~/lib/db/hooks"
 import { computeGenerations } from "~/lib/graph/compute-generations"
 import { deriveUnions } from "~/lib/graph/derive-unions"
@@ -20,6 +21,7 @@ export default function App() {
   // and has to be mounted above the early returns below, or a snapshot would
   // stop being taken whenever the boot skeleton showed.
   useAutoSnapshots()
+  useFolderBackup()
 
   const trees = useTrees()
   const people = usePeople()

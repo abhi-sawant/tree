@@ -14,6 +14,7 @@ import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
+import { BackupFolderPanel } from "~/components/views/backup-folder-panel"
 import { SnapshotsPanel } from "~/components/views/snapshots-panel"
 import { StoragePanel } from "~/components/views/storage-panel"
 import { getLastExportDate } from "~/lib/db/app-meta"
@@ -182,6 +183,11 @@ export function SettingsView({
           Saved in this browser and applied before the page paints, so switching
           to dark doesn&apos;t flash white on every load.
         </p>
+      </section>
+
+      <section className="flex flex-col gap-2.5">
+        <SectionHeading>Backup folder</SectionHeading>
+        <BackupFolderPanel />
       </section>
 
       <section className="flex flex-col gap-2.5">

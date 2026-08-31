@@ -3,7 +3,11 @@ import type { DBCore, DBCoreTable, Middleware } from "dexie"
 // Tables that hold bookkeeping *about* the data rather than the data itself.
 // Writing a snapshot or a last-export date must not itself look like a change,
 // or the snapshot scheduler would feed itself for ever.
-export const BOOKKEEPING_TABLES: readonly string[] = ["appMeta", "snapshots"]
+export const BOOKKEEPING_TABLES: readonly string[] = [
+  "appMeta",
+  "snapshots",
+  "backupTargets",
+]
 
 export type ChangeListener = (tables: readonly string[]) => void
 
