@@ -11,7 +11,7 @@ import { deriveUnions } from "~/lib/graph/derive-unions"
 import { getLastTreeId } from "~/lib/last-tree"
 import { resolveActiveTreeId, useAppShellStore } from "~/lib/ui/app-shell-store"
 
-export default function AppRoute() {
+export default function App() {
   const trees = useTrees()
   const people = usePeople()
   const relationships = useRelationships()

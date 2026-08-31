@@ -1,5 +1,5 @@
-import { reactRouter } from "@react-router/dev/vite"
 import tailwindcss from "@tailwindcss/vite"
+import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import { VitePWA } from "vite-plugin-pwa"
 
@@ -7,7 +7,7 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
     tailwindcss(),
-    reactRouter(),
+    react(),
     VitePWA({
       registerType: "prompt",
       injectRegister: null,

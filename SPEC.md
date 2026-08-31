@@ -209,7 +209,6 @@ No nagging. Just make the risk legible.
 | Concern | Choice | Note |
 |---|---|---|
 | Build | Vite + React 19 + TypeScript (strict) | |
-| Routing | React Router 7 | `/tree/:id`, `/people`, `/settings` |
 | Styling | Tailwind + shadcn/ui | |
 | Canvas | `@xyflow/react` | Custom person nodes + union nodes |
 | Layout | `elkjs` | `layered` algorithm, run in a web worker |

@@ -15,7 +15,7 @@ npm run dev
 
 ## Build
 
-Produces a static `build/client` bundle suitable for any static host.
+Produces a static `dist` bundle suitable for any static host.
 
 ```bash
 npm run build
