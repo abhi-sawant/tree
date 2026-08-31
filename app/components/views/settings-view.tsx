@@ -14,6 +14,7 @@ import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
+import { StoragePanel } from "~/components/views/storage-panel"
 import { getLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
 import {
@@ -158,10 +159,7 @@ export function SettingsView({
             {lastExport ? new Date(lastExport).toLocaleString() : "never"}
           </span>
         </div>
-        <p className="text-12-5 leading-relaxed text-muted-foreground">
-          Everything lives in this browser. Nothing is uploaded — export a
-          backup regularly.
-        </p>
+        <StoragePanel />
       </section>
 
       <section className="flex flex-col gap-2.5">

@@ -4,9 +4,12 @@ import { db } from "~/lib/db/db"
 import { createPerson } from "~/lib/db/people"
 import {
   computeTargetDimensions,
+  recompressAllPhotos,
+  recompressPhoto,
   removePersonPhoto,
   resizeAndCompressImage,
   setPersonPhoto,
+  shouldKeepRecompressed,
 } from "~/lib/photos"
 
 afterEach(async () => {
@@ -110,5 +113,140 @@ describe("removePersonPhoto", () => {
     const person = await createPerson({ givenName: "Ada" })
 
     await expect(removePersonPhoto(person.id)).resolves.toBeUndefined()
+  })
+})
+
+describe("shouldKeepRecompressed", () => {
+  it("keeps a re-encode that saves at least the minimum fraction", () => {
+    expect(shouldKeepRecompressed(1000, 900)).toBe(true)
+    expect(shouldKeepRecompressed(1000, 950)).toBe(true)
+  })
+
+  it("rejects a saving too small to be worth the quality loss", () => {
+    expect(shouldKeepRecompressed(1000, 960)).toBe(false)
+    expect(shouldKeepRecompressed(1000, 1000)).toBe(false)
+  })
+
+  it("rejects a re-encode that grew the file", () => {
+    expect(shouldKeepRecompressed(1000, 1200)).toBe(false)
+  })
+
+  it("honours a custom minimum saving", () => {
+    expect(shouldKeepRecompressed(1000, 990, 0.001)).toBe(true)
+    expect(shouldKeepRecompressed(1000, 500, 0.9)).toBe(false)
+  })
+
+  it("rejects rather than divides by a zero-length blob", () => {
+    expect(shouldKeepRecompressed(0, 0)).toBe(false)
+    expect(shouldKeepRecompressed(1000, 0)).toBe(false)
+  })
+})
+
+describe("recompressPhoto", () => {
+  async function seedPhoto(bytes: number, mime = "image/jpeg") {
+    const person = await createPerson({ givenName: "Ada" })
+    const id = await setPersonPhoto(
+      person.id,
+      new Blob(["x".repeat(bytes)]),
+      mime
+    )
+    return { person, id }
+  }
+
+  it("replaces the blob in place, keeping the same photo id", async () => {
+    const { person, id } = await seedPhoto(1000)
+    const encode = vi
+      .fn()
+      .mockResolvedValue(new Blob(["y".repeat(200)], { type: "image/jpeg" }))
+
+    const result = await recompressPhoto(id, { encode })
+
+    expect(result).toEqual({
+      photoId: id,
+      before: 1000,
+      after: 200,
+      replaced: true,
+    })
+    expect((await db.photos.get(id))?.blob.size).toBe(200)
+    // The person still points at the same row, so nothing had to be rewritten.
+    expect((await db.people.get(person.id))?.photoId).toBe(id)
+  })
+
+  it("keeps the original when the saving is too small", async () => {
+    const { id } = await seedPhoto(1000)
+    const encode = vi.fn().mockResolvedValue(new Blob(["y".repeat(990)]))
+
+    const result = await recompressPhoto(id, { encode })
+
+    expect(result).toMatchObject({ replaced: false })
+    expect((await db.photos.get(id))?.blob.size).toBe(1000)
+  })
+
+  it("keeps the original when the photo can't be decoded", async () => {
+    const { id } = await seedPhoto(1000)
+    const encode = vi.fn().mockRejectedValue(new Error("unsupported format"))
+
+    const result = await recompressPhoto(id, { encode })
+
+    expect(result).toEqual({
+      photoId: id,
+      before: 1000,
+      after: 1000,
+      replaced: false,
+    })
+    expect((await db.photos.get(id))?.blob.size).toBe(1000)
+  })
+
+  it("returns undefined for a photo id that doesn't exist", async () => {
+    expect(await recompressPhoto("nope", { encode: vi.fn() })).toBeUndefined()
+  })
+})
+
+describe("recompressAllPhotos", () => {
+  it("totals kept bytes using the original size where nothing was replaced", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    await setPersonPhoto(person.id, new Blob(["x".repeat(1000)]), "image/jpeg")
+    const other = await createPerson({ givenName: "Grace" })
+    await setPersonPhoto(other.id, new Blob(["x".repeat(500)]), "image/jpeg")
+
+    // Halves the first photo; leaves the second alone.
+    const encode = vi
+      .fn()
+      .mockImplementation((blob: Blob) =>
+        Promise.resolve(
+          blob.size === 1000
+            ? new Blob(["y".repeat(400)])
+            : new Blob(["y".repeat(500)])
+        )
+      )
+
+    const summary = await recompressAllPhotos({ encode })
+
+    expect(summary.considered).toBe(2)
+    expect(summary.replaced).toBe(1)
+    expect(summary.bytesBefore).toBe(1500)
+    expect(summary.bytesAfter).toBe(900)
+  })
+
+  it("reports progress once per photo", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    await setPersonPhoto(person.id, new Blob(["x"]), "image/jpeg")
+    const onProgress = vi.fn()
+
+    await recompressAllPhotos({
+      encode: vi.fn().mockResolvedValue(new Blob([""])),
+      onProgress,
+    })
+
+    expect(onProgress).toHaveBeenCalledWith(1, 1)
+  })
+
+  it("returns a zeroed summary with no photos stored", async () => {
+    expect(await recompressAllPhotos({ encode: vi.fn() })).toEqual({
+      considered: 0,
+      replaced: 0,
+      bytesBefore: 0,
+      bytesAfter: 0,
+    })
   })
 })
