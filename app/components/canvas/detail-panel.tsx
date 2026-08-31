@@ -14,6 +14,8 @@ import { PartialDateFields } from "~/components/people/partial-date-fields"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import { Button } from "~/components/ui/button"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import { useAppearanceStore } from "~/lib/canvas/appearance-store"
+import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import { resolveSelection } from "~/lib/canvas/resolve-selection"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { personNodeId } from "~/lib/graph/node-ids"
@@ -38,8 +40,6 @@ import type { PersonFormValues } from "~/lib/schemas"
 import { toast } from "~/lib/ui/toast-store"
 import { cn } from "~/lib/utils"
 import type { Person, Relationship } from "~/lib/types"
-
-const GENERATION_LEVELS = 6
 
 type DetailTab = "details" | "family" | "notes"
 
@@ -172,12 +172,17 @@ export function DetailPanel({
 }
 
 function GenerationChip({ generation }: { generation: number | undefined }) {
+  const generationColors = useAppearanceStore(
+    (s) => s.settings.generationColors
+  )
   if (generation === undefined) return null
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
         className="size-2 rounded-xs"
-        style={{ background: `var(--level-${generation % GENERATION_LEVELS})` }}
+        style={{
+          background: resolveGenerationColor(generation, generationColors),
+        }}
       />
       Gen {generation + 1}
     </span>

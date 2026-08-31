@@ -2,6 +2,8 @@ import { useEffect, useState } from "react"
 
 import { PersonAvatar } from "~/components/people/person-avatar"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import { useAppearanceStore } from "~/lib/canvas/appearance-store"
+import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import { useSearchPeople } from "~/lib/db/hooks"
 import { personNodeId } from "~/lib/graph/node-ids"
 import { formatPartialDate } from "~/lib/partial-date"
@@ -9,7 +11,6 @@ import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import type { Person } from "~/lib/types"
 
 const MAX_RESULTS = 24
-const GENERATION_LEVELS = 6
 
 interface CommandPaletteProps {
   generations: Map<string, number>
@@ -24,6 +25,9 @@ export function CommandPalette({
   const setPaletteOpen = useAppShellStore((s) => s.setPaletteOpen)
   const setView = useAppShellStore((s) => s.setView)
   const requestCenter = useCanvasUIStore((s) => s.requestCenter)
+  const generationColors = useAppearanceStore(
+    (s) => s.settings.generationColors
+  )
   const [query, setQuery] = useState("")
 
   const results = useSearchPeople(query)?.slice(0, MAX_RESULTS) ?? []
@@ -103,7 +107,10 @@ export function CommandPalette({
                       <span
                         className="size-2 rounded-xs"
                         style={{
-                          background: `var(--level-${generation % GENERATION_LEVELS})`,
+                          background: resolveGenerationColor(
+                            generation,
+                            generationColors
+                          ),
                         }}
                       />
                       Gen {generation + 1}

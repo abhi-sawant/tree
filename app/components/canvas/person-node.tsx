@@ -20,6 +20,8 @@ import {
   ContextMenuTrigger,
 } from "~/components/ui/context-menu"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import { useAppearanceStore } from "~/lib/canvas/appearance-store"
+import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import { clearMemberPosition } from "~/lib/db/members"
 import { personNodeId } from "~/lib/graph/node-ids"
 import { formatPartialDate } from "~/lib/partial-date"
@@ -27,12 +29,6 @@ import { cn } from "~/lib/utils"
 import type { PersonNodeData } from "~/lib/layout/to-react-flow-graph"
 
 export type PersonNodeType = Node<PersonNodeData, "person">
-
-// Cycles through a fixed palette so generations keep reading as distinct
-// colors even in a tree deep enough to run past the palette's length —
-// distinguishing them exactly (vs. wrapping) would need an unbounded set of
-// colors, which stops being visually distinguishable well before this does.
-const GENERATION_LEVELS = 6
 
 const QUICK_ADD: Array<{ kind: AddActionKind; label: string }> = [
   { kind: "add-parent", label: "+ Parent" },
@@ -43,7 +39,11 @@ const QUICK_ADD: Array<{ kind: AddActionKind; label: string }> = [
 
 export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   const { person, treeId, overridden, generation } = data
-  const levelColor = `var(--level-${generation % GENERATION_LEVELS})`
+  const generationColors = useAppearanceStore(
+    (s) => s.settings.generationColors
+  )
+  const avatarSize = useAppearanceStore((s) => s.settings.avatarSize)
+  const levelColor = resolveGenerationColor(generation, generationColors)
   const requestAddRelative = useCanvasUIStore((s) => s.requestAddRelative)
   // The node array is controlled, so React Flow's own `selected` prop never
   // makes it back onto these nodes — the canvas UI store is the one source
@@ -63,7 +63,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   const card = (
     <div
       className={cn(
-        "flex flex-col text-center justify-center h-full w-full items-center gap-2.5 border border-neutral-500 bg-card px-3",
+        "flex h-full w-full flex-col items-center justify-center gap-2.5 border border-neutral-500 bg-card px-3 text-center",
         selected && "ring-2 ring-primary"
       )}
       style={{ borderLeftWidth: 3, borderLeftColor: levelColor }}
@@ -81,7 +81,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
         id="right"
         isConnectable={false}
       />
-      <PersonAvatar photoId={person.photoId} size="card" />
+      <PersonAvatar photoId={person.photoId} size="card" sizePx={avatarSize} />
       <div className="flex min-w-0 flex-col gap-px">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-xl font-semibold">{name}</span>

@@ -1,7 +1,10 @@
 import type { ElkNode } from "elkjs"
 import { useEffect, useState } from "react"
 
-import type { ElkWorkerRequest, ElkWorkerResponse } from "~/lib/layout/elk-worker"
+import type {
+  ElkWorkerRequest,
+  ElkWorkerResponse,
+} from "~/lib/layout/elk-worker"
 import type { NodePosition } from "~/lib/layout/run-layout"
 
 export type LayoutStatus = "idle" | "computing" | "done" | "error"
@@ -14,6 +17,7 @@ export interface LayoutState {
 export function useElkLayout(
   graph: ElkNode | undefined,
   overriddenNodeIds: string[],
+  layoutOptions?: Record<string, string>
 ): LayoutState {
   const [state, setState] = useState<LayoutState>({ status: "idle" })
 
@@ -34,13 +38,17 @@ export function useElkLayout(
       if (cancelled) return
       setState((s) => ({ ...s, status: "error" }))
     }
-    worker.postMessage({ graph, overriddenNodeIds } satisfies ElkWorkerRequest)
+    worker.postMessage({
+      graph,
+      overriddenNodeIds,
+      layoutOptions,
+    } satisfies ElkWorkerRequest)
 
     return () => {
       cancelled = true
       worker.terminate()
     }
-  }, [graph, overriddenNodeIds])
+  }, [graph, overriddenNodeIds, layoutOptions])
 
   return state
 }

@@ -24,6 +24,23 @@ export const DEFAULT_LAYOUT_OPTIONS: Record<string, string> = {
   "elk.layered.crossingMinimization.forceNodeModelOrder": "true",
 }
 
+// horizontalSpacing here must track the horizontalSpacing passed into
+// toElkGraph (see to-elk-graph.ts's childColumnPitch) — both derive a union's
+// child-column footprint from the same number.
+export function buildLayoutOptions({
+  horizontalSpacing,
+  verticalSpacing,
+}: {
+  horizontalSpacing: number
+  verticalSpacing: number
+}): Record<string, string> {
+  return {
+    ...DEFAULT_LAYOUT_OPTIONS,
+    "elk.layered.spacing.nodeNodeBetweenLayers": String(verticalSpacing),
+    "elk.spacing.nodeNode": String(horizontalSpacing),
+  }
+}
+
 // Takes a pre-constructed ELK instance rather than building one itself:
 // elkjs needs a different construction on Node (compute-layout.ts) vs. inside
 // a browser Worker (elk-worker.ts) — see elk-worker.ts for why.

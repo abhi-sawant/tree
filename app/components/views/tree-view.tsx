@@ -10,10 +10,13 @@ import { DetailPanel } from "~/components/canvas/detail-panel"
 import { TreeCanvas } from "~/components/canvas/tree-canvas"
 import { filterHiddenGenerations } from "~/lib/canvas/filter-generations"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import { useAppearanceStore } from "~/lib/canvas/appearance-store"
+import { resolveEdgeColor } from "~/lib/canvas/appearance-resolve"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { personNodeId } from "~/lib/graph/node-ids"
 import { toElkGraph } from "~/lib/graph/to-elk-graph"
 import { useTreeMembers } from "~/lib/db/hooks"
+import { buildLayoutOptions } from "~/lib/layout/run-layout"
 import { mergeLayoutPositions } from "~/lib/layout/merge-positions"
 import {
   toReactFlowGraph,
@@ -46,6 +49,7 @@ export function TreeView({
   const resetHiddenGenerations = useCanvasUIStore(
     (s) => s.resetHiddenGenerations
   )
+  const appearance = useAppearanceStore((s) => s.settings)
   const treeMembers = useTreeMembers(tree.id)
 
   // A node selected in a previously-open tree has no meaning in this one,
@@ -57,8 +61,22 @@ export function TreeView({
 
   const graph = useMemo(() => {
     if (!treeMembers || treeMembers.length === 0) return undefined
-    return toElkGraph({ people, relationships, treeMembers })
-  }, [treeMembers, people, relationships])
+    return toElkGraph({
+      people,
+      relationships,
+      treeMembers,
+      personWidth: appearance.personWidth,
+      personHeight: appearance.personHeight,
+      horizontalSpacing: appearance.horizontalSpacing,
+    })
+  }, [
+    treeMembers,
+    people,
+    relationships,
+    appearance.personWidth,
+    appearance.personHeight,
+    appearance.horizontalSpacing,
+  ])
 
   const overriddenNodeIds = useMemo(
     () =>
@@ -68,7 +86,20 @@ export function TreeView({
     [treeMembers]
   )
 
-  const { status, positions } = useElkLayout(graph, overriddenNodeIds)
+  const layoutOptions = useMemo(
+    () =>
+      buildLayoutOptions({
+        horizontalSpacing: appearance.horizontalSpacing,
+        verticalSpacing: appearance.verticalSpacing,
+      }),
+    [appearance.horizontalSpacing, appearance.verticalSpacing]
+  )
+
+  const { status, positions } = useElkLayout(
+    graph,
+    overriddenNodeIds,
+    layoutOptions
+  )
 
   const mergedPositions = useMemo(() => {
     if (!positions || !treeMembers) return undefined
@@ -85,6 +116,14 @@ export function TreeView({
       unions,
       treeId: tree.id,
       overriddenNodeIds,
+      personWidth: appearance.personWidth,
+      personHeight: appearance.personHeight,
+      edgeStrokeWidth: appearance.edgeStrokeWidth,
+      spouseColor: resolveEdgeColor(appearance.spouseColor, "--edge-spouse"),
+      parentChildColor: resolveEdgeColor(
+        appearance.parentChildColor,
+        "--edge-parent-child"
+      ),
     })
   }, [
     graph,
@@ -94,6 +133,11 @@ export function TreeView({
     unions,
     tree.id,
     overriddenNodeIds,
+    appearance.personWidth,
+    appearance.personHeight,
+    appearance.edgeStrokeWidth,
+    appearance.spouseColor,
+    appearance.parentChildColor,
   ])
 
   // Keep showing the last successfully laid-out graph while a recompute is

@@ -15,16 +15,15 @@ import { PersonNode } from "~/components/canvas/person-node"
 import { TreeToolbar } from "~/components/canvas/tree-toolbar"
 import { UnionNode } from "~/components/canvas/union-node"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import { useAppearanceStore } from "~/lib/canvas/appearance-store"
+import {
+  resolveEdgeColor,
+  resolveGenerationColor,
+} from "~/lib/canvas/appearance-resolve"
 import { setMemberPosition } from "~/lib/db/members"
 import { parseNodeId } from "~/lib/graph/node-ids"
 
 const nodeTypes = { person: PersonNode, union: UnionNode }
-
-const LEGEND = [
-  { color: "var(--edge-parent-child)", label: "Parent–child" },
-  { color: "var(--edge-spouse)", label: "Marriage" },
-  { color: "var(--level-0)", label: "Generation colour" },
-]
 
 interface TreeCanvasProps {
   treeId: string
@@ -40,6 +39,24 @@ export function TreeCanvas({
   edges,
 }: TreeCanvasProps) {
   const select = useCanvasUIStore((s) => s.select)
+  const appearance = useAppearanceStore((s) => s.settings)
+  const legend = [
+    {
+      color: resolveEdgeColor(
+        appearance.parentChildColor,
+        "--edge-parent-child"
+      ),
+      label: "Parent–child",
+    },
+    {
+      color: resolveEdgeColor(appearance.spouseColor, "--edge-spouse"),
+      label: "Marriage",
+    },
+    {
+      color: resolveGenerationColor(0, appearance.generationColors),
+      label: "Generation colour",
+    },
+  ]
 
   const handleNodeDragStop: OnNodeDrag = (_event, node) => {
     const parsed = parseNodeId(node.id)
@@ -81,7 +98,7 @@ export function TreeCanvas({
       <TreeToolbar treeId={treeId} generationCount={generationCount} />
       <Panel position="bottom-left">
         <div className="flex gap-3 border border-border bg-card px-2.5 py-2">
-          {LEGEND.map((item) => (
+          {legend.map((item) => (
             <div key={item.label} className="flex items-center gap-1.5">
               <span className="h-0.5 w-2" style={{ background: item.color }} />
               <span className="font-heading text-9-5 font-medium tracking-wider text-muted-foreground uppercase">

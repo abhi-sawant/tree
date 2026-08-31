@@ -1,6 +1,8 @@
 import { Panel, useReactFlow } from "@xyflow/react"
-import { LayoutGrid } from "lucide-react"
+import { LayoutGrid, Palette } from "lucide-react"
+import { useState } from "react"
 
+import { CustomizePanel } from "~/components/canvas/customize-panel"
 import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
@@ -8,11 +10,11 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { useAppearanceStore } from "~/lib/canvas/appearance-store"
+import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { clearAllPositions } from "~/lib/db/members"
 import { toast } from "~/lib/ui/toast-store"
-
-const GENERATION_LEVELS = 6
 
 interface TreeToolbarProps {
   treeId: string
@@ -23,6 +25,10 @@ export function TreeToolbar({ treeId, generationCount }: TreeToolbarProps) {
   const { fitView } = useReactFlow()
   const hiddenGenerations = useCanvasUIStore((s) => s.hiddenGenerations)
   const toggleGeneration = useCanvasUIStore((s) => s.toggleGeneration)
+  const generationColors = useAppearanceStore(
+    (s) => s.settings.generationColors
+  )
+  const [customizeOpen, setCustomizeOpen] = useState(false)
 
   const visibleCount = generationCount - hiddenGenerations.length
   const generationLabel =
@@ -48,6 +54,13 @@ export function TreeToolbar({ treeId, generationCount }: TreeToolbarProps) {
         <Button variant="outline" size="xs" onClick={() => void fitView()}>
           Fit
         </Button>
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() => setCustomizeOpen(true)}
+        >
+          <Palette /> Customize
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -67,7 +80,10 @@ export function TreeToolbar({ treeId, generationCount }: TreeToolbarProps) {
                 <span
                   className="size-2 shrink-0 rounded-xs"
                   style={{
-                    background: `var(--level-${generation % GENERATION_LEVELS})`,
+                    background: resolveGenerationColor(
+                      generation,
+                      generationColors
+                    ),
                   }}
                 />
                 Generation {generation + 1}
@@ -76,6 +92,7 @@ export function TreeToolbar({ treeId, generationCount }: TreeToolbarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <CustomizePanel open={customizeOpen} onOpenChange={setCustomizeOpen} />
     </Panel>
   )
 }

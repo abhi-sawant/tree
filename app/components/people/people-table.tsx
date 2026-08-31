@@ -10,10 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table"
+import { useAppearanceStore } from "~/lib/canvas/appearance-store"
+import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import { formatPartialDate } from "~/lib/partial-date"
 import type { Person, Tree } from "~/lib/types"
-
-const GENERATION_LEVELS = 6
 
 function relativesSummary(counts: RelativeCounts): string {
   const plural = (n: number, word: string) =>
@@ -57,6 +57,10 @@ export function PeopleTable({
   onAddToTree,
   onRemoveFromTree,
 }: PeopleTableProps) {
+  const generationColors = useAppearanceStore(
+    (s) => s.settings.generationColors
+  )
+
   if (people.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
@@ -110,7 +114,10 @@ export function PeopleTable({
                     <span
                       className="size-2 rounded-xs"
                       style={{
-                        background: `var(--level-${generation % GENERATION_LEVELS})`,
+                        background: resolveGenerationColor(
+                          generation,
+                          generationColors
+                        ),
                       }}
                     />
                     Gen {generation + 1}

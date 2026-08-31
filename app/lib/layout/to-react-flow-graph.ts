@@ -32,6 +32,11 @@ export interface ToReactFlowGraphOptions {
   unions: UnionNode[]
   treeId: string
   overriddenNodeIds: string[]
+  personWidth?: number
+  personHeight?: number
+  edgeStrokeWidth?: number
+  spouseColor?: string
+  parentChildColor?: string
 }
 
 export interface ReactFlowGraph {
@@ -50,6 +55,11 @@ export function toReactFlowGraph({
   unions,
   treeId,
   overriddenNodeIds,
+  personWidth = PERSON_WIDTH,
+  personHeight = PERSON_HEIGHT,
+  edgeStrokeWidth = 2,
+  spouseColor = "var(--edge-spouse)",
+  parentChildColor = "var(--edge-parent-child)",
 }: ToReactFlowGraphOptions): ReactFlowGraph {
   const peopleById = new Map(people.map((p) => [p.id, p]))
   const unionsById = new Map(unions.map((u) => [u.id, u]))
@@ -66,7 +76,13 @@ export function toReactFlowGraph({
   for (const union of unions) {
     const elkPosition = positions[union.id]
     if (elkPosition) {
-      resolvedPositions[union.id] = unionPosition(union, elkPosition, positions)
+      resolvedPositions[union.id] = unionPosition(
+        union,
+        elkPosition,
+        positions,
+        personWidth,
+        personHeight
+      )
     }
   }
 
@@ -87,8 +103,8 @@ export function toReactFlowGraph({
             overridden: overridden.has(elkNode.id),
             generation: generations.get(person.id) ?? 0,
           } satisfies PersonNodeData,
-          width: PERSON_WIDTH,
-          height: PERSON_HEIGHT,
+          width: personWidth,
+          height: personHeight,
           draggable: true,
         },
       ]
@@ -127,7 +143,7 @@ export function toReactFlowGraph({
         sourceHandle: personIsLeft ? "right" : "left",
         targetHandle: personIsLeft ? "left" : "right",
         type: "straight",
-        style: { strokeWidth: 2, stroke: "var(--edge-spouse)" },
+        style: { strokeWidth: edgeStrokeWidth, stroke: spouseColor },
       }
     }
 
@@ -140,7 +156,7 @@ export function toReactFlowGraph({
       target,
       sourceHandle: source.startsWith(PERSON_PREFIX) ? "bottom" : undefined,
       type: "smoothstep",
-      style: { strokeWidth: 2, stroke: "var(--edge-parent-child)" },
+      style: { strokeWidth: edgeStrokeWidth, stroke: parentChildColor },
     }
   })
 
@@ -158,14 +174,16 @@ export function toReactFlowGraph({
 function unionPosition(
   union: UnionNode,
   elkPosition: NodePosition,
-  positions: Record<string, NodePosition>
+  positions: Record<string, NodePosition>,
+  personWidth: number,
+  personHeight: number
 ): NodePosition {
   const [parentAId, parentBId] = union.parents
   const posA = positions[personNodeId(parentAId)]
   const posB = positions[personNodeId(parentBId)]
   if (!posA || !posB) return elkPosition
 
-  const centerX = (posA.x + PERSON_WIDTH / 2 + posB.x + PERSON_WIDTH / 2) / 2
-  const centerY = (posA.y + posB.y) / 2 + PERSON_HEIGHT / 2
+  const centerX = (posA.x + personWidth / 2 + posB.x + personWidth / 2) / 2
+  const centerY = (posA.y + posB.y) / 2 + personHeight / 2
   return { x: centerX - UNION_WIDTH / 2, y: centerY - UNION_HEIGHT / 2 }
 }

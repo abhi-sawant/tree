@@ -17,21 +17,27 @@ const sizeClasses = {
 interface PersonAvatarProps {
   photoId?: string
   size?: keyof typeof sizeClasses
+  // Overrides `size` with an exact pixel value — used where the avatar size
+  // is user-configurable (the canvas card) rather than a fixed design size.
+  sizePx?: number
   className?: string
 }
 
 export function PersonAvatar({
   photoId,
   size = "lg",
+  sizePx,
   className,
 }: PersonAvatarProps) {
   const url = usePhotoUrl(photoId)
+  const style = sizePx ? { width: sizePx, height: sizePx } : undefined
 
   if (url) {
     return (
       <img
         src={url}
         alt=""
+        style={style}
         className={cn(
           sizeClasses[size],
           "shrink-0 rounded-full object-cover",
@@ -45,6 +51,7 @@ export function PersonAvatar({
     <img
       src={"/user.png"}
       alt=""
+      style={style}
       className={cn(
         sizeClasses[size],
         "shrink-0 rounded-full object-cover",

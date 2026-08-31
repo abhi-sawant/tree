@@ -9,6 +9,9 @@ export interface ToElkGraphOptions {
   people: Person[]
   relationships: Relationship[]
   treeMembers: TreeMember[]
+  personWidth?: number
+  personHeight?: number
+  horizontalSpacing?: number
 }
 
 export const PERSON_WIDTH = 250
@@ -20,6 +23,9 @@ export function toElkGraph({
   people,
   relationships,
   treeMembers,
+  personWidth = PERSON_WIDTH,
+  personHeight = PERSON_HEIGHT,
+  horizontalSpacing = 40,
 }: ToElkGraphOptions): ElkNode {
   const memberIds = new Set(treeMembers.map((m) => m.personId))
   const scopedPeople = people.filter((p) => memberIds.has(p.id))
@@ -65,8 +71,8 @@ export function toElkGraph({
 
   const personNodes: ElkNode[] = personOrder.map((personId) => ({
     id: personNodeId(personId),
-    width: PERSON_WIDTH,
-    height: PERSON_HEIGHT,
+    width: personWidth,
+    height: personHeight,
   }))
 
   // A union node's ELK width is normally tiny (UNION_WIDTH) and its rendered
@@ -90,7 +96,7 @@ export function toElkGraph({
   for (const u of unions) {
     for (const parentId of u.parents) hasSpouse.add(parentId)
   }
-  const CHILD_COLUMN_PITCH = PERSON_WIDTH + 40 // must track elk.spacing.nodeNode
+  const childColumnPitch = personWidth + horizontalSpacing // must track elk.spacing.nodeNode
   const footprintWidth = (unionId: string): number => {
     let slots = 0
     for (const childId of childrenByUnion.get(unionId) ?? []) {
@@ -103,7 +109,7 @@ export function toElkGraph({
     // within its own row) — the exact footprint closes the gap in every
     // real tree we tested but a synthetic case still slipped through by a
     // few dozen px, so this buffer absorbs that class of drift.
-    return (slots + 1) * CHILD_COLUMN_PITCH - 40
+    return (slots + 1) * childColumnPitch - horizontalSpacing
   }
 
   const unionNodes: ElkNode[] = orderedUnions.map((u) => ({
