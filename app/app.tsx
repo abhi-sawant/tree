@@ -10,8 +10,12 @@ import { computeGenerations } from "~/lib/graph/compute-generations"
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { getLastTreeId } from "~/lib/last-tree"
 import { resolveActiveTreeId, useAppShellStore } from "~/lib/ui/app-shell-store"
+import { watchSystemTheme } from "~/lib/ui/theme-store"
 
 export default function App() {
+  // Document-level, so it belongs here rather than in any one view.
+  useEffect(watchSystemTheme, [])
+
   const trees = useTrees()
   const people = usePeople()
   const relationships = useRelationships()
