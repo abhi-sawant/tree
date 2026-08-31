@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
+import type { EdgeRouting } from "~/lib/canvas/edge-routing"
 import type { LayoutDirection } from "~/lib/canvas/layout-direction"
 
 export const GENERATION_LEVELS = 6
@@ -13,6 +14,7 @@ export interface AppearanceSettings {
   verticalSpacing: number
   edgeStrokeWidth: number
   layoutDirection: LayoutDirection
+  edgeRouting: EdgeRouting
   spouseColor: string | null
   parentChildColor: string | null
   generationColors: (string | null)[]
@@ -30,6 +32,7 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   verticalSpacing: 90,
   edgeStrokeWidth: 2,
   layoutDirection: "DOWN",
+  edgeRouting: "smoothstep",
   spouseColor: null,
   parentChildColor: null,
   generationColors: Array.from({ length: GENERATION_LEVELS }, () => null),

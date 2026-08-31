@@ -586,3 +586,69 @@ describe("toReactFlowGraph bloodline highlighting", () => {
     expect(childEdge?.style?.strokeWidth).toBe(5)
   })
 })
+
+describe("toReactFlowGraph edge routing", () => {
+  function edgesFor(
+    edgeRouting?: "smoothstep" | "step" | "straight" | "default"
+  ) {
+    const treeId = id()
+    const parent = person({ givenName: "Parent" })
+    const child = person({ givenName: "Child" })
+    const people = [parent, child]
+    const relationships = [parentChild(parent.id, child.id)]
+    const { unions } = deriveUnions(people, relationships)
+    const graph = toElkGraph({
+      people,
+      relationships,
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+    return toReactFlowGraph({
+      graph,
+      positions: {},
+      people,
+      relationships,
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+      edgeRouting,
+    }).edges
+  }
+
+  it("defaults to rounded steps, matching the shipped look", () => {
+    expect(edgesFor()[0].type).toBe("smoothstep")
+  })
+
+  it("applies the chosen routing to parent-child lines", () => {
+    expect(edgesFor("straight")[0].type).toBe("straight")
+    expect(edgesFor("default")[0].type).toBe("default")
+    expect(edgesFor("step")[0].type).toBe("step")
+  })
+
+  it("always draws a marriage line straight, whatever the routing", () => {
+    // The marriage line is a short connector between a couple and their union
+    // dot; curving it reads as a relationship, which it is not.
+    const treeId = id()
+    const a = person()
+    const b = person()
+    const people = [a, b]
+    const relationships = [spouse(a.id, b.id)]
+    const { unions } = deriveUnions(people, relationships)
+    const graph = toElkGraph({
+      people,
+      relationships,
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+    const { edges } = toReactFlowGraph({
+      graph,
+      positions: {},
+      people,
+      relationships,
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+      edgeRouting: "default",
+    })
+    expect(edges).toHaveLength(2)
+    for (const edge of edges) expect(edge.type).toBe("straight")
+  })
+})

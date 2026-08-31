@@ -12,6 +12,7 @@ import {
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
+import { EDGE_ROUTINGS, type EdgeRouting } from "~/lib/canvas/edge-routing"
 import {
   directionLabel,
   type LayoutDirection,
@@ -102,10 +103,26 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
                 ))}
               </Select>
             </Label>
+            <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
+              Connector shape
+              <Select
+                value={settings.edgeRouting}
+                onChange={(e) =>
+                  setSetting("edgeRouting", e.target.value as EdgeRouting)
+                }
+              >
+                {EDGE_ROUTINGS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </Label>
             <p className="text-11 leading-relaxed text-muted-foreground">
               Left to right suits wide, shallow trees. Cards you have pinned by
               hand keep their saved position in either direction — use Re-layout
-              to release them.
+              to release them. Connector shape applies to parent–child lines; a
+              marriage line is always drawn straight across between the couple.
             </p>
           </section>
 

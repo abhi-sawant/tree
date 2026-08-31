@@ -1,6 +1,7 @@
 import type { Edge, Node } from "@xyflow/react"
 import type { ElkNode } from "elkjs"
 
+import type { EdgeRouting } from "~/lib/canvas/edge-routing"
 import {
   HANDLE,
   isVertical,
@@ -45,6 +46,7 @@ export interface ToReactFlowGraphOptions {
   personWidth?: number
   personHeight?: number
   direction?: LayoutDirection
+  edgeRouting?: EdgeRouting
   edgeStrokeWidth?: number
   spouseColor?: string
   parentChildColor?: string
@@ -75,6 +77,7 @@ export function toReactFlowGraph({
   personWidth = PERSON_WIDTH,
   personHeight = PERSON_HEIGHT,
   direction = "DOWN",
+  edgeRouting = "smoothstep",
   edgeStrokeWidth = 2,
   spouseColor = "var(--edge-spouse)",
   parentChildColor = "var(--edge-parent-child)",
@@ -220,7 +223,7 @@ export function toReactFlowGraph({
       sourceHandle: source.startsWith(PERSON_PREFIX)
         ? HANDLE.children
         : undefined,
-      type: "smoothstep",
+      type: edgeRouting,
       data: { subtype },
       zIndex: highlighted ? 1 : 0,
       style: {
