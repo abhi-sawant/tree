@@ -48,6 +48,12 @@ interface CanvasUIState {
   // Narrows the canvas to one person's lineage. Unlike hiddenGenerations this
   // is applied *before* layout (see tree-view), so the remaining people lay out
   // compactly instead of keeping the gaps left by everyone removed.
+  // Whether to glow the line of descent from the selected person to the tree
+  // root. Off by default: selection already draws a ring, and glowing a whole
+  // path on every click would be noise rather than information.
+  showBloodline: boolean
+  toggleBloodline: () => void
+
   focus: FocusScope | null
   setFocus: (focus: FocusScope) => void
   setFocusMode: (mode: FocusMode) => void
@@ -72,6 +78,10 @@ export const useCanvasUIStore = create<CanvasUIState>((set) => ({
   requestCenter: (nodeId) =>
     set({ selectedNodeId: nodeId, pendingCenterNodeId: nodeId }),
   clearPendingCenter: () => set({ pendingCenterNodeId: null }),
+
+  showBloodline: false,
+  toggleBloodline: () =>
+    set((state) => ({ showBloodline: !state.showBloodline })),
 
   focus: null,
   setFocus: (focus) => set({ focus }),

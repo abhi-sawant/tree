@@ -1,5 +1,5 @@
 import { Panel, useReactFlow } from "@xyflow/react"
-import { Crosshair, LayoutGrid, Palette, X } from "lucide-react"
+import { Crosshair, GitBranch, LayoutGrid, Palette, X } from "lucide-react"
 import { useState } from "react"
 
 import { CustomizePanel } from "~/components/canvas/customize-panel"
@@ -52,6 +52,8 @@ export function TreeToolbar({
   const setFocusMode = useCanvasUIStore((s) => s.setFocusMode)
   const setFocusDepth = useCanvasUIStore((s) => s.setFocusDepth)
   const clearFocus = useCanvasUIStore((s) => s.clearFocus)
+  const showBloodline = useCanvasUIStore((s) => s.showBloodline)
+  const toggleBloodline = useCanvasUIStore((s) => s.toggleBloodline)
   const generationColors = useAppearanceStore(
     (s) => s.settings.generationColors
   )
@@ -89,6 +91,15 @@ export function TreeToolbar({
         </Button>
         <Button variant="outline" size="xs" onClick={() => void fitView()}>
           Fit
+        </Button>
+        <Button
+          variant={showBloodline ? "default" : "outline"}
+          size="xs"
+          aria-pressed={showBloodline}
+          title="Glow the line of descent from the selected person to the tree root"
+          onClick={toggleBloodline}
+        >
+          <GitBranch /> Bloodline
         </Button>
         <Button
           variant="outline"

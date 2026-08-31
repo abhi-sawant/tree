@@ -8,13 +8,14 @@ import {
 } from "~/components/canvas/canvas-states"
 import { DetailPanel } from "~/components/canvas/detail-panel"
 import { TreeCanvas } from "~/components/canvas/tree-canvas"
+import { bloodlineToRoot } from "~/lib/canvas/bloodline"
 import { filterHiddenGenerations } from "~/lib/canvas/filter-generations"
 import { personIdsInFocus } from "~/lib/canvas/focus-scope"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import { resolveEdgeColor } from "~/lib/canvas/appearance-resolve"
 import type { UnionNode } from "~/lib/graph/derive-unions"
-import { personNodeId } from "~/lib/graph/node-ids"
+import { parseNodeId, personNodeId } from "~/lib/graph/node-ids"
 import { toElkGraph } from "~/lib/graph/to-elk-graph"
 import { useTreeMembers } from "~/lib/db/hooks"
 import { buildLayoutOptions } from "~/lib/layout/run-layout"
@@ -51,6 +52,8 @@ export function TreeView({
     (s) => s.resetHiddenGenerations
   )
   const focus = useCanvasUIStore((s) => s.focus)
+  const selectedNodeId = useCanvasUIStore((s) => s.selectedNodeId)
+  const showBloodline = useCanvasUIStore((s) => s.showBloodline)
   const appearance = useAppearanceStore((s) => s.settings)
   const treeMembers = useTreeMembers(tree.id)
 
@@ -102,6 +105,20 @@ export function TreeView({
     [scopedMembers]
   )
 
+  const bloodlineNodeIds = useMemo(() => {
+    if (!showBloodline || !selectedNodeId) return undefined
+    const parsed = parseNodeId(selectedNodeId)
+    // Only a person anchors a line of descent; a union dot is not a step in one.
+    if (parsed?.kind !== "person") return undefined
+    const line = bloodlineToRoot(
+      relationships,
+      parsed.personId,
+      tree.rootPersonId
+    )
+    if (!line) return undefined
+    return [...line.personIds.map(personNodeId), ...line.unionIds]
+  }, [showBloodline, selectedNodeId, relationships, tree.rootPersonId])
+
   const layoutOptions = useMemo(
     () =>
       buildLayoutOptions({
@@ -132,6 +149,7 @@ export function TreeView({
       unions,
       treeId: tree.id,
       overriddenNodeIds,
+      bloodlineNodeIds,
       personWidth: appearance.personWidth,
       personHeight: appearance.personHeight,
       edgeStrokeWidth: appearance.edgeStrokeWidth,
@@ -149,6 +167,7 @@ export function TreeView({
     unions,
     tree.id,
     overriddenNodeIds,
+    bloodlineNodeIds,
     appearance.personWidth,
     appearance.personHeight,
     appearance.edgeStrokeWidth,

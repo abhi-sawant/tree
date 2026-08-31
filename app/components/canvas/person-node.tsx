@@ -39,7 +39,7 @@ const QUICK_ADD: Array<{ kind: AddActionKind; label: string }> = [
 ]
 
 export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
-  const { person, treeId, overridden, generation } = data
+  const { person, treeId, overridden, generation, onBloodline } = data
   const generationColors = useAppearanceStore(
     (s) => s.settings.generationColors
   )
@@ -64,6 +64,9 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
     <div
       className={cn(
         "flex h-full w-full flex-col items-center justify-center gap-2.5 border border-neutral-500 bg-card px-3 text-center",
+        // A softer ring than the selection one, so the selected card still
+        // reads as the selected card within a highlighted line.
+        onBloodline && !selected && "ring-2 ring-primary/40",
         selected && "ring-2 ring-primary"
       )}
       style={{ borderLeftWidth: 3, borderLeftColor: levelColor }}

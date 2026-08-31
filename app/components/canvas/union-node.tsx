@@ -16,6 +16,7 @@ import type { UnionNodeData } from "~/lib/layout/to-react-flow-graph"
 export type UnionNodeType = Node<UnionNodeData, "union">
 
 export function UnionNode({ id, data }: NodeProps<UnionNodeType>) {
+  const onBloodline = data.onBloodline
   const select = useCanvasUIStore((s) => s.select)
   const selected = useCanvasUIStore((s) => s.selectedNodeId === id)
   const requestRecordMarriage = useCanvasUIStore((s) => s.requestRecordMarriage)
@@ -36,6 +37,7 @@ export function UnionNode({ id, data }: NodeProps<UnionNodeType>) {
     <div
       className={cn(
         "h-full w-full rounded-full",
+        onBloodline && !selected && "ring-2 ring-primary/40",
         selected && "ring-3 ring-primary"
       )}
       style={

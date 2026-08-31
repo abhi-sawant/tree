@@ -19,10 +19,12 @@ export interface PersonNodeData extends Record<string, unknown> {
   treeId: string
   overridden: boolean
   generation: number
+  onBloodline: boolean
 }
 
 export interface UnionNodeData extends Record<string, unknown> {
   union: UnionNode
+  onBloodline: boolean
 }
 
 export interface ToReactFlowGraphOptions {
@@ -33,6 +35,8 @@ export interface ToReactFlowGraphOptions {
   unions: UnionNode[]
   treeId: string
   overriddenNodeIds: string[]
+  // Node ids (people and unions) on the highlighted bloodline, if any.
+  bloodlineNodeIds?: string[]
   personWidth?: number
   personHeight?: number
   edgeStrokeWidth?: number
@@ -45,6 +49,11 @@ export interface ReactFlowGraph {
   edges: Edge[]
 }
 
+// Not user-customisable, unlike the relationship colours: this is a transient
+// selection cue, and letting it be recoloured to match one of them would defeat
+// the whole point of it standing out.
+const BLOODLINE_COLOR = "var(--primary)"
+
 // People/unions missing from the current data (or otherwise deleted)
 // shouldn't happen for nodes toElkGraph produced, but a defensive skip is
 // cheap insurance against a dangling id rendering a broken card.
@@ -56,6 +65,7 @@ export function toReactFlowGraph({
   unions,
   treeId,
   overriddenNodeIds,
+  bloodlineNodeIds = [],
   personWidth = PERSON_WIDTH,
   personHeight = PERSON_HEIGHT,
   edgeStrokeWidth = 2,
@@ -65,7 +75,14 @@ export function toReactFlowGraph({
   const peopleById = new Map(people.map((p) => [p.id, p]))
   const unionsById = new Map(unions.map((u) => [u.id, u]))
   const overridden = new Set(overriddenNodeIds)
+  const bloodline = new Set(bloodlineNodeIds)
   const generations = computeGenerations(people, relationships)
+
+  // An edge is on the bloodline only when *both* of its ends are. The other
+  // parent of a union on the path is never in the set, so their half of the
+  // marriage line correctly stays unhighlighted.
+  const onBloodline = (source: string, target: string) =>
+    bloodline.size > 0 && bloodline.has(source) && bloodline.has(target)
 
   // ELK lays the union out in its own layer below the couple (it only ever
   // sees a person->union edge, one layer at a time). We want it sitting
@@ -103,6 +120,7 @@ export function toReactFlowGraph({
             treeId,
             overridden: overridden.has(elkNode.id),
             generation: generations.get(person.id) ?? 0,
+            onBloodline: bloodline.has(elkNode.id),
           } satisfies PersonNodeData,
           width: personWidth,
           height: personHeight,
@@ -118,7 +136,10 @@ export function toReactFlowGraph({
         id: elkNode.id,
         type: "union",
         position,
-        data: { union } satisfies UnionNodeData,
+        data: {
+          union,
+          onBloodline: bloodline.has(elkNode.id),
+        } satisfies UnionNodeData,
         width: UNION_WIDTH,
         height: UNION_HEIGHT,
         draggable: false,
@@ -141,6 +162,7 @@ export function toReactFlowGraph({
       // already stored, already carried through to UnionNode.end by
       // deriveUnions, and until now never shown.
       const ended = !!unionsById.get(target)?.end
+      const highlighted = onBloodline(source, target)
       return {
         id: elkEdge.id,
         source,
@@ -148,9 +170,12 @@ export function toReactFlowGraph({
         sourceHandle: personIsLeft ? "right" : "left",
         targetHandle: personIsLeft ? "left" : "right",
         type: "straight",
+        // Lift the highlighted run above everything else, or a crossing edge
+        // drawn later would cut through the glow.
+        zIndex: highlighted ? 1 : 0,
         style: {
-          strokeWidth: edgeStrokeWidth,
-          stroke: spouseColor,
+          strokeWidth: highlighted ? edgeStrokeWidth * 2.5 : edgeStrokeWidth,
+          stroke: highlighted ? BLOODLINE_COLOR : spouseColor,
           // Short dashes, distinct from the long dash a non-biological
           // parent-child link uses, so the two never read as the same thing.
           ...(ended ? { strokeDasharray: "3 3" } : {}),
@@ -172,6 +197,8 @@ export function toReactFlowGraph({
       : [source.slice(PERSON_PREFIX.length)]
     const subtype = sharedParentLinkSubtype(relationships, childId, parentIds)
 
+    const highlighted = onBloodline(source, target)
+
     return {
       id: elkEdge.id,
       source,
@@ -179,9 +206,10 @@ export function toReactFlowGraph({
       sourceHandle: source.startsWith(PERSON_PREFIX) ? "bottom" : undefined,
       type: "smoothstep",
       data: { subtype },
+      zIndex: highlighted ? 1 : 0,
       style: {
-        strokeWidth: edgeStrokeWidth,
-        stroke: parentChildColor,
+        strokeWidth: highlighted ? edgeStrokeWidth * 2.5 : edgeStrokeWidth,
+        stroke: highlighted ? BLOODLINE_COLOR : parentChildColor,
         // Dashed for any link that isn't by birth. The long dash distinguishes
         // it at a glance from the short dash an ended marriage uses.
         ...(subtype && subtype !== "biological"
