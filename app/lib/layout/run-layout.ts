@@ -41,9 +41,10 @@ export function buildLayoutOptions({
   }
 }
 
-// Takes a pre-constructed ELK instance rather than building one itself:
-// elkjs needs a different construction on Node (compute-layout.ts) vs. inside
-// a browser Worker (elk-worker.ts) — see elk-worker.ts for why.
+// Takes a pre-constructed ELK instance rather than building one itself: elkjs
+// needs a different construction in Node (compute-layout.ts, default entry with
+// its synchronous fallback) than in the browser (use-elk-layout.ts, explicit
+// workerUrl) — see use-elk-layout.ts for why.
 export async function runLayout(
   elk: ELK,
   graph: ElkNode,
