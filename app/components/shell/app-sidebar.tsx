@@ -118,6 +118,12 @@ export function AppSidebar({
           onSelect={setView}
         />
         <SidebarNavItem
+          label="Health"
+          target="health"
+          view={view}
+          onSelect={setView}
+        />
+        <SidebarNavItem
           label="Settings"
           target="settings"
           view={view}

@@ -55,7 +55,10 @@ function makeTreeMember(overrides: Partial<TreeMember> = {}): TreeMember {
 
 describe("createPerson", () => {
   it("stamps id, createdAt, and updatedAt", async () => {
-    const person = await createPerson({ givenName: "Grace", familyName: "Hopper" })
+    const person = await createPerson({
+      givenName: "Grace",
+      familyName: "Hopper",
+    })
 
     expect(person.id).toBeTruthy()
     expect(person.createdAt).toBe(person.updatedAt)
@@ -70,7 +73,10 @@ describe("createPerson", () => {
 
 describe("updatePerson", () => {
   it("merges the patch, bumps updatedAt, and preserves id/createdAt", async () => {
-    const person = await createPerson({ givenName: "Ada", familyName: "Lovelace" })
+    const person = await createPerson({
+      givenName: "Ada",
+      familyName: "Lovelace",
+    })
     const before = person.updatedAt
 
     await new Promise((resolve) => setTimeout(resolve, 2))
@@ -94,12 +100,30 @@ describe("searchPeople", () => {
     expect(results[0].givenName).toBe("Ada")
   })
 
+  it("matches a maiden name so a married-name record is still findable", async () => {
+    await createPerson({
+      givenName: "Ada",
+      familyName: "King",
+      maidenName: "Byron",
+    })
+    const results = await searchPeople("byron")
+    expect(results).toHaveLength(1)
+    expect(results[0].familyName).toBe("King")
+  })
+
+  it("matches a nickname", async () => {
+    await createPerson({ givenName: "Augusta", nickname: "Ada" })
+    expect(await searchPeople("ada")).toHaveLength(1)
+  })
+
   it("includes placeholders by default and excludes them when asked", async () => {
     await createPerson({ givenName: "Real Person" })
     await createPerson({ givenName: "Placeholder Person", isPlaceholder: true })
 
     expect(await searchPeople("")).toHaveLength(2)
-    expect(await searchPeople("", { includePlaceholders: false })).toHaveLength(1)
+    expect(await searchPeople("", { includePlaceholders: false })).toHaveLength(
+      1
+    )
   })
 })
 
@@ -124,12 +148,18 @@ describe("getTreesForPerson", () => {
 describe("getDeleteImpact", () => {
   it("is empty for an unattached person", async () => {
     const person = await createPerson({ givenName: "Solo" })
-    expect(await getDeleteImpact(person.id)).toEqual({ blockingTrees: [], memberOfTrees: [] })
+    expect(await getDeleteImpact(person.id)).toEqual({
+      blockingTrees: [],
+      memberOfTrees: [],
+    })
   })
 
   it("reports memberOfTrees for a regular member", async () => {
     const person = await createPerson({ givenName: "Member" })
-    const tree = await createTree({ name: "Family", rootPersonId: crypto.randomUUID() })
+    const tree = await createTree({
+      name: "Family",
+      rootPersonId: crypto.randomUUID(),
+    })
     await addPersonToTree(tree.id, person.id)
 
     const impact = await getDeleteImpact(person.id)
@@ -152,7 +182,11 @@ describe("deletePerson", () => {
     const other = await createPerson({ givenName: "Other" })
     const unrelated = await createPerson({ givenName: "Unrelated" })
 
-    const photo: Photo = { id: crypto.randomUUID(), blob: new Blob(["x"]), mime: "image/jpeg" }
+    const photo: Photo = {
+      id: crypto.randomUUID(),
+      blob: new Blob(["x"]),
+      mime: "image/jpeg",
+    }
     await db.photos.add(photo)
     await updatePerson(target.id, { photoId: photo.id })
 
@@ -176,7 +210,11 @@ describe("deletePerson", () => {
     }
     await db.relationships.bulkAdd([relAsFrom, relAsTo, unrelatedRel])
 
-    const unrelatedPhoto: Photo = { id: crypto.randomUUID(), blob: new Blob(["y"]), mime: "image/jpeg" }
+    const unrelatedPhoto: Photo = {
+      id: crypto.randomUUID(),
+      blob: new Blob(["y"]),
+      mime: "image/jpeg",
+    }
     await db.photos.add(unrelatedPhoto)
     await updatePerson(unrelated.id, { photoId: unrelatedPhoto.id })
 
@@ -203,7 +241,9 @@ describe("deletePerson", () => {
       id: unrelatedPhoto.id,
       mime: unrelatedPhoto.mime,
     })
-    expect(await db.members.where("personId").equals(unrelated.id).count()).toBe(1)
+    expect(
+      await db.members.where("personId").equals(unrelated.id).count()
+    ).toBe(1)
   })
 
   it("blocks deleting a root person, with no partial deletion", async () => {
@@ -225,7 +265,9 @@ describe("deletePerson", () => {
       await deletePerson(root.id)
     } catch (error) {
       expect(error).toBeInstanceOf(PersonIsRootError)
-      expect((error as PersonIsRootError).trees).toEqual([{ id: tree.id, name: tree.name }])
+      expect((error as PersonIsRootError).trees).toEqual([
+        { id: tree.id, name: tree.name },
+      ])
     }
 
     expect(await db.people.get(root.id)).toBeDefined()

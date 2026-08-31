@@ -4,6 +4,7 @@ import type { ElkNode } from "elkjs"
 import { computeGenerations } from "~/lib/graph/compute-generations"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { PERSON_PREFIX, UNION_PREFIX, personNodeId } from "~/lib/graph/node-ids"
+import { sharedParentLinkSubtype } from "~/lib/graph/parent-links"
 import {
   PERSON_HEIGHT,
   PERSON_WIDTH,
@@ -136,6 +137,10 @@ export function toReactFlowGraph({
       const personX = resolvedPositions[source]?.x ?? 0
       const unionX = resolvedPositions[target]?.x ?? 0
       const personIsLeft = personX < unionX
+      // An end date on the spouse relationship is a divorce or separation —
+      // already stored, already carried through to UnionNode.end by
+      // deriveUnions, and until now never shown.
+      const ended = !!unionsById.get(target)?.end
       return {
         id: elkEdge.id,
         source,
@@ -143,20 +148,46 @@ export function toReactFlowGraph({
         sourceHandle: personIsLeft ? "right" : "left",
         targetHandle: personIsLeft ? "left" : "right",
         type: "straight",
-        style: { strokeWidth: edgeStrokeWidth, stroke: spouseColor },
+        style: {
+          strokeWidth: edgeStrokeWidth,
+          stroke: spouseColor,
+          // Short dashes, distinct from the long dash a non-biological
+          // parent-child link uses, so the two never read as the same thing.
+          ...(ended ? { strokeDasharray: "3 3" } : {}),
+        },
       }
     }
 
     // A single-parent link (person->child, no union involved) still drops
     // straight down from the parent's bottom — that handle now needs an
     // explicit id since the person node has left/right handles too.
+    //
+    // The edge's own source/target already say which parents it represents, so
+    // the link's subtype is resolvable here without threading a separate
+    // relationship map through the layout: a union source means both of its
+    // parents, a person source means just that one.
+    const childId = target.slice(PERSON_PREFIX.length)
+    const parentIds = source.startsWith(UNION_PREFIX)
+      ? (unionsById.get(source)?.parents ?? [])
+      : [source.slice(PERSON_PREFIX.length)]
+    const subtype = sharedParentLinkSubtype(relationships, childId, parentIds)
+
     return {
       id: elkEdge.id,
       source,
       target,
       sourceHandle: source.startsWith(PERSON_PREFIX) ? "bottom" : undefined,
       type: "smoothstep",
-      style: { strokeWidth: edgeStrokeWidth, stroke: parentChildColor },
+      data: { subtype },
+      style: {
+        strokeWidth: edgeStrokeWidth,
+        stroke: parentChildColor,
+        // Dashed for any link that isn't by birth. The long dash distinguishes
+        // it at a glance from the short dash an ended marriage uses.
+        ...(subtype && subtype !== "biological"
+          ? { strokeDasharray: "7 5" }
+          : {}),
+      },
     }
   })
 

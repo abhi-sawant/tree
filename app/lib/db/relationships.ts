@@ -1,6 +1,6 @@
 import { db } from "~/lib/db/db"
 import { RelationshipFormSchema } from "~/lib/schemas"
-import type { PartialDate, Relationship } from "~/lib/types"
+import type { ParentChildSubtype, PartialDate, Relationship } from "~/lib/types"
 
 export interface AddRelationshipInput {
   type: "parent-child" | "spouse"
@@ -8,6 +8,7 @@ export interface AddRelationshipInput {
   to: string
   start?: PartialDate
   end?: PartialDate
+  subtype?: ParentChildSubtype
 }
 
 export class SelfReferenceError extends Error {
@@ -68,7 +69,9 @@ async function getSpouseIds(personId: string): Promise<string[]> {
 // D11's "N people" source: parents + spouses + children, deduped. Used by the
 // "add existing person to tree" dialog to preview and pull in a person's
 // immediate family so they don't render as a disconnected island.
-export async function getImmediateFamilyIds(personId: string): Promise<string[]> {
+export async function getImmediateFamilyIds(
+  personId: string
+): Promise<string[]> {
   const [parentIds, spouseIds, childIds] = await Promise.all([
     getParentIds(personId),
     getSpouseIds(personId),

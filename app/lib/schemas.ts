@@ -7,14 +7,26 @@ export const PartialDateSchema = z.object({
   approximate: z.boolean().optional(),
 })
 
+export const SexSchema = z.enum(["male", "female", "other"])
+
 export const PersonSchema = z.object({
   id: z.string(),
   givenName: z.string().min(1),
   familyName: z.string().optional(),
+  maidenName: z.string().optional(),
+  nickname: z.string().optional(),
+  multipleBirthGroup: z.string().optional(),
+  sex: SexSchema.optional(),
   birth: PartialDateSchema.optional(),
   death: PartialDateSchema.optional(),
   photoId: z.string().optional(),
   notes: z.string().optional(),
+  // A blank label would make the entry unreadable wherever it is shown, and
+  // unparseable in the GEDCOM NOTE block it exports into — the form drops
+  // incomplete rows before they reach here.
+  customFields: z
+    .array(z.object({ label: z.string().min(1), value: z.string() }))
+    .optional(),
   isPlaceholder: z.boolean().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
@@ -27,11 +39,20 @@ export const PersonFormSchema = PersonSchema.omit({
 })
 export type PersonFormValues = z.infer<typeof PersonFormSchema>
 
+export const ParentChildSubtypeSchema = z.enum([
+  "biological",
+  "adopted",
+  "step",
+  "foster",
+  "guardian",
+])
+
 export const RelationshipSchema = z.object({
   id: z.string(),
   type: z.enum(["parent-child", "spouse"]),
   from: z.string(),
   to: z.string(),
+  subtype: ParentChildSubtypeSchema.optional(),
   start: PartialDateSchema.optional(),
   end: PartialDateSchema.optional(),
 })

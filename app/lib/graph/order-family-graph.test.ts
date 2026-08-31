@@ -232,3 +232,94 @@ describe("orderFamilyGraph", () => {
     expect(new Set(personOrder)).toEqual(new Set([a.id, b.id]))
   })
 })
+
+describe("orderFamilyGraph multiple births", () => {
+  // Three siblings recorded in the order twin1, middle, twin2 — so the plain
+  // createdAt sort would wedge `middle` between the two twins.
+  function threeSiblings(twinToken?: string) {
+    const mother = person()
+    const father = person()
+    const twin1 = person({ multipleBirthGroup: twinToken })
+    const middle = person()
+    const twin2 = person({ multipleBirthGroup: twinToken })
+    const people = [mother, father, twin1, middle, twin2]
+    const relationships = [
+      spouse(mother.id, father.id),
+      ...[twin1, middle, twin2].flatMap((child) => [
+        parentChild(mother.id, child.id),
+        parentChild(father.id, child.id),
+      ]),
+    ]
+    const { unions, singleParentLinks, twoParentLinks } = deriveUnions(
+      people,
+      relationships
+    )
+    const { personOrder } = orderFamilyGraph(
+      people,
+      unions,
+      singleParentLinks,
+      twoParentLinks
+    )
+    return { personOrder, twin1, twin2, middle }
+  }
+
+  it("keeps twins adjacent even when a sibling was recorded between them", () => {
+    const { personOrder, twin1, twin2 } = threeSiblings("birth-1")
+    expect(
+      Math.abs(indexOf(personOrder, twin1.id) - indexOf(personOrder, twin2.id))
+    ).toBe(1)
+  })
+
+  it("anchors the pair where its earliest member would have sorted", () => {
+    // twin1 was recorded first of the three, so the block still leads and
+    // `middle` keeps its position after them rather than being pushed around.
+    const { personOrder, twin1, twin2, middle } = threeSiblings("birth-1")
+    expect(indexOf(personOrder, twin1.id)).toBeLessThan(
+      indexOf(personOrder, twin2.id)
+    )
+    expect(indexOf(personOrder, twin2.id)).toBeLessThan(
+      indexOf(personOrder, middle.id)
+    )
+  })
+
+  it("leaves ordering untouched when nobody is in a group", () => {
+    const { personOrder, twin1, twin2, middle } = threeSiblings(undefined)
+    expect(indexOf(personOrder, twin1.id)).toBeLessThan(
+      indexOf(personOrder, middle.id)
+    )
+    expect(indexOf(personOrder, middle.id)).toBeLessThan(
+      indexOf(personOrder, twin2.id)
+    )
+  })
+
+  it("keeps two separate multiple births apart from each other", () => {
+    const mother = person()
+    const twinA1 = person({ multipleBirthGroup: "g1" })
+    const twinB1 = person({ multipleBirthGroup: "g2" })
+    const twinA2 = person({ multipleBirthGroup: "g1" })
+    const twinB2 = person({ multipleBirthGroup: "g2" })
+    const kids = [twinA1, twinB1, twinA2, twinB2]
+    const people = [mother, ...kids]
+    const relationships = kids.map((child) => parentChild(mother.id, child.id))
+    const { unions, singleParentLinks, twoParentLinks } = deriveUnions(
+      people,
+      relationships
+    )
+    const { personOrder } = orderFamilyGraph(
+      people,
+      unions,
+      singleParentLinks,
+      twoParentLinks
+    )
+    expect(
+      Math.abs(
+        indexOf(personOrder, twinA1.id) - indexOf(personOrder, twinA2.id)
+      )
+    ).toBe(1)
+    expect(
+      Math.abs(
+        indexOf(personOrder, twinB1.id) - indexOf(personOrder, twinB2.id)
+      )
+    ).toBe(1)
+  })
+})

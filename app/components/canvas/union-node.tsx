@@ -28,13 +28,22 @@ export function UnionNode({ id, data }: NodeProps<UnionNodeType>) {
     requestRecordMarriage(data.union.parents)
   }
 
+  // A marriage with an end date reads as a hollow ring rather than a filled
+  // dot: the same "this connection is no longer current" cue the dashed edge
+  // gives, on the one element that stays visible when the couple is far apart.
+  const ended = !!data.union.end
   const dot = (
     <div
       className={cn(
         "h-full w-full rounded-full",
         selected && "ring-3 ring-primary"
       )}
-      style={{ background: spouseColor }}
+      style={
+        ended
+          ? { border: `2px solid ${spouseColor}`, background: "var(--card)" }
+          : { background: spouseColor }
+      }
+      title={ended ? "Marriage ended" : undefined}
     />
   )
   const handles = (

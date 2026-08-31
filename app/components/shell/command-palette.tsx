@@ -9,6 +9,7 @@ import { personNodeId } from "~/lib/graph/node-ids"
 import { formatPartialDate } from "~/lib/partial-date"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import type { Person } from "~/lib/types"
+import { personDisplayName } from "~/lib/person-name"
 
 const MAX_RESULTS = 24
 
@@ -96,9 +97,7 @@ export function CommandPalette({
               >
                 <PersonAvatar photoId={person.photoId} size="md" />
                 <span className="truncate text-13 font-medium">
-                  {[person.givenName, person.familyName]
-                    .filter(Boolean)
-                    .join(" ") || "Unnamed"}
+                  {personDisplayName(person)}
                 </span>
                 <span className="text-xs text-muted-foreground">{dates}</span>
                 <span className="ml-auto flex items-center gap-1.5 font-heading text-9-5 font-medium tracking-widest text-muted-foreground uppercase">

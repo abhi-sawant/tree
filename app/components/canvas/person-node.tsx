@@ -5,7 +5,7 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react"
-import { Pin } from "lucide-react"
+import { Pin, Users } from "lucide-react"
 import { useState } from "react"
 
 import type { AddActionKind } from "~/components/canvas/add-relative-menu"
@@ -27,6 +27,7 @@ import { personNodeId } from "~/lib/graph/node-ids"
 import { formatPartialDate } from "~/lib/partial-date"
 import { cn } from "~/lib/utils"
 import type { PersonNodeData } from "~/lib/layout/to-react-flow-graph"
+import { personDisplayName } from "~/lib/person-name"
 
 export type PersonNodeType = Node<PersonNodeData, "person">
 
@@ -51,8 +52,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   const selected = useCanvasUIStore((s) => s.selectedNodeId === id)
   const [removeOpen, setRemoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const name =
-    [person.givenName, person.familyName].filter(Boolean).join(" ") || "Unnamed"
+  const name = personDisplayName(person)
   const dates = [
     formatPartialDate(person.birth),
     formatPartialDate(person.death),
@@ -86,6 +86,12 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
         <div className="flex items-center gap-1.5">
           <span className="truncate text-xl font-semibold">{name}</span>
           {person.isPlaceholder && <PlaceholderBadge />}
+          {person.multipleBirthGroup && (
+            <Users
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-label="One of a multiple birth"
+            />
+          )}
           {overridden && (
             <Pin className="size-3 shrink-0 text-muted-foreground" />
           )}

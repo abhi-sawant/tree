@@ -32,12 +32,20 @@ function member(treeId: string, personId: string): TreeMember {
   return { treeId, personId }
 }
 
-function parentChild(from: string, to: string): Relationship {
-  return { id: id(), type: "parent-child", from, to }
+function parentChild(
+  from: string,
+  to: string,
+  subtype?: Relationship["subtype"]
+): Relationship {
+  return { id: id(), type: "parent-child", from, to, subtype }
 }
 
-function spouse(from: string, to: string): Relationship {
-  return { id: id(), type: "spouse", from, to }
+function spouse(
+  from: string,
+  to: string,
+  overrides: Partial<Relationship> = {}
+): Relationship {
+  return { id: id(), type: "spouse", from, to, ...overrides }
 }
 
 describe("toReactFlowGraph", () => {
@@ -344,5 +352,141 @@ describe("toReactFlowGraph", () => {
     expect(nodes.filter((n) => n.type === "union")).toHaveLength(2)
     // 2 parent->union edges per union (4) + 1 union->child edge per union (2) + x's direct link to childWithB's union already counted above
     expect(edges).toHaveLength(graph.edges!.length)
+  })
+})
+
+describe("toReactFlowGraph parent-child edge subtypes", () => {
+  // Builds the full ELK -> React Flow pipeline for one child of `parents`, so
+  // the edge under test is the real one the canvas would draw.
+  function edgeFor(subtypes: Array<Relationship["subtype"]>) {
+    const treeId = id()
+    const child = person({ givenName: "Kid" })
+    const parents = subtypes.map((_, i) => person({ givenName: `P${i}` }))
+    const relationships: Relationship[] = parents.map((p, i) =>
+      parentChild(p.id, child.id, subtypes[i])
+    )
+    if (parents.length === 2) {
+      relationships.push(spouse(parents[0].id, parents[1].id))
+    }
+    const people = [...parents, child]
+    const { unions } = deriveUnions(people, relationships)
+    const graph = toElkGraph({
+      people,
+      relationships,
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+    const { edges } = toReactFlowGraph({
+      graph,
+      positions: {},
+      people,
+      relationships,
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+    })
+    const edge = edges.find((e) => e.target === `person:${child.id}`)
+    expect(edge).toBeDefined()
+    return edge!
+  }
+
+  it("dashes a couple's line to a child both parents adopted", () => {
+    expect(edgeFor(["adopted", "adopted"]).style?.strokeDasharray).toBe("7 5")
+  })
+
+  it("leaves a by-birth line solid", () => {
+    expect(
+      edgeFor([undefined, undefined]).style?.strokeDasharray
+    ).toBeUndefined()
+  })
+
+  it("leaves a mixed couple's line solid rather than overstating it", () => {
+    // The child descends from one of the two, so dashing the single shared
+    // line would assert something false.
+    expect(edgeFor([undefined, "step"]).style?.strokeDasharray).toBeUndefined()
+  })
+
+  it("dashes a single parent's line by that one link", () => {
+    expect(edgeFor(["foster"]).style?.strokeDasharray).toBe("7 5")
+    expect(edgeFor([undefined]).style?.strokeDasharray).toBeUndefined()
+  })
+
+  it("never dashes a marriage line as a subtype", () => {
+    const treeId = id()
+    const a = person()
+    const b = person()
+    const kid = person()
+    const relationships = [
+      spouse(a.id, b.id),
+      parentChild(a.id, kid.id, "adopted"),
+      parentChild(b.id, kid.id, "adopted"),
+    ]
+    const people = [a, b, kid]
+    const { unions } = deriveUnions(people, relationships)
+    const graph = toElkGraph({
+      people,
+      relationships,
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+    const { edges } = toReactFlowGraph({
+      graph,
+      positions: {},
+      people,
+      relationships,
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+    })
+    const marriageEdges = edges.filter((e) => e.target.startsWith("union:"))
+    expect(marriageEdges).toHaveLength(2)
+    for (const edge of marriageEdges) {
+      expect(edge.style?.strokeDasharray).toBeUndefined()
+    }
+  })
+})
+
+describe("toReactFlowGraph marriage edges", () => {
+  function marriageEdges(spouseOverrides: Partial<Relationship>) {
+    const treeId = id()
+    const a = person({ givenName: "A" })
+    const b = person({ givenName: "B" })
+    const relationships = [spouse(a.id, b.id, spouseOverrides)]
+    const people = [a, b]
+    const { unions } = deriveUnions(people, relationships)
+    const graph = toElkGraph({
+      people,
+      relationships,
+      treeMembers: people.map((p) => member(treeId, p.id)),
+    })
+    const { edges } = toReactFlowGraph({
+      graph,
+      positions: {},
+      people,
+      relationships,
+      unions,
+      treeId,
+      overriddenNodeIds: [],
+    })
+    return edges.filter((e) => e.target.startsWith("union:"))
+  }
+
+  it("dashes both halves of the line for a marriage with an end date", () => {
+    const edges = marriageEdges({ start: { year: 1980 }, end: { year: 1995 } })
+    expect(edges).toHaveLength(2)
+    for (const edge of edges) {
+      expect(edge.style?.strokeDasharray).toBe("3 3")
+    }
+  })
+
+  it("leaves an ongoing marriage solid", () => {
+    for (const edge of marriageEdges({ start: { year: 1980 } })) {
+      expect(edge.style?.strokeDasharray).toBeUndefined()
+    }
+  })
+
+  it("uses a different dash from a non-biological parent-child link", () => {
+    // The two must stay visually distinguishable — an ended marriage and an
+    // adoption mean entirely different things.
+    const ended = marriageEdges({ end: { year: 1995 } })[0]
+    expect(ended.style?.strokeDasharray).not.toBe("7 5")
   })
 })

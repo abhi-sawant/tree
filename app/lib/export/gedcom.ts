@@ -1,10 +1,17 @@
 import { deriveUnions } from "~/lib/graph/derive-unions"
+import { sharedParentLinkSubtype } from "~/lib/graph/parent-links"
 import { partialDateToGedcomDate } from "~/lib/partial-date"
 import { db } from "~/lib/db/db"
 import { blobToBytes, zipEntries, type ZipEntries } from "~/lib/export/archive"
 import { gedcomFilename } from "~/lib/export/filenames"
 import { extensionForMime, gedcomFormForExtension } from "~/lib/export/mime"
-import type { PartialDate, Person, Relationship } from "~/lib/types"
+import type {
+  ParentChildSubtype,
+  PartialDate,
+  Person,
+  Relationship,
+  Sex,
+} from "~/lib/types"
 
 export const GEDCOM_MEDIA_DIR = "media"
 
@@ -49,6 +56,29 @@ function assignXrefs(ids: string[], prefix: string): Map<string, string> {
   return map
 }
 
+// GEDCOM 5.5.1 gives FAM two sex-specific parent slots, HUSB and WIFE, with no
+// neutral alternative — so the pair has to be ordered by recorded sex for the
+// tags to mean what they claim. Where sex can't decide it (unrecorded on either
+// side, "other", or both the same), fall back to the ascending id sort so the
+// output stays deterministic across exports.
+function orderParentsForFamily(
+  parentIds: string[],
+  peopleById: ReadonlyMap<string, Person>
+): string[] {
+  const sorted = [...parentIds].sort()
+  if (sorted.length !== 2) return sorted
+
+  const [a, b] = sorted
+  const sexA = peopleById.get(a)?.sex
+  const sexB = peopleById.get(b)?.sex
+
+  if (sexA === "male" && sexB !== "male") return [a, b]
+  if (sexB === "male" && sexA !== "male") return [b, a]
+  if (sexA === "female" && sexB !== "female") return [b, a]
+  if (sexB === "female" && sexA !== "female") return [a, b]
+  return sorted
+}
+
 // deriveUnions groups two-parent children into UnionNodes but leaves
 // single-parent children as a flat list — group those by parent here so
 // every recorded parent-child link ends up in exactly one FamilyGroup.
@@ -60,10 +90,11 @@ function buildFamilyGroups(
     people,
     relationships
   )
+  const peopleById = new Map(people.map((person) => [person.id, person]))
 
   const groups: FamilyGroup[] = unions.map((union) => ({
     key: union.id,
-    parents: [...union.parents].sort(),
+    parents: orderParentsForFamily([...union.parents], peopleById),
     children: twoParentLinks
       .filter((link) => link.unionId === union.id)
       .map((link) => link.childId)
@@ -90,8 +121,21 @@ function buildFamilyGroups(
   return groups.sort((a, b) => a.key.localeCompare(b.key))
 }
 
-function formatGedcomName(person: Person): string {
-  return `${person.givenName} /${person.familyName ?? ""}/`
+function formatGedcomName(person: Person, surname?: string): string {
+  return `${person.givenName} /${surname ?? person.familyName ?? ""}/`
+}
+
+// 5.5.1 allows an INDI to carry several NAME structures, so a maiden name goes
+// out as a second one; importers treat the first as primary, which keeps the
+// name the family uses in front. Nickname is not emitted: 5.5.1 has no field
+// for it (NICK arrives in GEDCOM 7), and smuggling it into NAME would corrupt
+// the surname parsing every importer does on that line.
+function nameLines(person: Person): string[] {
+  const lines = [`1 NAME ${formatGedcomName(person)}`]
+  if (person.maidenName && person.maidenName !== person.familyName) {
+    lines.push(`1 NAME ${formatGedcomName(person, person.maidenName)}`)
+  }
+  return lines
 }
 
 // A bare BIRT/DEAT tag with no DATE would assert the event happened with an
@@ -102,9 +146,30 @@ function dateEventLines(tag: string, date?: PartialDate): string[] {
   return gedcomDate ? [`1 ${tag}`, `2 DATE ${gedcomDate}`] : []
 }
 
-function noteLines(notes?: string): string[] {
-  if (!notes) return []
-  const [first, ...rest] = notes.split("\n")
+// SEX is optional in 5.5.1, which admits only M, F and U. An unrecorded sex is
+// omitted rather than written as U, for the same reason dateEventLines omits a
+// bare BIRT: absent data must not be exported as an assertion. "other" has no
+// 5.5.1 representation and maps to U — recorded but undetermined is the closest
+// the version allows (GEDCOM 7 adds X).
+function sexLines(sex?: Sex): string[] {
+  if (!sex) return []
+  const code = sex === "male" ? "M" : sex === "female" ? "F" : "U"
+  return [`1 SEX ${code}`]
+}
+
+// Custom fields ride along in the NOTE block as "label: value" lines rather
+// than inventing non-standard tags for them: an underscore-prefixed extension
+// tag would be dropped or flagged by other genealogy tools, while a note is
+// something every importer keeps and every reader can read.
+function noteLines(person: Person): string[] {
+  const lines = [
+    ...(person.notes ? person.notes.split("\n") : []),
+    ...(person.customFields ?? []).map(
+      ({ label, value }) => `${label}: ${value}`
+    ),
+  ]
+  if (lines.length === 0) return []
+  const [first, ...rest] = lines
   return [`1 NOTE ${first}`, ...rest.map((line) => `2 CONT ${line}`)]
 }
 
@@ -129,19 +194,47 @@ function emitIndividual(
   xref: string,
   famcXref: string | undefined,
   famsXrefs: string[],
+  famcGroup: FamilyGroup | undefined,
+  relationships: Relationship[],
   media?: GedcomMedia
 ): string[] {
   return [
     `0 ${xref} INDI`,
-    `1 NAME ${formatGedcomName(person)}`,
+    ...nameLines(person),
+    ...sexLines(person.sex),
     ...dateEventLines("BIRT", person.birth),
     ...dateEventLines("DEAT", person.death),
-    ...noteLines(person.notes),
-    ...(famcXref ? [`1 FAMC ${famcXref}`] : []),
+    ...noteLines(person),
+    ...famcLines(famcXref, person, famcGroup, relationships),
     ...famsXrefs.map((famsXref) => `1 FAMS ${famsXref}`),
     // Last in the INDI record, matching the 5.5.1 substructure order.
     ...mediaLines(media),
   ]
+}
+
+// PEDI qualifies a child's FAMC link. 5.5.1 defines only adopted, birth, foster
+// and sealing, so "step" and "guardian" have nothing to map to and are omitted
+// rather than smuggled through as a non-standard value; "biological" is left
+// implicit, matching every other omit-what-is-the-default choice in this writer.
+const PEDI_BY_SUBTYPE: Partial<Record<ParentChildSubtype, string>> = {
+  adopted: "adopted",
+  foster: "foster",
+}
+
+function famcLines(
+  famcXref: string | undefined,
+  person: Person,
+  group: FamilyGroup | undefined,
+  relationships: Relationship[]
+): string[] {
+  if (!famcXref) return []
+  const subtype = group
+    ? sharedParentLinkSubtype(relationships, person.id, group.parents)
+    : undefined
+  const pedi = subtype ? PEDI_BY_SUBTYPE[subtype] : undefined
+  return pedi
+    ? [`1 FAMC ${famcXref}`, `2 PEDI ${pedi}`]
+    : [`1 FAMC ${famcXref}`]
 }
 
 function emitFamily(
@@ -183,6 +276,7 @@ export function buildGedcomText(
   // 2), so FAMC is a plain map. FAMS lists accumulate in familyGroups' order,
   // which is already ascending by xref (both are sorted by the same key).
   const famcByPerson = new Map<string, string>()
+  const famcGroupByPerson = new Map<string, FamilyGroup>()
   const famsByPerson = new Map<string, string[]>()
   for (const group of familyGroups) {
     const familyXref = familyXrefs.get(group.key)!
@@ -193,6 +287,7 @@ export function buildGedcomText(
     }
     for (const childId of group.children) {
       famcByPerson.set(childId, familyXref)
+      famcGroupByPerson.set(childId, group)
     }
   }
 
@@ -203,6 +298,8 @@ export function buildGedcomText(
       personXrefs.get(person.id)!,
       famcByPerson.get(person.id),
       famsByPerson.get(person.id) ?? [],
+      famcGroupByPerson.get(person.id),
+      relationships,
       media?.get(person.id)
     )
   )

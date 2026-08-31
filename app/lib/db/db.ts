@@ -29,6 +29,12 @@ export class FamilyTreeDB extends Dexie {
     this.version(2).stores({
       appMeta: "key",
     })
+    // Additive index only — Dexie reindexes existing rows itself, so no
+    // upgrade callback is needed. `sex` is indexed for the aggregate queries
+    // that read it in bulk rather than for any single-person lookup.
+    this.version(3).stores({
+      people: "id, givenName, familyName, sex, [givenName+familyName]",
+    })
   }
 }
 

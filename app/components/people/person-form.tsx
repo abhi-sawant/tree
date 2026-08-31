@@ -1,3 +1,4 @@
+import { Plus, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { ZodError } from "zod"
 
@@ -6,9 +7,11 @@ import { PersonAvatar } from "~/components/people/person-avatar"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
+import { Select } from "~/components/ui/select"
 import { Textarea } from "~/components/ui/textarea"
 import { resizeAndCompressImage } from "~/lib/photos"
 import { PersonFormSchema, type PersonFormValues } from "~/lib/schemas"
+import type { CustomField, Sex } from "~/lib/types"
 
 export type PhotoAction =
   | { kind: "unchanged" }
@@ -42,9 +45,15 @@ export function PersonForm({
 
   const [givenName, setGivenName] = useState(initialValues?.givenName ?? "")
   const [familyName, setFamilyName] = useState(initialValues?.familyName ?? "")
+  const [maidenName, setMaidenName] = useState(initialValues?.maidenName ?? "")
+  const [nickname, setNickname] = useState(initialValues?.nickname ?? "")
+  const [sex, setSex] = useState<Sex | "">(initialValues?.sex ?? "")
   const [birth, setBirth] = useState(initialValues?.birth)
   const [death, setDeath] = useState(initialValues?.death)
   const [notes, setNotes] = useState(initialValues?.notes ?? "")
+  const [customFields, setCustomFields] = useState<CustomField[]>(
+    initialValues?.customFields ?? []
+  )
   const [error, setError] = useState<ZodError | undefined>(undefined)
 
   const [photoAction, setPhotoAction] = useState<PhotoAction>({
@@ -98,15 +107,33 @@ export function PersonForm({
     photoAction.kind === "staged" ||
     (photoAction.kind === "unchanged" && !!initialValues?.photoId)
 
+  const cleanedCustomFields = customFields
+    .map(({ label, value }) => ({ label: label.trim(), value: value.trim() }))
+    .filter(({ label }) => label !== "")
+
+  function updateCustomField(index: number, patch: Partial<CustomField>) {
+    setCustomFields((fields) =>
+      fields.map((field, i) => (i === index ? { ...field, ...patch } : field))
+    )
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
     const result = PersonFormSchema.safeParse({
       givenName,
       familyName: familyName || undefined,
+      maidenName: maidenName || undefined,
+      nickname: nickname || undefined,
+      sex: sex || undefined,
       birth,
       death,
       notes: notes || undefined,
+      // A row with no label is an unfinished edit, not data — dropping it here
+      // is friendlier than failing the schema's min(1) and blocking the save.
+      customFields: cleanedCustomFields.length
+        ? cleanedCustomFields
+        : undefined,
       isPlaceholder: initialValues?.isPlaceholder,
     })
 
@@ -142,6 +169,40 @@ export function PersonForm({
             />
           </div>
 
+          <div className="flex flex-wrap gap-x-3 gap-y-4">
+            <div className="flex min-w-0 flex-1 basis-40 flex-col gap-1">
+              <Label htmlFor="maidenName">Maiden name</Label>
+              <Input
+                id="maidenName"
+                value={maidenName}
+                onChange={(e) => setMaidenName(e.target.value)}
+                placeholder="If different"
+              />
+            </div>
+            <div className="flex min-w-0 flex-1 basis-40 flex-col gap-1">
+              <Label htmlFor="nickname">Nickname</Label>
+              <Input
+                id="nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="sex">Sex</Label>
+            <Select
+              id="sex"
+              value={sex}
+              onChange={(e) => setSex(e.target.value as Sex | "")}
+            >
+              <option value="">Not recorded</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="other">Other</option>
+            </Select>
+          </div>
+
           <PartialDateFields legend="Birth" value={birth} onChange={setBirth} />
           <PartialDateFields legend="Death" value={death} onChange={setDeath} />
         </>
@@ -158,6 +219,67 @@ export function PersonForm({
             className="min-h-35"
           />
         </div>
+      )}
+
+      {showIdentity && (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-xs font-semibold tracking-wide uppercase">
+            Other details
+          </legend>
+          {customFields.map((field, index) => (
+            <div key={index} className="flex items-end gap-2">
+              <div className="flex min-w-0 flex-1 basis-32 flex-col gap-1">
+                <Label htmlFor={`custom-label-${index}`}>Label</Label>
+                <Input
+                  id={`custom-label-${index}`}
+                  value={field.label}
+                  onChange={(e) =>
+                    updateCustomField(index, { label: e.target.value })
+                  }
+                  placeholder="Occupation"
+                />
+              </div>
+              <div className="flex min-w-0 flex-1 basis-32 flex-col gap-1">
+                <Label htmlFor={`custom-value-${index}`}>Value</Label>
+                <Input
+                  id={`custom-value-${index}`}
+                  value={field.value}
+                  onChange={(e) =>
+                    updateCustomField(index, { value: e.target.value })
+                  }
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label={`Remove ${field.label || "field"}`}
+                onClick={() =>
+                  setCustomFields((fields) =>
+                    fields.filter((_, i) => i !== index)
+                  )
+                }
+              >
+                <X />
+              </Button>
+            </div>
+          ))}
+          <div className="flex">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCustomFields((fields) => [
+                  ...fields,
+                  { label: "", value: "" },
+                ])
+              }
+            >
+              <Plus /> Add a detail
+            </Button>
+          </div>
+        </fieldset>
       )}
 
       {showIdentity && (

@@ -123,3 +123,82 @@ describe("BackupEnvelopeSchema", () => {
     expect(result.success).toBe(false)
   })
 })
+
+describe("PersonSchema new v2 fields", () => {
+  const base = {
+    id: "p-1",
+    givenName: "Ada",
+    createdAt: 0,
+    updatedAt: 0,
+  }
+
+  it("round-trips every added field", () => {
+    const person = {
+      ...base,
+      familyName: "King",
+      maidenName: "Byron",
+      nickname: "Ada",
+      sex: "female" as const,
+      multipleBirthGroup: "birth-1",
+      customFields: [{ label: "Occupation", value: "Mathematician" }],
+    }
+    const parsed = PersonSchema.parse(person)
+    expect(parsed).toEqual(person)
+  })
+
+  it("accepts a person with none of them, so existing backups still load", () => {
+    expect(PersonSchema.safeParse(base).success).toBe(true)
+  })
+
+  it("rejects an unknown sex", () => {
+    expect(PersonSchema.safeParse({ ...base, sex: "yes" }).success).toBe(false)
+  })
+
+  it("rejects a custom field with a blank label", () => {
+    expect(
+      PersonSchema.safeParse({
+        ...base,
+        customFields: [{ label: "", value: "x" }],
+      }).success
+    ).toBe(false)
+  })
+
+  it("accepts a custom field with a blank value", () => {
+    // A recorded label with nothing filled in yet is legitimate; a value with
+    // no label is not, since nothing can render or export it.
+    expect(
+      PersonSchema.safeParse({
+        ...base,
+        customFields: [{ label: "Occupation", value: "" }],
+      }).success
+    ).toBe(true)
+  })
+})
+
+describe("RelationshipSchema subtype", () => {
+  const base = { id: "r-1", type: "parent-child" as const, from: "a", to: "b" }
+
+  it("accepts each defined subtype", () => {
+    for (const subtype of [
+      "biological",
+      "adopted",
+      "step",
+      "foster",
+      "guardian",
+    ]) {
+      expect(RelationshipSchema.safeParse({ ...base, subtype }).success).toBe(
+        true
+      )
+    }
+  })
+
+  it("accepts an absent subtype", () => {
+    expect(RelationshipSchema.safeParse(base).success).toBe(true)
+  })
+
+  it("rejects an unknown subtype", () => {
+    expect(
+      RelationshipSchema.safeParse({ ...base, subtype: "cousin" }).success
+    ).toBe(false)
+  })
+})

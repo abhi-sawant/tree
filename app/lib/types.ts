@@ -5,24 +5,58 @@ export type PartialDate = {
   approximate?: boolean
 }
 
+// GEDCOM 5.5.1 only knows M/F/U. "other" is kept as a distinct stored value
+// rather than folded into the absent case, because the export mapping is a
+// lossy detail of one output format and shouldn't reach back into the model.
+// An absent sex means unrecorded — there is deliberately no "unknown" member,
+// which would be a second way to say the same thing.
+export type Sex = "male" | "female" | "other"
+
+// A user-named fact with no place in the fixed schema — occupation, religion,
+// military service. Deliberately unstructured: it is an escape hatch for the
+// facts people want to record now, not a substitute for the events/places/
+// sources model, which needs its own design pass.
+export interface CustomField {
+  label: string
+  value: string
+}
+
 export interface Person {
   id: string
   givenName: string
   familyName?: string
+  // The surname a person was born under, where it differs from familyName.
+  // Recorded separately rather than replacing familyName because both are
+  // real: one is how the family knows them, the other is how the records do.
+  maidenName?: string
+  nickname?: string
+  // A token shared by everyone born in the same multiple birth. A shared token
+  // rather than a boolean so triplets work, and so the grouping survives one of
+  // the siblings being deleted.
+  multipleBirthGroup?: string
+  sex?: Sex
   birth?: PartialDate
   death?: PartialDate
   photoId?: string
   notes?: string
+  customFields?: CustomField[]
   isPlaceholder?: boolean // D6
   createdAt: number
   updatedAt: number
 }
+
+// How a parent-child link came about. An absent subtype means biological, so
+// no backfill is needed and the common case stays the cheapest to store.
+// "step" and "guardian" have no GEDCOM 5.5.1 PEDI value and are not exported.
+export type ParentChildSubtype =
+  "biological" | "adopted" | "step" | "foster" | "guardian"
 
 export interface Relationship {
   id: string
   type: "parent-child" | "spouse"
   from: string // parent, or spouse A
   to: string // child, or spouse B
+  subtype?: ParentChildSubtype // parent-child only
   start?: PartialDate // marriage date
   end?: PartialDate // divorce / separation
 }

@@ -9,10 +9,10 @@ const require = createRequire(import.meta.url)
 
 // elkjs's elk-worker.min.js is a ~1.6MB GWT-compiled bundle meant to be
 // loaded verbatim as a classic Worker's entry script (see
-// app/lib/layout/elk-worker.ts). Importing it the normal way (`?url`) makes
-// Vite's dev server serve it through the JS transform pipeline, which
+// app/lib/layout/use-elk-layout.ts). Importing it the normal way (`?url`)
+// makes Vite's dev server serve it through the JS transform pipeline, which
 // injects an inline sourcemap and balloons the response to 10MB+ — the
-// nested Worker that loads it then hangs forever instead of firing
+// Worker that loads it then hangs forever instead of firing
 // onmessage/onerror. Emitting it as a raw static asset, both in dev and in
 // the production bundle, sidesteps that pipeline entirely.
 function elkWorkerAsset(): Plugin {

@@ -186,6 +186,226 @@ describe("buildGedcomText", () => {
     )
   })
 
+  it("omits SEX entirely when sex is not recorded", () => {
+    const text = buildGedcomText(people, relationships)
+    expect(text).not.toContain("1 SEX")
+  })
+
+  it("emits SEX between NAME and the events, mapping other to U", () => {
+    const text = buildGedcomText(
+      [
+        person({ id: "p-1", givenName: "Fern", sex: "female" }),
+        person({
+          id: "p-2",
+          givenName: "Mel",
+          sex: "male",
+          birth: { year: 1900 },
+        }),
+        person({ id: "p-3", givenName: "Ori", sex: "other" }),
+      ],
+      []
+    )
+    expect(text).toContain("0 @I1@ INDI\n1 NAME Fern //\n1 SEX F")
+    expect(text).toContain("0 @I2@ INDI\n1 NAME Mel //\n1 SEX M\n1 BIRT")
+    expect(text).toContain("0 @I3@ INDI\n1 NAME Ori //\n1 SEX U")
+  })
+
+  it("assigns HUSB/WIFE by recorded sex, not by id order", () => {
+    // p-a sorts first but is female, so the id-order fallback would have put
+    // her in HUSB.
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ada", sex: "female" }),
+        person({ id: "p-b", givenName: "Ben", sex: "male" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        parentChild("p-a", "p-c"),
+        parentChild("p-b", "p-c"),
+      ]
+    )
+    const family = text.split("0 @F1@ FAM")[1].split("\n0 ")[0]
+    expect(family).toContain("1 HUSB @I2@")
+    expect(family).toContain("1 WIFE @I1@")
+  })
+
+  it("falls back to id order when sex cannot decide the pair", () => {
+    // Both female, and a couple with sex recorded on neither: in both cases
+    // the ascending id sort has to settle it so exports stay reproducible.
+    const bothFemale = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ada", sex: "female" }),
+        person({ id: "p-b", givenName: "Bea", sex: "female" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        parentChild("p-a", "p-c"),
+        parentChild("p-b", "p-c"),
+      ]
+    )
+    const family = bothFemale.split("0 @F1@ FAM")[1].split("\n0 ")[0]
+    expect(family).toContain("1 HUSB @I1@")
+    expect(family).toContain("1 WIFE @I2@")
+
+    const neitherRecorded = buildGedcomText(people, relationships)
+    expect(neitherRecorded.split("0 @F2@ FAM")[1].split("\n0 ")[0]).toContain(
+      "1 HUSB @I1@"
+    )
+  })
+
+  it("pairs an unrecorded parent against a recorded one by the recorded sex", () => {
+    // Only p-b's sex is known. A female known parent must still take WIFE,
+    // leaving HUSB for the parent we know nothing about.
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ada" }),
+        person({ id: "p-b", givenName: "Bea", sex: "female" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        parentChild("p-a", "p-c"),
+        parentChild("p-b", "p-c"),
+      ]
+    )
+    const family = text.split("0 @F1@ FAM")[1].split("\n0 ")[0]
+    expect(family).toContain("1 HUSB @I1@")
+    expect(family).toContain("1 WIFE @I2@")
+  })
+
+  it("emits a maiden name as a second NAME, primary name first", () => {
+    const text = buildGedcomText(
+      [
+        person({
+          id: "p-1",
+          givenName: "Ada",
+          familyName: "King",
+          maidenName: "Byron",
+        }),
+      ],
+      []
+    )
+    expect(text).toContain("1 NAME Ada /King/\n1 NAME Ada /Byron/")
+  })
+
+  it("skips a maiden name that just repeats the family name", () => {
+    const text = buildGedcomText(
+      [
+        person({
+          id: "p-1",
+          givenName: "Ada",
+          familyName: "Byron",
+          maidenName: "Byron",
+        }),
+      ],
+      []
+    )
+    const record = text.split("0 @I1@ INDI")[1].split("\n0 ")[0]
+    expect(record.match(/1 NAME/g)).toHaveLength(1)
+  })
+
+  it("does not put a nickname on the NAME line", () => {
+    // 5.5.1 has no nickname field, and every importer parses the surname out
+    // of NAME — a nickname smuggled in there would corrupt that.
+    const text = buildGedcomText(
+      [person({ id: "p-1", givenName: "Augusta", nickname: "Ada" })],
+      []
+    )
+    expect(text).not.toContain("Ada")
+  })
+
+  it("qualifies FAMC with PEDI when both parent links agree", () => {
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ann" }),
+        person({ id: "p-b", givenName: "Bob" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        { ...parentChild("p-a", "p-c"), subtype: "adopted" as const },
+        { ...parentChild("p-b", "p-c"), subtype: "adopted" as const },
+      ]
+    )
+    expect(text).toContain("1 FAMC @F1@\n2 PEDI adopted")
+  })
+
+  it("omits PEDI for subtypes 5.5.1 cannot express", () => {
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ann" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [{ ...parentChild("p-a", "p-c"), subtype: "step" as const }]
+    )
+    expect(text).toContain("1 FAMC @F1@")
+    expect(text).not.toContain("PEDI")
+  })
+
+  it("omits PEDI when the two parent links disagree", () => {
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ann" }),
+        person({ id: "p-b", givenName: "Bob" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        parentChild("p-a", "p-c"),
+        { ...parentChild("p-b", "p-c"), subtype: "adopted" as const },
+      ]
+    )
+    expect(text).toContain("1 FAMC @F1@")
+    expect(text).not.toContain("PEDI")
+  })
+
+  it("emits no PEDI for an ordinary biological link", () => {
+    expect(buildGedcomText(people, relationships)).not.toContain("PEDI")
+  })
+
+  it("appends custom fields to the NOTE block as label: value", () => {
+    const text = buildGedcomText(
+      [
+        person({
+          id: "p-1",
+          givenName: "Ada",
+          notes: "A note",
+          customFields: [
+            { label: "Occupation", value: "Mathematician" },
+            { label: "Residence", value: "London" },
+          ],
+        }),
+      ],
+      []
+    )
+    expect(text).toContain(
+      "1 NOTE A note\n2 CONT Occupation: Mathematician\n2 CONT Residence: London"
+    )
+  })
+
+  it("opens the NOTE block with a custom field when there are no notes", () => {
+    const text = buildGedcomText(
+      [
+        person({
+          id: "p-1",
+          givenName: "Ada",
+          customFields: [{ label: "Occupation", value: "Mathematician" }],
+        }),
+      ],
+      []
+    )
+    expect(text).toContain("1 NOTE Occupation: Mathematician")
+    expect(text).not.toContain("2 CONT")
+  })
+
+  it("emits no NOTE at all when neither notes nor custom fields exist", () => {
+    const text = buildGedcomText([person({ id: "p-1", givenName: "Ada" })], [])
+    const record = text.split("0 @I1@ INDI")[1].split("\n0 ")[0]
+    expect(record).not.toContain("NOTE")
+  })
+
   it("silently excludes a malformed 3-parent child without throwing", () => {
     const threeParents: Relationship[] = [
       parentChild("p-a", "p-child-a"),

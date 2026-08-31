@@ -32,14 +32,21 @@ import {
   addSpouseNew,
   recordMarriage,
   updateRelationshipDates,
+  updateRelationshipSubtype,
   type RelationshipDates,
 } from "~/lib/db/relationship-actions"
 import { removeRelationship } from "~/lib/db/relationships"
+import { Checkbox } from "~/components/ui/checkbox"
+import { Label } from "~/components/ui/label"
+import { Select } from "~/components/ui/select"
+import { setMultipleBirthGroup } from "~/lib/db/multiple-birth"
+import { SUBTYPE_OPTIONS } from "~/components/canvas/relative-form"
+import { personDisplayName } from "~/lib/person-name"
 import { formatPartialDate } from "~/lib/partial-date"
 import type { PersonFormValues } from "~/lib/schemas"
 import { toast } from "~/lib/ui/toast-store"
 import { cn } from "~/lib/utils"
-import type { Person, Relationship } from "~/lib/types"
+import type { ParentChildSubtype, Person, Relationship } from "~/lib/types"
 
 type DetailTab = "details" | "family" | "notes"
 
@@ -58,10 +65,7 @@ interface DetailPanelProps {
 }
 
 function personName(person: Person | undefined): string {
-  if (!person) return "Unknown"
-  return (
-    [person.givenName, person.familyName].filter(Boolean).join(" ") || "Unnamed"
-  )
+  return person ? personDisplayName(person) : "Unknown"
 }
 
 function lifeSpan(person: Person): string {
@@ -304,6 +308,7 @@ function PersonDetail({
         {tab === "family" && (
           <>
             <RelationshipList
+              showSubtype
               title="Parents"
               relationships={parentRels}
               otherPersonId={(r) => r.from}
@@ -319,11 +324,18 @@ function PersonDetail({
               showDates
             />
             <RelationshipList
+              showSubtype
               title="Children"
               relationships={childRels}
               otherPersonId={(r) => r.to}
               people={people}
               onSelect={select}
+            />
+
+            <MultipleBirthEditor
+              person={person}
+              relationships={relationships}
+              people={people}
             />
 
             <AddRelativeMenu
@@ -349,17 +361,26 @@ function PersonDetail({
                   : [person.id]
               }
               showDates={action.kind === "add-spouse"}
-              onSubmitNew={async (values, dates, photoAction) => {
+              showSubtype={
+                action.kind === "add-parent" || action.kind === "add-child"
+              }
+              onSubmitNew={async (values, dates, photoAction, subtype) => {
                 let created: Person | undefined
                 if (action.kind === "add-parent")
-                  created = await addParentNew(person.id, treeId, values)
+                  created = await addParentNew(
+                    person.id,
+                    treeId,
+                    values,
+                    subtype
+                  )
                 else if (action.kind === "add-spouse")
                   created = await addSpouseNew(person.id, treeId, values, dates)
                 else if (action.kind === "add-child")
                   created = await addChildNew(
                     { kind: "person", personId: person.id },
                     treeId,
-                    values
+                    values,
+                    subtype
                   )
                 else if (action.kind === "add-sibling")
                   created = await addSiblingNew(person.id, treeId, values)
@@ -372,16 +393,17 @@ function PersonDetail({
                 setAction(undefined)
                 toast("Relative added")
               }}
-              onSubmitExisting={async (picked, dates) => {
+              onSubmitExisting={async (picked, dates, subtype) => {
                 if (action.kind === "add-parent")
-                  await addParentExisting(person.id, treeId, picked.id)
+                  await addParentExisting(person.id, treeId, picked.id, subtype)
                 else if (action.kind === "add-spouse")
                   await addSpouseExisting(person.id, treeId, picked.id, dates)
                 else if (action.kind === "add-child")
                   await addChildExisting(
                     { kind: "person", personId: person.id },
                     treeId,
-                    picked.id
+                    picked.id,
+                    subtype
                   )
                 else if (action.kind === "add-sibling")
                   await addSiblingExisting(person.id, treeId, picked.id)
@@ -698,6 +720,7 @@ interface RelationshipListProps {
   people: Map<string, Person>
   onSelect: (nodeId: string) => void
   showDates?: boolean
+  showSubtype?: boolean
 }
 
 function RelationshipList({
@@ -707,6 +730,7 @@ function RelationshipList({
   people,
   onSelect,
   showDates = false,
+  showSubtype = false,
 }: RelationshipListProps) {
   const [editingId, setEditingId] = useState<string | undefined>(undefined)
 
@@ -743,6 +767,12 @@ function RelationshipList({
                     {r.end && ` – ${formatPartialDate(r.end)}`}
                   </span>
                 )}
+                {showSubtype && (
+                  <SubtypeSelect
+                    relationship={r}
+                    onChanged={() => toast("Relationship updated")}
+                  />
+                )}
               </div>
               <div className="ml-auto flex gap-1">
                 {showDates && (
@@ -776,6 +806,110 @@ function RelationshipList({
         )
       })}
     </div>
+  )
+}
+
+// Siblings are offered as checkboxes rather than asking for a group name,
+// because a multiple birth is a relationship between specific people — the
+// shared token is storage, not something a user should ever have to think
+// about. Only full siblings-by-shared-parent are candidates, since anyone
+// without a parent in common cannot have been born alongside this person.
+function MultipleBirthEditor({
+  person,
+  relationships,
+  people,
+}: {
+  person: Person
+  relationships: Relationship[]
+  people: Map<string, Person>
+}) {
+  const siblingIds = useMemo(() => {
+    const parentIds = relationships
+      .filter((r) => r.type === "parent-child" && r.to === person.id)
+      .map((r) => r.from)
+    if (parentIds.length === 0) return []
+    const parents = new Set(parentIds)
+    return [
+      ...new Set(
+        relationships
+          .filter(
+            (r) =>
+              r.type === "parent-child" &&
+              parents.has(r.from) &&
+              r.to !== person.id
+          )
+          .map((r) => r.to)
+      ),
+    ]
+  }, [relationships, person.id])
+
+  if (siblingIds.length === 0) return null
+
+  const group = person.multipleBirthGroup
+  const inGroup = (id: string) =>
+    !!group && people.get(id)?.multipleBirthGroup === group
+
+  async function toggle(siblingId: string) {
+    const current = siblingIds.filter(inGroup)
+    const next = current.includes(siblingId)
+      ? current.filter((id) => id !== siblingId)
+      : [...current, siblingId]
+    await setMultipleBirthGroup(person.id, next)
+    toast(
+      next.length > 0 ? "Multiple birth recorded" : "Multiple birth cleared"
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+        Born together with
+      </p>
+      {siblingIds.map((siblingId) => (
+        <Label key={siblingId} className="text-xs">
+          <Checkbox
+            checked={inGroup(siblingId)}
+            onCheckedChange={() => void toggle(siblingId)}
+          />
+          {personName(people.get(siblingId))}
+        </Label>
+      ))}
+    </div>
+  )
+}
+
+// Editable in place rather than behind a toggle: unlike dates, this is a
+// five-way choice with a default, and reading it is as useful as changing it —
+// "how is this person related" is exactly what the Family tab is for.
+function SubtypeSelect({
+  relationship,
+  onChanged,
+}: {
+  relationship: Relationship
+  onChanged: () => void
+}) {
+  async function handleChange(value: string) {
+    const subtype = value as ParentChildSubtype
+    await updateRelationshipSubtype(
+      relationship,
+      subtype === "biological" ? undefined : subtype
+    )
+    onChanged()
+  }
+
+  return (
+    <Select
+      aria-label="How this parent-child link came about"
+      value={relationship.subtype ?? "biological"}
+      onChange={(e) => void handleChange(e.target.value)}
+      className="h-6 text-11"
+    >
+      {SUBTYPE_OPTIONS.map(({ value, label }) => (
+        <option key={value} value={value}>
+          {label}
+        </option>
+      ))}
+    </Select>
   )
 }
 

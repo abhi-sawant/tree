@@ -6,6 +6,7 @@ import { CommandPalette } from "~/components/shell/command-palette"
 import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
 import { Toaster } from "~/components/ui/toast"
+import { HealthView } from "~/components/views/health-view"
 import { SettingsView } from "~/components/views/settings-view"
 import { TableView } from "~/components/views/table-view"
 import { TreeView } from "~/components/views/tree-view"
@@ -146,6 +147,13 @@ export function AppShell({
             relationships={relationships}
             generations={generations}
             totalPeople={people.length}
+          />
+        )}
+        {view === "health" && (
+          <HealthView
+            people={people}
+            relationships={relationships}
+            memberIds={memberIds}
           />
         )}
         {view === "settings" && (
