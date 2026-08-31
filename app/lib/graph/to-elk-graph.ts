@@ -11,10 +11,10 @@ export interface ToElkGraphOptions {
   treeMembers: TreeMember[]
 }
 
-export const PERSON_WIDTH = 200
+export const PERSON_WIDTH = 250
 export const PERSON_HEIGHT = 200
-export const UNION_WIDTH = 16
-export const UNION_HEIGHT = 16
+export const UNION_WIDTH = 12
+export const UNION_HEIGHT = 12
 
 export function toElkGraph({
   people,

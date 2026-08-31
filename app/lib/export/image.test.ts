@@ -34,7 +34,6 @@ describe("exportPngBlob", () => {
       height: 200,
       backgroundColor: EXPORT_BACKGROUND_COLOR,
       pixelRatio: 2,
-      cacheBust: true,
     })
   })
 
@@ -52,9 +51,9 @@ describe("exportPngBlob", () => {
   it("throws when toBlob resolves null", async () => {
     vi.mocked(toBlob).mockResolvedValue(null)
 
-    await expect(exportPngBlob(node, { width: 100, height: 200 })).rejects.toThrow(
-      "PNG export failed"
-    )
+    await expect(
+      exportPngBlob(node, { width: 100, height: 200 })
+    ).rejects.toThrow("PNG export failed")
   })
 })
 
@@ -70,7 +69,6 @@ describe("exportPngDataUrl", () => {
       height: 60,
       backgroundColor: EXPORT_BACKGROUND_COLOR,
       pixelRatio: 2,
-      cacheBust: true,
     })
   })
 })

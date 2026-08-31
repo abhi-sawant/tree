@@ -13,11 +13,11 @@ import type { UnionNodeData } from "~/lib/layout/to-react-flow-graph"
 
 export type UnionNodeType = Node<UnionNodeData, "union">
 
-const dotClassName =
-  "h-full w-full rounded-full border border-border bg-muted-foreground/60"
+const dotClassName = "h-full w-full rounded-full bg-edge-spouse"
 
-export function UnionNode({ id, data, selected }: NodeProps<UnionNodeType>) {
+export function UnionNode({ id, data }: NodeProps<UnionNodeType>) {
   const select = useCanvasUIStore((s) => s.select)
+  const selected = useCanvasUIStore((s) => s.selectedNodeId === id)
   const requestRecordMarriage = useCanvasUIStore((s) => s.requestRecordMarriage)
 
   function handleRecordMarriage() {
@@ -26,12 +26,7 @@ export function UnionNode({ id, data, selected }: NodeProps<UnionNodeType>) {
   }
 
   const dot = (
-    <div
-      className={cn(
-        dotClassName,
-        selected && "ring-2 ring-primary ring-offset-1"
-      )}
-    />
+    <div className={cn(dotClassName, selected && "ring-3 ring-primary")} />
   )
   const handles = (
     <>

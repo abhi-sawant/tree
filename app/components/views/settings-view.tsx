@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router"
 
 import {
   AlertDialog,
@@ -11,28 +10,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
-import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
-import { getLastExportDate, setLastExportDate } from "~/lib/db/app-meta"
+import { getLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
 import { gedcomFilename } from "~/lib/export/filenames"
 import { exportGedcom } from "~/lib/export/gedcom"
-import {
-  InvalidBackupError,
-  exportBackup,
-  importBackup,
-} from "~/lib/export/json"
+import { InvalidBackupError, importBackup } from "~/lib/export/json"
 import { isStoragePersisted } from "~/lib/storage"
+import { toast } from "~/lib/ui/toast-store"
 
-function backupFilename(): string {
-  const date = new Date().toISOString().slice(0, 10)
-  return `family-tree-backup-${date}.json`
+interface SettingsViewProps {
+  onExportBackup: () => void
+  exportToken: number
 }
 
-export default function Settings() {
-  const navigate = useNavigate()
+export function SettingsView({
+  onExportBackup,
+  exportToken,
+}: SettingsViewProps) {
   const [inputKey, setInputKey] = useState(0)
   const [pendingFile, setPendingFile] = useState<File | undefined>(undefined)
   const [error, setError] = useState<string | undefined>(undefined)
@@ -41,25 +38,16 @@ export default function Settings() {
   const [lastExport, setLastExport] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    isStoragePersisted().then(setPersisted)
-    getLastExportDate().then(setLastExport)
+    void isStoragePersisted().then(setPersisted)
   }, [])
-
-  async function recordExport() {
-    await setLastExportDate()
-    setLastExport(await getLastExportDate())
-  }
-
-  async function handleExport() {
-    const blob = await exportBackup()
-    triggerDownload(blob, backupFilename())
-    await recordExport()
-  }
+  useEffect(() => {
+    void getLastExportDate().then(setLastExport)
+  }, [exportToken])
 
   async function handleExportGedcom() {
     const blob = await exportGedcom()
     triggerDownload(blob, gedcomFilename())
-    await recordExport()
+    toast("GEDCOM exported")
   }
 
   function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
@@ -80,7 +68,6 @@ export default function Settings() {
     setImporting(true)
     try {
       await importBackup(pendingFile)
-      navigate("/")
       window.location.reload()
     } catch (err) {
       setImporting(false)
@@ -94,64 +81,55 @@ export default function Settings() {
   }
 
   return (
-    <div className="flex flex-col gap-8 p-6">
-      <h1 className="font-heading text-lg font-semibold tracking-wider uppercase">
-        Settings
-      </h1>
-
+    <div className="flex max-w-155 flex-1 flex-col gap-7 overflow-y-auto p-6">
       <section className="flex flex-col gap-2">
-        <h2 className="font-heading text-sm font-semibold tracking-wider uppercase">
-          Storage
-        </h2>
-        <div>
-          <Badge variant={persisted ? "default" : "secondary"}>
+        <SectionHeading>Storage</SectionHeading>
+        <div className="flex items-center gap-2 border border-border p-3">
+          <span
+            className={
+              persisted
+                ? "size-2 rounded-full bg-success"
+                : "size-2 rounded-full bg-muted-foreground"
+            }
+          />
+          <span className="font-heading text-10 font-semibold tracking-widest uppercase">
             {persisted === undefined
               ? "Checking…"
               : persisted
                 ? "Persistent storage granted"
                 : "Not persisted"}
-          </Badge>
+          </span>
+          <span className="ml-auto text-xs text-muted-foreground">
+            Last export{" "}
+            {lastExport ? new Date(lastExport).toLocaleString() : "never"}
+          </span>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Last export:{" "}
-          {lastExport ? new Date(lastExport).toLocaleString() : "never"}
+        <p className="text-12-5 leading-relaxed text-muted-foreground">
+          Everything lives in this browser. Nothing is uploaded — export a
+          backup regularly.
         </p>
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="font-heading text-sm font-semibold tracking-wider uppercase">
-          Export backup
-        </h2>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Download every person, relationship, tree, and photo as a single JSON
-          file.
+      <section className="flex flex-col gap-2.5">
+        <SectionHeading>Export</SectionHeading>
+        <p className="text-12-5 leading-relaxed text-muted-foreground">
+          The JSON backup covers every person, relationship, tree and photo.
+          GEDCOM 5.5.1 covers everyone in the pool, for use in other genealogy
+          software. PNG and PDF capture the open canvas — export those from the
+          Tree view's Export menu.
         </p>
-        <div>
-          <Button onClick={handleExport}>Export backup</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={onExportBackup}>JSON backup</Button>
+          <Button variant="outline" onClick={() => void handleExportGedcom()}>
+            GEDCOM 5.5.1
+          </Button>
         </div>
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="font-heading text-sm font-semibold tracking-wider uppercase">
-          Export GEDCOM
-        </h2>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Download every person and relationship as a GEDCOM 5.5.1 file, for use
-          in other genealogy software. Always covers everyone in the pool, not
-          just the currently open tree.
-        </p>
-        <div>
-          <Button onClick={handleExportGedcom}>Export GEDCOM</Button>
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h2 className="font-heading text-sm font-semibold tracking-wider uppercase">
-          Import backup
-        </h2>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Restore from a JSON backup file. This replaces all current data — it
-          can't be undone.
+      <section className="flex flex-col gap-2.5">
+        <SectionHeading>Import backup</SectionHeading>
+        <p className="text-12-5 leading-relaxed text-muted-foreground">
+          Restoring replaces everything currently stored. This can't be undone.
         </p>
         <Label className="max-w-sm flex-col items-start gap-2 text-sm font-normal normal-case">
           Choose backup file
@@ -191,5 +169,13 @@ export default function Settings() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="font-heading text-xs font-semibold tracking-widest uppercase">
+      {children}
+    </h2>
   )
 }

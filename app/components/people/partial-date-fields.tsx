@@ -15,7 +15,11 @@ function toUndefinedIfEmpty(pd: PartialDate): PartialDate | undefined {
     : pd
 }
 
-export function PartialDateFields({ legend, value, onChange }: PartialDateFieldsProps) {
+export function PartialDateFields({
+  legend,
+  value,
+  onChange,
+}: PartialDateFieldsProps) {
   const current: PartialDate = value ?? {}
 
   function update(patch: Partial<PartialDate>) {
@@ -30,20 +34,21 @@ export function PartialDateFields({ legend, value, onChange }: PartialDateFields
 
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-xs font-semibold tracking-wide uppercase">{legend}</legend>
-      <div className="flex items-end gap-3">
-        <div className="flex flex-col gap-1">
+      <legend className="text-xs font-semibold tracking-wide uppercase">
+        {legend}
+      </legend>
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-1 basis-16 flex-col gap-1">
           <Label htmlFor={`${legend}-year`}>Year</Label>
           <Input
             id={`${legend}-year`}
             type="number"
             inputMode="numeric"
-            className="w-20"
             value={current.year ?? ""}
             onChange={(e) => update({ year: parseNumberInput(e.target.value) })}
           />
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-1 basis-12 flex-col gap-1">
           <Label htmlFor={`${legend}-month`}>Month</Label>
           <Input
             id={`${legend}-month`}
@@ -51,12 +56,13 @@ export function PartialDateFields({ legend, value, onChange }: PartialDateFields
             inputMode="numeric"
             min={1}
             max={12}
-            className="w-16"
             value={current.month ?? ""}
-            onChange={(e) => update({ month: parseNumberInput(e.target.value) })}
+            onChange={(e) =>
+              update({ month: parseNumberInput(e.target.value) })
+            }
           />
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-1 basis-12 flex-col gap-1">
           <Label htmlFor={`${legend}-day`}>Day</Label>
           <Input
             id={`${legend}-day`}
@@ -64,15 +70,16 @@ export function PartialDateFields({ legend, value, onChange }: PartialDateFields
             inputMode="numeric"
             min={1}
             max={31}
-            className="w-16"
             value={current.day ?? ""}
             onChange={(e) => update({ day: parseNumberInput(e.target.value) })}
           />
         </div>
-        <Label className="mb-2.5">
+        <Label className="mb-2.5 shrink-0 whitespace-nowrap">
           <Checkbox
             checked={current.approximate ?? false}
-            onCheckedChange={(checked) => update({ approximate: checked === true })}
+            onCheckedChange={(checked) =>
+              update({ approximate: checked === true })
+            }
           />
           Approximate
         </Label>

@@ -1,0 +1,168 @@
+import { useEffect, useMemo, useState } from "react"
+
+import { AppSidebar } from "~/components/shell/app-sidebar"
+import { AppTopbar } from "~/components/shell/app-topbar"
+import { CommandPalette } from "~/components/shell/command-palette"
+import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
+import { PersonFormDialog } from "~/components/people/person-form-dialog"
+import { Toaster } from "~/components/ui/toast"
+import { SettingsView } from "~/components/views/settings-view"
+import { TableView } from "~/components/views/table-view"
+import { TreeView } from "~/components/views/tree-view"
+import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import { useTreeMembers } from "~/lib/db/hooks"
+import { setLastExportDate } from "~/lib/db/app-meta"
+import { triggerDownload } from "~/lib/download"
+import { exportBackup } from "~/lib/export/json"
+import type { UnionNode } from "~/lib/graph/derive-unions"
+import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { toast } from "~/lib/ui/toast-store"
+import type { Person, Relationship, Tree } from "~/lib/types"
+
+function backupFilename(): string {
+  const date = new Date().toISOString().slice(0, 10)
+  return `family-tree-backup-${date}.json`
+}
+
+interface AppShellProps {
+  tree: Tree
+  trees: Tree[]
+  people: Person[]
+  relationships: Relationship[]
+  unions: UnionNode[]
+  generations: Map<string, number>
+}
+
+export function AppShell({
+  tree,
+  trees,
+  people,
+  relationships,
+  unions,
+  generations,
+}: AppShellProps) {
+  const view = useAppShellStore((s) => s.view)
+  const setActiveTree = useAppShellStore((s) => s.setActiveTree)
+  const setView = useAppShellStore((s) => s.setView)
+  const treeMembers = useTreeMembers(tree.id)
+
+  // A node selected in a previously-open tree has no meaning in this one,
+  // and neither does a generation hidden there. This lives here rather than
+  // in TreeView because TreeView unmounts whenever the table or settings
+  // view is showing, and remounting it must not throw the selection away.
+  const select = useCanvasUIStore((s) => s.select)
+  const resetHiddenGenerations = useCanvasUIStore(
+    (s) => s.resetHiddenGenerations
+  )
+  useEffect(() => {
+    select(null)
+    resetHiddenGenerations()
+  }, [tree.id, select, resetHiddenGenerations])
+
+  const [createTreeOpen, setCreateTreeOpen] = useState(false)
+  const [addPersonOpen, setAddPersonOpen] = useState(false)
+  // Nudged after every backup so the sidebar and Settings re-read app-meta.
+  const [exportToken, setExportToken] = useState(0)
+
+  const memberIds = useMemo(
+    () => new Set((treeMembers ?? []).map((m) => m.personId)),
+    [treeMembers]
+  )
+
+  // Generation numbering shown in the chrome is scoped to this tree — a
+  // relative who only exists in another tree shouldn't inflate the count.
+  const generationCount = useMemo(() => {
+    let max = -1
+    for (const personId of memberIds) {
+      const generation = generations.get(personId)
+      if (generation !== undefined && generation > max) max = generation
+    }
+    return max + 1
+  }, [memberIds, generations])
+
+  const rootName = useMemo(() => {
+    const root = people.find((p) => p.id === tree.rootPersonId)
+    if (!root) return "—"
+    return (
+      [root.givenName, root.familyName].filter(Boolean).join(" ") || "Unnamed"
+    )
+  }, [people, tree.rootPersonId])
+
+  async function handleExportBackup() {
+    const blob = await exportBackup()
+    triggerDownload(blob, backupFilename())
+    await setLastExportDate()
+    setExportToken((t) => t + 1)
+    toast("Backup exported")
+  }
+
+  return (
+    <div className="flex h-svh w-full">
+      <AppSidebar
+        trees={trees}
+        activeTreeId={tree.id}
+        onCreateTree={() => setCreateTreeOpen(true)}
+        onExportBackup={() => void handleExportBackup()}
+        exportToken={exportToken}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AppTopbar
+          tree={tree}
+          trees={trees}
+          memberCount={memberIds.size}
+          generationCount={generationCount}
+          rootName={rootName}
+          onCreateTree={() => setCreateTreeOpen(true)}
+          onExportBackup={() => void handleExportBackup()}
+        />
+
+        {view === "tree" && (
+          <TreeView
+            tree={tree}
+            people={people}
+            relationships={relationships}
+            unions={unions}
+            generations={generations}
+            generationCount={generationCount}
+            onAddPerson={() => setAddPersonOpen(true)}
+          />
+        )}
+        {view === "table" && (
+          <TableView
+            relationships={relationships}
+            generations={generations}
+            totalPeople={people.length}
+          />
+        )}
+        {view === "settings" && (
+          <SettingsView
+            onExportBackup={() => void handleExportBackup()}
+            exportToken={exportToken}
+          />
+        )}
+      </div>
+
+      <CommandPalette generations={generations} memberIds={memberIds} />
+      <Toaster />
+
+      <CreateTreeDialog
+        open={createTreeOpen}
+        onOpenChange={setCreateTreeOpen}
+        onCreated={(newTree) => {
+          setCreateTreeOpen(false)
+          setActiveTree(newTree.id)
+          setView("tree")
+          toast("Tree created")
+        }}
+      />
+      {addPersonOpen && (
+        <PersonFormDialog
+          open={addPersonOpen}
+          onOpenChange={setAddPersonOpen}
+          treeId={tree.id}
+        />
+      )}
+    </div>
+  )
+}

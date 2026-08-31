@@ -11,6 +11,7 @@ import type { Person } from "~/lib/types"
 
 interface PersonRowActionsProps {
   person: Person
+  onOpenInTree: (person: Person) => void
   onEdit: (person: Person) => void
   onDelete: (person: Person) => void
   onAddToTree: (person: Person) => void
@@ -19,6 +20,7 @@ interface PersonRowActionsProps {
 
 export function PersonRowActions({
   person,
+  onOpenInTree,
   onEdit,
   onDelete,
   onAddToTree,
@@ -35,13 +37,23 @@ export function PersonRowActions({
         }
       />
       <DropdownMenuContent>
-        <DropdownMenuItem onClick={() => onEdit(person)}>Edit</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onAddToTree(person)}>Add to tree</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onOpenInTree(person)}>
+          Open in tree
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEdit(person)}>
+          Edit details
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddToTree(person)}>
+          Add to tree
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onRemoveFromTree(person)}>
           Remove from tree
         </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(person)}>
-          Delete
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => onDelete(person)}
+        >
+          Delete person…
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

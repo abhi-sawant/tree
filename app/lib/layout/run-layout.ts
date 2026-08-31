@@ -9,7 +9,7 @@ export interface NodePosition {
 export const DEFAULT_LAYOUT_OPTIONS: Record<string, string> = {
   "elk.algorithm": "layered",
   "elk.direction": "DOWN",
-  "elk.layered.spacing.nodeNodeBetweenLayers": "80",
+  "elk.layered.spacing.nodeNodeBetweenLayers": "90",
   "elk.spacing.nodeNode": "40",
   "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
   // toElkGraph feeds nodes/edges in family-grouped order (see
@@ -30,7 +30,7 @@ export const DEFAULT_LAYOUT_OPTIONS: Record<string, string> = {
 export async function runLayout(
   elk: ELK,
   graph: ElkNode,
-  layoutOptions: Record<string, string> = DEFAULT_LAYOUT_OPTIONS,
+  layoutOptions: Record<string, string> = DEFAULT_LAYOUT_OPTIONS
 ): Promise<Record<string, NodePosition>> {
   const result = await elk.layout(graph, { layoutOptions })
 

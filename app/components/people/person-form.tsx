@@ -15,11 +15,18 @@ export type PhotoAction =
   | { kind: "staged"; blob: Blob; mime: string }
   | { kind: "removed" }
 
+// Which fields this instance *renders*. Every field is still held in state
+// and submitted whatever the section, so saving from the "details" tab can't
+// silently blank out notes edited on the "notes" tab (and vice versa).
+export type PersonFormSection = "all" | "details" | "notes"
+
 interface PersonFormProps {
   initialValues?: Partial<PersonFormValues>
   onSubmit: (values: PersonFormValues, photoAction: PhotoAction) => void
   onCancel?: () => void
   submitLabel?: string
+  cancelLabel?: string
+  section?: PersonFormSection
 }
 
 export function PersonForm({
@@ -27,7 +34,12 @@ export function PersonForm({
   onSubmit,
   onCancel,
   submitLabel = "Save",
+  cancelLabel = "Cancel",
+  section = "all",
 }: PersonFormProps) {
+  const showIdentity = section !== "notes"
+  const showNotes = section !== "details"
+
   const [givenName, setGivenName] = useState(initialValues?.givenName ?? "")
   const [familyName, setFamilyName] = useState(initialValues?.familyName ?? "")
   const [birth, setBirth] = useState(initialValues?.birth)
@@ -35,8 +47,12 @@ export function PersonForm({
   const [notes, setNotes] = useState(initialValues?.notes ?? "")
   const [error, setError] = useState<ZodError | undefined>(undefined)
 
-  const [photoAction, setPhotoAction] = useState<PhotoAction>({ kind: "unchanged" })
-  const [stagedPreviewUrl, setStagedPreviewUrl] = useState<string | undefined>(undefined)
+  const [photoAction, setPhotoAction] = useState<PhotoAction>({
+    kind: "unchanged",
+  })
+  const [stagedPreviewUrl, setStagedPreviewUrl] = useState<string | undefined>(
+    undefined
+  )
   const [photoError, setPhotoError] = useState<string | undefined>(undefined)
   const [processingPhoto, setProcessingPhoto] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -105,81 +121,116 @@ export function PersonForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="givenName">Given name</Label>
-        <Input
-          id="givenName"
-          value={givenName}
-          onChange={(e) => setGivenName(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="familyName">Family name</Label>
-        <Input id="familyName" value={familyName} onChange={(e) => setFamilyName(e.target.value)} />
-      </div>
-
-      <PartialDateFields legend="Birth" value={birth} onChange={setBirth} />
-      <PartialDateFields legend="Death" value={death} onChange={setDeath} />
-
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <Label>Photo</Label>
-        <div className="flex items-center gap-3">
-          {stagedPreviewUrl ? (
-            <img
-              src={stagedPreviewUrl}
-              alt=""
-              className="size-16 shrink-0 rounded-full object-cover"
-            />
-          ) : (
-            <PersonAvatar
-              photoId={photoAction.kind === "unchanged" ? initialValues?.photoId : undefined}
-              size="lg"
-            />
-          )}
+      {showIdentity && (
+        <>
           <div className="flex flex-col gap-1">
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={processingPhoto}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {processingPhoto ? "Processing…" : hasPhoto ? "Change photo" : "Add photo"}
-              </Button>
-              {hasPhoto && (
-                <Button type="button" variant="ghost" size="sm" onClick={handleRemovePhoto}>
-                  Remove
+            <Label htmlFor="givenName">Given name</Label>
+            <Input
+              id="givenName"
+              value={givenName}
+              onChange={(e) => setGivenName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="familyName">Family name</Label>
+            <Input
+              id="familyName"
+              value={familyName}
+              onChange={(e) => setFamilyName(e.target.value)}
+            />
+          </div>
+
+          <PartialDateFields legend="Birth" value={birth} onChange={setBirth} />
+          <PartialDateFields legend="Death" value={death} onChange={setDeath} />
+        </>
+      )}
+
+      {showNotes && (
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="notes">Notes</Label>
+          <Textarea
+            id="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Places, stories, sources…"
+            className="min-h-35"
+          />
+        </div>
+      )}
+
+      {showIdentity && (
+        <div className="flex flex-col gap-1">
+          <Label>Photo</Label>
+          <div className="flex items-center gap-3">
+            {stagedPreviewUrl ? (
+              <img
+                src={stagedPreviewUrl}
+                alt=""
+                className="size-16 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <PersonAvatar
+                photoId={
+                  photoAction.kind === "unchanged"
+                    ? initialValues?.photoId
+                    : undefined
+                }
+                size="lg"
+              />
+            )}
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={processingPhoto}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {processingPhoto
+                    ? "Processing…"
+                    : hasPhoto
+                      ? "Change photo"
+                      : "Add photo"}
                 </Button>
+                {hasPhoto && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemovePhoto}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+              {photoError && (
+                <p className="text-sm text-destructive">{photoError}</p>
               )}
             </div>
-            {photoError && <p className="text-sm text-destructive">{photoError}</p>}
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoSelected}
+          />
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handlePhotoSelected}
-        />
-      </div>
+      )}
 
       {error && (
-        <p className="text-sm text-destructive">{error.issues[0]?.message ?? "Invalid input."}</p>
+        <p className="text-sm text-destructive">
+          {error.issues[0]?.message ?? "Invalid input."}
+        </p>
       )}
 
       <div className="flex justify-end gap-2">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {cancelLabel}
           </Button>
         )}
         <Button type="submit">{submitLabel}</Button>

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest"
 
 import { deriveUnions } from "~/lib/graph/derive-unions"
-import { toElkGraph } from "~/lib/graph/to-elk-graph"
+import {
+  PERSON_HEIGHT,
+  PERSON_WIDTH,
+  UNION_HEIGHT,
+  UNION_WIDTH,
+  toElkGraph,
+} from "~/lib/graph/to-elk-graph"
 import {
   toReactFlowGraph,
   type PersonNodeData,
@@ -57,8 +63,8 @@ describe("toReactFlowGraph", () => {
     expect(nodes).toHaveLength(1)
     const node = nodes[0]
     expect(node.type).toBe("person")
-    expect(node.width).toBe(160)
-    expect(node.height).toBe(80)
+    expect(node.width).toBe(PERSON_WIDTH)
+    expect(node.height).toBe(PERSON_HEIGHT)
     expect(node.position).toEqual({ x: 1, y: 2 })
     expect(node.draggable).toBe(true)
     const data = node.data as PersonNodeData
@@ -125,8 +131,8 @@ describe("toReactFlowGraph", () => {
 
     const unionNode = nodes.find((n) => n.id === unionId)!
     expect(unionNode.type).toBe("union")
-    expect(unionNode.width).toBe(16)
-    expect(unionNode.height).toBe(16)
+    expect(unionNode.width).toBe(UNION_WIDTH)
+    expect(unionNode.height).toBe(UNION_HEIGHT)
     expect(unionNode.draggable).toBe(false)
     expect((unionNode.data as UnionNodeData).union).toMatchObject({
       kind: "real",
@@ -159,9 +165,10 @@ describe("toReactFlowGraph", () => {
       .children!.map((n) => n.id)
       .find((nid) => nid.startsWith("union:"))!
 
-    // a is at x=0 (center 80), b is at x=300 (center 380) — true midpoint is 230.
-    // Both sit on the same row (y=0). The ELK-reported union position
-    // (999, 60) should be ignored in favor of that shared row.
+    // a is at x=0, b is at x=300, so their centres are half a card apart
+    // either side of the true midpoint. Both sit on the same row (y=0); the
+    // ELK-reported union position (999, 60) should be ignored in favour of
+    // that shared row.
     const { nodes } = toReactFlowGraph({
       graph,
       positions: {
@@ -177,8 +184,10 @@ describe("toReactFlowGraph", () => {
     })
 
     const unionNode = nodes.find((n) => n.id === unionId)!
-    expect(unionNode.position.x).toBe(230 - 8) // minus half the union node's width
-    expect(unionNode.position.y).toBe(32) // vertically centered in the couple's row
+    const midpointX = (0 + PERSON_WIDTH / 2 + 300 + PERSON_WIDTH / 2) / 2
+    expect(unionNode.position.x).toBe(midpointX - UNION_WIDTH / 2)
+    // vertically centered in the couple's row
+    expect(unionNode.position.y).toBe(PERSON_HEIGHT / 2 - UNION_HEIGHT / 2)
   })
 
   it("routes a parent->union edge as a straight line into the side the parent sits on", () => {
@@ -262,7 +271,10 @@ describe("toReactFlowGraph", () => {
       overriddenNodeIds: [],
     })
 
-    expect(nodes.find((n) => n.id === unionId)!.position).toEqual({ x: 42, y: 7 })
+    expect(nodes.find((n) => n.id === unionId)!.position).toEqual({
+      x: 42,
+      y: 7,
+    })
   })
 
   it("maps edges from the ELK edge's sources[0]/targets[0]", () => {

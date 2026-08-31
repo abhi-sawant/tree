@@ -3,15 +3,20 @@ import { useEffect, useMemo, useState } from "react"
 import {
   AddRelativeMenu,
   type AddAction,
+  type AddActionKind,
 } from "~/components/canvas/add-relative-menu"
 import { RelativeForm } from "~/components/canvas/relative-form"
+import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
+import { PersonAvatar } from "~/components/people/person-avatar"
 import { PersonForm, type PhotoAction } from "~/components/people/person-form"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { PartialDateFields } from "~/components/people/partial-date-fields"
+import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import { Button } from "~/components/ui/button"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { resolveSelection } from "~/lib/canvas/resolve-selection"
 import type { UnionNode } from "~/lib/graph/derive-unions"
+import { personNodeId } from "~/lib/graph/node-ids"
 import { updatePerson } from "~/lib/db/people"
 import { removePersonPhoto, setPersonPhoto } from "~/lib/photos"
 import {
@@ -30,13 +35,26 @@ import {
 import { removeRelationship } from "~/lib/db/relationships"
 import { formatPartialDate } from "~/lib/partial-date"
 import type { PersonFormValues } from "~/lib/schemas"
+import { toast } from "~/lib/ui/toast-store"
+import { cn } from "~/lib/utils"
 import type { Person, Relationship } from "~/lib/types"
+
+const GENERATION_LEVELS = 6
+
+type DetailTab = "details" | "family" | "notes"
+
+const TABS: Array<{ id: DetailTab; label: string }> = [
+  { id: "details", label: "Details" },
+  { id: "family", label: "Family" },
+  { id: "notes", label: "Notes" },
+]
 
 interface DetailPanelProps {
   treeId: string
   people: Person[]
   relationships: Relationship[]
   unions: UnionNode[]
+  generations: Map<string, number>
 }
 
 function personName(person: Person | undefined): string {
@@ -46,15 +64,30 @@ function personName(person: Person | undefined): string {
   )
 }
 
+function lifeSpan(person: Person): string {
+  const dates = [
+    formatPartialDate(person.birth),
+    formatPartialDate(person.death),
+  ]
+  if (!dates[0] && !dates[1]) return "Dates unknown"
+  if (dates[0] && dates[1]) return `${dates[0]} – ${dates[1]}`
+  return dates[0] ? `b. ${dates[0]}` : `d. ${dates[1]}`
+}
+
 export function DetailPanel({
   treeId,
   people,
   relationships,
   unions,
+  generations,
 }: DetailPanelProps) {
   const selectedNodeId = useCanvasUIStore((s) => s.selectedNodeId)
   const pendingMarriage = useCanvasUIStore((s) => s.pendingMarriage)
   const clearPendingMarriage = useCanvasUIStore((s) => s.clearPendingMarriage)
+  const pendingAddRelative = useCanvasUIStore((s) => s.pendingAddRelative)
+  const clearPendingAddRelative = useCanvasUIStore(
+    (s) => s.clearPendingAddRelative
+  )
 
   const peopleById = useMemo(
     () => new Map(people.map((p) => [p.id, p])),
@@ -66,10 +99,12 @@ export function DetailPanel({
   )
 
   const [action, setAction] = useState<AddAction | undefined>(undefined)
+  const [tab, setTab] = useState<DetailTab>("details")
 
-  // A new selection always starts with no add-relative sub-form open.
+  // A new selection always starts on Details with no add-relative sub-form.
   useEffect(() => {
     setAction(undefined)
+    setTab("details")
   }, [selectedNodeId])
 
   // One-shot handoff from an implicit union's "Record marriage" context menu.
@@ -82,12 +117,25 @@ export function DetailPanel({
     clearPendingMarriage()
   }, [pendingMarriage, selection, clearPendingMarriage])
 
+  // One-shot handoff from the canvas quick-add buttons / node context menu.
+  useEffect(() => {
+    if (!pendingAddRelative || pendingAddRelative.nodeId !== selectedNodeId) {
+      return
+    }
+    setAction({ kind: pendingAddRelative.kind, mode: "new" })
+    setTab("family")
+    clearPendingAddRelative()
+  }, [pendingAddRelative, selectedNodeId, clearPendingAddRelative])
+
   if (!selection) {
     return (
-      <aside className="flex h-full w-80 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border bg-card p-4">
-        <p className="text-sm text-muted-foreground">
-          Select a person or couple on the canvas to see details.
-        </p>
+      <aside className="flex h-full w-78 shrink-0 flex-col overflow-y-auto border-l border-border">
+        <div className="p-4">
+          <p className="text-13 leading-relaxed text-muted-foreground">
+            Select a person or a marriage dot on the canvas. Drag a card to pin
+            it in place; right-click for more actions.
+          </p>
+        </div>
       </aside>
     )
   }
@@ -95,7 +143,7 @@ export function DetailPanel({
   return (
     <aside
       key={selectedNodeId}
-      className="flex h-full w-80 shrink-0 flex-col gap-6 overflow-y-auto border-l border-border bg-card p-4"
+      className="flex h-full w-78 shrink-0 flex-col overflow-hidden border-l border-border"
     >
       {selection.kind === "person" ? (
         <PersonDetail
@@ -103,14 +151,18 @@ export function DetailPanel({
           person={selection.person}
           people={peopleById}
           relationships={relationships}
+          generation={generations.get(selection.person.id)}
           action={action}
           setAction={setAction}
+          tab={tab}
+          setTab={setTab}
         />
       ) : (
         <UnionDetail
           treeId={treeId}
           union={selection.union}
           people={peopleById}
+          relationships={relationships}
           action={action}
           setAction={setAction}
         />
@@ -119,13 +171,29 @@ export function DetailPanel({
   )
 }
 
+function GenerationChip({ generation }: { generation: number | undefined }) {
+  if (generation === undefined) return null
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="size-2 rounded-xs"
+        style={{ background: `var(--level-${generation % GENERATION_LEVELS})` }}
+      />
+      Gen {generation + 1}
+    </span>
+  )
+}
+
 interface PersonDetailProps {
   treeId: string
   person: Person
   people: Map<string, Person>
   relationships: Relationship[]
+  generation: number | undefined
   action: AddAction | undefined
   setAction: (action: AddAction | undefined) => void
+  tab: DetailTab
+  setTab: (tab: DetailTab) => void
 }
 
 function PersonDetail({
@@ -133,9 +201,19 @@ function PersonDetail({
   person,
   people,
   relationships,
+  generation,
   action,
   setAction,
+  tab,
+  setTab,
 }: PersonDetailProps) {
+  const select = useCanvasUIStore((s) => s.select)
+  // Bumping this remounts PersonForm, which is how "Revert" throws away
+  // unsaved edits — the form owns its own field state.
+  const [formKey, setFormKey] = useState(0)
+  const [removeOpen, setRemoveOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
   const parentRels = relationships.filter(
     (r) => r.type === "parent-child" && r.to === person.id
   )
@@ -146,103 +224,257 @@ function PersonDetail({
     (r) => r.type === "spouse" && (r.from === person.id || r.to === person.id)
   )
 
-  async function handleUpdatePerson(values: PersonFormValues, photoAction: PhotoAction) {
+  async function handleUpdatePerson(
+    values: PersonFormValues,
+    photoAction: PhotoAction
+  ) {
     await updatePerson(person.id, values)
     if (photoAction.kind === "staged") {
       await setPersonPhoto(person.id, photoAction.blob, photoAction.mime)
     } else if (photoAction.kind === "removed") {
       await removePersonPhoto(person.id)
     }
+    toast("Changes saved")
   }
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <h2 className="font-heading text-base font-semibold tracking-wide uppercase">
-          {personName(person)}
-        </h2>
-        {person.isPlaceholder && <PlaceholderBadge />}
+      <div className="flex flex-none items-center gap-3 border-b border-border p-4">
+        <PersonAvatar photoId={person.photoId} size="panel" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate font-heading text-sm font-semibold tracking-wide uppercase">
+              {personName(person)}
+            </h2>
+            {person.isPlaceholder && <PlaceholderBadge />}
+          </div>
+          <span className="flex items-center gap-2 text-11 text-muted-foreground">
+            {lifeSpan(person)}
+            <GenerationChip generation={generation} />
+          </span>
+        </div>
       </div>
 
-      <PersonForm
-        key={person.id}
-        initialValues={person}
-        onSubmit={handleUpdatePerson}
-        submitLabel="Save changes"
-      />
+      <div className="flex flex-none border-b border-border">
+        {TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={cn(
+              "h-9.5 flex-1 cursor-pointer border-b-2 font-heading text-10 font-semibold tracking-widest uppercase",
+              tab === id
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <RelationshipList
-        title="Parents"
-        relationships={parentRels}
-        otherPersonId={(r) => r.from}
-        people={people}
-      />
-      <RelationshipList
-        title="Spouses"
-        relationships={spouseRels}
-        otherPersonId={(r) => (r.from === person.id ? r.to : r.from)}
-        people={people}
-        showDates
-      />
-      <RelationshipList
-        title="Children"
-        relationships={childRels}
-        otherPersonId={(r) => r.to}
-        people={people}
-      />
+      <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4">
+        {tab === "details" && (
+          <PersonForm
+            key={`${person.id}:${formKey}`}
+            section="details"
+            initialValues={person}
+            onSubmit={handleUpdatePerson}
+            onCancel={() => setFormKey((k) => k + 1)}
+            cancelLabel="Revert"
+            submitLabel="Save"
+          />
+        )}
 
-      <AddRelativeMenu
-        selection={{ kind: "person", person }}
-        parentCount={parentRels.length}
-        onOpenAction={setAction}
-      />
+        {tab === "notes" && (
+          <PersonForm
+            key={`${person.id}:notes:${formKey}`}
+            section="notes"
+            initialValues={person}
+            onSubmit={handleUpdatePerson}
+            submitLabel="Save notes"
+          />
+        )}
 
-      {action && (
-        <RelativeForm
-          mode={action.mode}
-          excludeIds={
-            action.kind === "add-parent"
-              ? [person.id, ...parentRels.map((r) => r.from)]
-              : [person.id]
-          }
-          showDates={action.kind === "add-spouse"}
-          onSubmitNew={async (values, dates, photoAction) => {
-            let created: Person | undefined
-            if (action.kind === "add-parent")
-              created = await addParentNew(person.id, treeId, values)
-            else if (action.kind === "add-spouse")
-              created = await addSpouseNew(person.id, treeId, values, dates)
-            else if (action.kind === "add-child")
-              created = await addChildNew(
-                { kind: "person", personId: person.id },
-                treeId,
-                values
-              )
-            else if (action.kind === "add-sibling")
-              created = await addSiblingNew(person.id, treeId, values)
-            if (created && photoAction.kind === "staged")
-              await setPersonPhoto(created.id, photoAction.blob, photoAction.mime)
-            setAction(undefined)
-          }}
-          onSubmitExisting={async (picked, dates) => {
-            if (action.kind === "add-parent")
-              await addParentExisting(person.id, treeId, picked.id)
-            else if (action.kind === "add-spouse")
-              await addSpouseExisting(person.id, treeId, picked.id, dates)
-            else if (action.kind === "add-child")
-              await addChildExisting(
-                { kind: "person", personId: person.id },
-                treeId,
-                picked.id
-              )
-            else if (action.kind === "add-sibling")
-              await addSiblingExisting(person.id, treeId, picked.id)
-            setAction(undefined)
-          }}
-          onCancel={() => setAction(undefined)}
-        />
-      )}
+        {tab === "family" && (
+          <>
+            <RelationshipList
+              title="Parents"
+              relationships={parentRels}
+              otherPersonId={(r) => r.from}
+              people={people}
+              onSelect={select}
+            />
+            <RelationshipList
+              title="Spouses"
+              relationships={spouseRels}
+              otherPersonId={(r) => (r.from === person.id ? r.to : r.from)}
+              people={people}
+              onSelect={select}
+              showDates
+            />
+            <RelationshipList
+              title="Children"
+              relationships={childRels}
+              otherPersonId={(r) => r.to}
+              people={people}
+              onSelect={select}
+            />
+
+            <AddRelativeMenu
+              selection={{ kind: "person", person }}
+              parentCount={parentRels.length}
+              onOpenAction={setAction}
+            />
+          </>
+        )}
+
+        {action && (
+          <AddRelativePanel
+            action={action}
+            onModeChange={(mode) => setAction({ kind: action.kind, mode })}
+            onCancel={() => setAction(undefined)}
+          >
+            <RelativeForm
+              key={`${action.kind}:${action.mode}`}
+              mode={action.mode}
+              excludeIds={
+                action.kind === "add-parent"
+                  ? [person.id, ...parentRels.map((r) => r.from)]
+                  : [person.id]
+              }
+              showDates={action.kind === "add-spouse"}
+              onSubmitNew={async (values, dates, photoAction) => {
+                let created: Person | undefined
+                if (action.kind === "add-parent")
+                  created = await addParentNew(person.id, treeId, values)
+                else if (action.kind === "add-spouse")
+                  created = await addSpouseNew(person.id, treeId, values, dates)
+                else if (action.kind === "add-child")
+                  created = await addChildNew(
+                    { kind: "person", personId: person.id },
+                    treeId,
+                    values
+                  )
+                else if (action.kind === "add-sibling")
+                  created = await addSiblingNew(person.id, treeId, values)
+                if (created && photoAction.kind === "staged")
+                  await setPersonPhoto(
+                    created.id,
+                    photoAction.blob,
+                    photoAction.mime
+                  )
+                setAction(undefined)
+                toast("Relative added")
+              }}
+              onSubmitExisting={async (picked, dates) => {
+                if (action.kind === "add-parent")
+                  await addParentExisting(person.id, treeId, picked.id)
+                else if (action.kind === "add-spouse")
+                  await addSpouseExisting(person.id, treeId, picked.id, dates)
+                else if (action.kind === "add-child")
+                  await addChildExisting(
+                    { kind: "person", personId: person.id },
+                    treeId,
+                    picked.id
+                  )
+                else if (action.kind === "add-sibling")
+                  await addSiblingExisting(person.id, treeId, picked.id)
+                setAction(undefined)
+                toast("Relative linked")
+              }}
+              onCancel={() => setAction(undefined)}
+            />
+          </AddRelativePanel>
+        )}
+      </div>
+
+      <div className="flex flex-none justify-between gap-2 border-t border-border px-4 py-3">
+        <Button variant="outline" size="sm" onClick={() => setRemoveOpen(true)}>
+          Remove from tree
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => setDeleteOpen(true)}
+        >
+          Delete
+        </Button>
+      </div>
+
+      <RemoveFromTreeDialog
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+        person={person}
+        treeId={treeId}
+      />
+      <DeletePersonDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        person={person}
+      />
     </>
+  )
+}
+
+const ADD_TITLES: Record<AddActionKind, string> = {
+  "add-parent": "Add parent",
+  "add-spouse": "Add spouse",
+  "add-child": "Add child",
+  "add-sibling": "Add sibling",
+}
+
+// Wraps whichever RelativeForm is open with the New / Existing switch, so a
+// quick-add started from the canvas (always "new") can still be pointed at
+// somebody already in the pool without reopening the menu.
+function AddRelativePanel({
+  action,
+  onModeChange,
+  onCancel,
+  children,
+}: {
+  action: AddAction
+  onModeChange: (mode: "new" | "existing") => void
+  onCancel: () => void
+  children: React.ReactNode
+}) {
+  const isMarriage = action.mode === "record-marriage"
+
+  return (
+    <div className="flex flex-col gap-2.5 border border-border bg-muted/40 p-3">
+      <div className="flex items-center justify-between">
+        <span className="font-heading text-10 font-semibold tracking-widest uppercase">
+          {isMarriage ? "Record marriage" : ADD_TITLES[action.kind]}
+        </span>
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Close"
+          className="cursor-pointer text-13 text-muted-foreground hover:text-foreground"
+        >
+          ✕
+        </button>
+      </div>
+      {!isMarriage && (
+        <div className="flex gap-1.5">
+          <Button
+            variant={action.mode === "new" ? "secondary" : "outline"}
+            size="xs"
+            onClick={() => onModeChange("new")}
+          >
+            New person
+          </Button>
+          <Button
+            variant={action.mode === "existing" ? "secondary" : "outline"}
+            size="xs"
+            onClick={() => onModeChange("existing")}
+          >
+            Existing
+          </Button>
+        </div>
+      )}
+      {children}
+    </div>
   )
 }
 
@@ -250,6 +482,7 @@ interface UnionDetailProps {
   treeId: string
   union: UnionNode
   people: Map<string, Person>
+  relationships: Relationship[]
   action: AddAction | undefined
   setAction: (action: AddAction | undefined) => void
 }
@@ -258,26 +491,48 @@ function UnionDetail({
   treeId,
   union,
   people,
+  relationships,
   action,
   setAction,
 }: UnionDetailProps) {
+  const select = useCanvasUIStore((s) => s.select)
   const [a, b] = union.parents
   const nameA = personName(people.get(a))
   const nameB = personName(people.get(b))
 
+  // A child "of this marriage" is one both parents point at.
+  const childIds = useMemo(() => {
+    const childrenOf = (parentId: string) =>
+      new Set(
+        relationships
+          .filter((r) => r.type === "parent-child" && r.from === parentId)
+          .map((r) => r.to)
+      )
+    const fromA = childrenOf(a)
+    const fromB = childrenOf(b)
+    return [...fromA].filter((id) => fromB.has(id))
+  }, [relationships, a, b])
+
   return (
-    <>
+    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="font-heading text-base font-semibold tracking-wide uppercase">
+        <h2 className="font-heading text-sm font-semibold tracking-wide uppercase">
           {nameA} &amp; {nameB}
         </h2>
         {union.kind === "real" ? (
           <UnionMarriageEditor union={union} />
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-11 text-muted-foreground">
             Not yet recorded as married.
           </p>
         )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+          Children of this marriage
+        </p>
+        <UnionChildren childIds={childIds} people={people} onSelect={select} />
       </div>
 
       {union.kind === "implicit" && (
@@ -300,35 +555,83 @@ function UnionDetail({
       />
 
       {action && (
-        <RelativeForm
-          mode={action.mode}
-          excludeIds={union.parents}
-          recordMarriageNames={[nameA, nameB]}
-          onSubmitNew={async (values, _dates, photoAction) => {
-            const created = await addChildNew(
-              { kind: "union", parents: union.parents },
-              treeId,
-              values
-            )
-            if (photoAction.kind === "staged")
-              await setPersonPhoto(created.id, photoAction.blob, photoAction.mime)
-            setAction(undefined)
-          }}
-          onSubmitExisting={async (picked) => {
-            await addChildExisting(
-              { kind: "union", parents: union.parents },
-              treeId,
-              picked.id
-            )
-            setAction(undefined)
-          }}
-          onSubmitMarriage={async (dates) => {
-            await recordMarriage(union.parents, dates)
-            setAction(undefined)
-          }}
+        <AddRelativePanel
+          action={action}
+          onModeChange={(mode) => setAction({ kind: action.kind, mode })}
           onCancel={() => setAction(undefined)}
-        />
+        >
+          <RelativeForm
+            key={`${action.kind}:${action.mode}`}
+            mode={action.mode}
+            excludeIds={union.parents}
+            recordMarriageNames={[nameA, nameB]}
+            onSubmitNew={async (values, _dates, photoAction) => {
+              const created = await addChildNew(
+                { kind: "union", parents: union.parents },
+                treeId,
+                values
+              )
+              if (photoAction.kind === "staged")
+                await setPersonPhoto(
+                  created.id,
+                  photoAction.blob,
+                  photoAction.mime
+                )
+              setAction(undefined)
+              toast("Child added")
+            }}
+            onSubmitExisting={async (picked) => {
+              await addChildExisting(
+                { kind: "union", parents: union.parents },
+                treeId,
+                picked.id
+              )
+              setAction(undefined)
+              toast("Child linked")
+            }}
+            onSubmitMarriage={async (dates) => {
+              await recordMarriage(union.parents, dates)
+              setAction(undefined)
+              toast("Marriage recorded")
+            }}
+            onCancel={() => setAction(undefined)}
+          />
+        </AddRelativePanel>
       )}
+    </div>
+  )
+}
+
+function UnionChildren({
+  childIds,
+  people,
+  onSelect,
+}: {
+  childIds: string[]
+  people: Map<string, Person>
+  onSelect: (nodeId: string) => void
+}) {
+  if (childIds.length === 0) {
+    return <p className="text-xs text-muted-foreground">None recorded.</p>
+  }
+
+  return (
+    <>
+      {childIds.map((childId) => (
+        <div
+          key={childId}
+          className="flex items-center gap-2 border border-border/60 px-2 py-1.5"
+        >
+          <PersonAvatar photoId={people.get(childId)?.photoId} size="xs" />
+          <button
+            type="button"
+            className="cursor-pointer text-xs hover:underline"
+            onClick={() => onSelect(personNodeId(childId))}
+          >
+            {personName(people.get(childId))}
+          </button>
+        </div>
+      ))}
     </>
   )
 }
@@ -349,7 +652,7 @@ function UnionMarriageEditor({ union }: { union: UnionNode }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-11 text-muted-foreground">
           Married {formatPartialDate(union.start) || "(date unknown)"}
           {union.end && ` – ${formatPartialDate(union.end)}`}
         </p>
@@ -364,7 +667,10 @@ function UnionMarriageEditor({ union }: { union: UnionNode }) {
           <Button
             variant="ghost"
             size="xs"
-            onClick={() => removeRelationship(relationship.id)}
+            onClick={() => {
+              void removeRelationship(relationship.id)
+              toast("Marriage removed")
+            }}
           >
             Remove
           </Button>
@@ -385,6 +691,7 @@ interface RelationshipListProps {
   relationships: Relationship[]
   otherPersonId: (r: Relationship) => string
   people: Map<string, Person>
+  onSelect: (nodeId: string) => void
   showDates?: boolean
 }
 
@@ -393,52 +700,64 @@ function RelationshipList({
   relationships,
   otherPersonId,
   people,
+  onSelect,
   showDates = false,
 }: RelationshipListProps) {
   const [editingId, setEditingId] = useState<string | undefined>(undefined)
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+    <div className="flex flex-col gap-1.5">
+      <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
         {title}
       </p>
       {relationships.length === 0 && (
-        <p className="text-sm text-muted-foreground">None recorded.</p>
+        <p className="text-xs text-muted-foreground">None recorded.</p>
       )}
       {relationships.map((r) => {
-        const other = people.get(otherPersonId(r))
+        const otherId = otherPersonId(r)
+        const other = people.get(otherId)
         const isEditing = editingId === r.id
         return (
           <div
             key={r.id}
-            className="flex flex-col gap-2 rounded-md border border-border p-2"
+            className="flex flex-col gap-2 border border-border/60 p-2"
           >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex flex-col">
-                <span className="text-sm">{personName(other)}</span>
+            <div className="flex items-center gap-2">
+              <PersonAvatar photoId={other?.photoId} size="xs" />
+              <div className="flex min-w-0 flex-col">
+                <button
+                  type="button"
+                  className="cursor-pointer truncate text-left text-xs hover:underline"
+                  onClick={() => onSelect(personNodeId(otherId))}
+                >
+                  {personName(other)}
+                </button>
                 {showDates && (r.start || r.end) && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-11 text-muted-foreground">
                     {formatPartialDate(r.start)}
                     {r.end && ` – ${formatPartialDate(r.end)}`}
                   </span>
                 )}
               </div>
-              <div className="flex gap-1">
+              <div className="ml-auto flex gap-1">
                 {showDates && (
                   <Button
                     variant="ghost"
                     size="xs"
                     onClick={() => setEditingId(isEditing ? undefined : r.id)}
                   >
-                    {isEditing ? "Cancel" : "Edit dates"}
+                    {isEditing ? "Cancel" : "Dates"}
                   </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="xs"
-                  onClick={() => removeRelationship(r.id)}
+                  onClick={() => {
+                    void removeRelationship(r.id)
+                    toast("Relationship removed")
+                  }}
                 >
-                  Remove
+                  Unlink
                 </Button>
               </div>
             </div>

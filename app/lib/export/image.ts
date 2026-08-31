@@ -14,12 +14,14 @@ export async function exportPngBlob(
   node: HTMLElement,
   options: CaptureOptions
 ): Promise<Blob> {
+  // cacheBust is off: it appends a query string to every image URL, which
+  // breaks the blob: URLs used for person photos (blob URLs don't support
+  // query params, so the re-fetch fails and aborts the whole export).
   const blob = await toBlob(node, {
     width: options.width,
     height: options.height,
     backgroundColor: EXPORT_BACKGROUND_COLOR,
     pixelRatio: options.pixelRatio ?? 2,
-    cacheBust: true,
   })
   if (!blob) throw new Error("PNG export failed — could not render the canvas.")
   return blob
@@ -36,7 +38,6 @@ export async function exportPngDataUrl(
     height: options.height,
     backgroundColor: EXPORT_BACKGROUND_COLOR,
     pixelRatio: options.pixelRatio ?? 2,
-    cacheBust: true,
   })
 }
 
@@ -48,7 +49,6 @@ export async function exportSvgBlob(
     width: options.width,
     height: options.height,
     backgroundColor: EXPORT_BACKGROUND_COLOR,
-    cacheBust: true,
   })
   const svgText = decodeURIComponent(dataUrl.split(",")[1])
   return new Blob([svgText], { type: "image/svg+xml" })

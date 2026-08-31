@@ -2,29 +2,55 @@ import { useMemo, useState } from "react"
 
 import { AddToTreeDialog } from "~/components/people/add-to-tree-dialog"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
-import { PeopleTable } from "~/components/people/people-table"
+import {
+  PeopleTable,
+  type RelativeCounts,
+} from "~/components/people/people-table"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
-import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
+import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { useMembers, useSearchPeople, useTrees } from "~/lib/db/hooks"
+import { personNodeId } from "~/lib/graph/node-ids"
 import { comparePartialDate } from "~/lib/partial-date"
-import type { Person, Tree } from "~/lib/types"
+import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import type { Person, Relationship, Tree } from "~/lib/types"
 
-export default function People() {
+interface TableViewProps {
+  relationships: Relationship[]
+  generations: Map<string, number>
+  totalPeople: number
+}
+
+export function TableView({
+  relationships,
+  generations,
+  totalPeople,
+}: TableViewProps) {
   const [query, setQuery] = useState("")
   const [showPlaceholders, setShowPlaceholders] = useState(true)
 
-  const [formTarget, setFormTarget] = useState<{ person?: Person } | undefined>(undefined)
-  const [deleteTarget, setDeleteTarget] = useState<Person | undefined>(undefined)
-  const [addToTreeTarget, setAddToTreeTarget] = useState<Person | undefined>(undefined)
-  const [removeFromTreeTarget, setRemoveFromTreeTarget] = useState<Person | undefined>(
+  const [formTarget, setFormTarget] = useState<{ person?: Person } | undefined>(
     undefined
   )
+  const [deleteTarget, setDeleteTarget] = useState<Person | undefined>(
+    undefined
+  )
+  const [addToTreeTarget, setAddToTreeTarget] = useState<Person | undefined>(
+    undefined
+  )
+  const [removeFromTreeTarget, setRemoveFromTreeTarget] = useState<
+    Person | undefined
+  >(undefined)
 
-  const people = useSearchPeople(query, { includePlaceholders: showPlaceholders })
+  const setView = useAppShellStore((s) => s.setView)
+  const requestCenter = useCanvasUIStore((s) => s.requestCenter)
+
+  const people = useSearchPeople(query, {
+    includePlaceholders: showPlaceholders,
+  })
   const trees = useTrees()
   const members = useMembers()
 
@@ -43,26 +69,48 @@ export default function People() {
     return map
   }, [trees, members])
 
+  const relativeCounts = useMemo(() => {
+    const counts = new Map<string, RelativeCounts>()
+    const bump = (id: string, key: "parents" | "spouses" | "children") => {
+      const entry = counts.get(id) ?? { parents: 0, spouses: 0, children: 0 }
+      entry[key] += 1
+      counts.set(id, entry)
+    }
+    for (const r of relationships) {
+      if (r.type === "parent-child") {
+        bump(r.from, "children")
+        bump(r.to, "parents")
+      } else {
+        bump(r.from, "spouses")
+        bump(r.to, "spouses")
+      }
+    }
+    return counts
+  }, [relationships])
+
   const sortedPeople = useMemo(() => {
     if (!people) return []
     return [...people].sort((a, b) => comparePartialDate(a.birth, b.birth))
   }, [people])
 
-  return (
-    <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-lg font-semibold tracking-wider uppercase">People</h1>
-        <Button onClick={() => setFormTarget({})}>Add person</Button>
-      </div>
+  function openInTree(person: Person) {
+    requestCenter(personNodeId(person.id))
+    setView("tree")
+  }
 
+  return (
+    <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
       <div className="flex items-center gap-4">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name…"
-          className="max-w-sm"
+          className="w-75"
         />
-        <Label>
+        <span className="text-xs text-muted-foreground">
+          {sortedPeople.length} of {totalPeople} people
+        </span>
+        <Label className="ml-auto">
           <Checkbox
             checked={showPlaceholders}
             onCheckedChange={(checked) => setShowPlaceholders(checked === true)}
@@ -74,6 +122,9 @@ export default function People() {
       <PeopleTable
         people={sortedPeople}
         treesByPersonId={treesByPersonId}
+        generations={generations}
+        relativeCounts={relativeCounts}
+        onOpenInTree={openInTree}
         onEdit={(person) => setFormTarget({ person })}
         onDelete={setDeleteTarget}
         onAddToTree={setAddToTreeTarget}
