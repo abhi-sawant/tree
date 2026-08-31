@@ -1,7 +1,20 @@
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { partialDateToGedcomDate } from "~/lib/partial-date"
 import { db } from "~/lib/db/db"
+import { blobToBytes, zipEntries, type ZipEntries } from "~/lib/export/archive"
+import { gedcomFilename } from "~/lib/export/filenames"
+import { extensionForMime, gedcomFormForExtension } from "~/lib/export/mime"
 import type { PartialDate, Person, Relationship } from "~/lib/types"
+
+export const GEDCOM_MEDIA_DIR = "media"
+
+export interface GedcomMedia {
+  personId: string
+  photoId: string
+  path: string // "media/I3.jpg", relative to the .ged at the archive root
+  form: string // GEDCOM MULTIMEDIA_FORMAT, e.g. "jpg"
+  title: string
+}
 
 const HEAD_LINES = [
   "0 HEAD",
@@ -95,11 +108,28 @@ function noteLines(notes?: string): string[] {
   return [`1 NOTE ${first}`, ...rest.map((line) => `2 CONT ${line}`)]
 }
 
+// The embedded MULTIMEDIA_LINK form, not a top-level OBJE record with a
+// pointer: a person has at most one photo (Person.photoId is a scalar) and
+// photos are never shared between individuals, so the pointer form's only
+// advantage doesn't apply here. Emitting both forms would make importers
+// create duplicate media items. Note TITL sits under OBJE at level 2 in this
+// form — it moves under FILE only in the top-level record form.
+function mediaLines(media?: GedcomMedia): string[] {
+  if (!media) return []
+  return [
+    "1 OBJE",
+    `2 FILE ${media.path}`,
+    `3 FORM ${media.form}`,
+    ...(media.title ? [`2 TITL ${media.title}`] : []),
+  ]
+}
+
 function emitIndividual(
   person: Person,
   xref: string,
   famcXref: string | undefined,
-  famsXrefs: string[]
+  famsXrefs: string[],
+  media?: GedcomMedia
 ): string[] {
   return [
     `0 ${xref} INDI`,
@@ -109,6 +139,8 @@ function emitIndividual(
     ...noteLines(person.notes),
     ...(famcXref ? [`1 FAMC ${famcXref}`] : []),
     ...famsXrefs.map((famsXref) => `1 FAMS ${famsXref}`),
+    // Last in the INDI record, matching the 5.5.1 substructure order.
+    ...mediaLines(media),
   ]
 }
 
@@ -134,7 +166,8 @@ function emitFamily(
 
 export function buildGedcomText(
   people: Person[],
-  relationships: Relationship[]
+  relationships: Relationship[],
+  media?: ReadonlyMap<string, GedcomMedia>
 ): string {
   const personXrefs = assignXrefs(
     people.map((person) => person.id),
@@ -169,7 +202,8 @@ export function buildGedcomText(
       person,
       personXrefs.get(person.id)!,
       famcByPerson.get(person.id),
-      famsByPerson.get(person.id) ?? []
+      famsByPerson.get(person.id) ?? [],
+      media?.get(person.id)
     )
   )
 
@@ -192,4 +226,70 @@ export async function exportGedcom(): Promise<Blob> {
   return new Blob([buildGedcomText(people, relationships)], {
     type: "text/plain;charset=utf-8",
   })
+}
+
+function displayName(person: Person): string {
+  return [person.givenName, person.familyName].filter(Boolean).join(" ")
+}
+
+// Pure, and deliberately assigns xrefs the same way buildGedcomText does (both
+// sort ids ascending), so a media path's stem always names the INDI it hangs
+// off. The stem is the xref rather than the photo's UUID: it keeps the FILE
+// value inside 5.5.1's nominal 30-character limit, and doesn't leak internal
+// ids into a file the user hands to third parties.
+export function planGedcomMedia(
+  people: Person[],
+  photoMimes: ReadonlyMap<string, string>
+): GedcomMedia[] {
+  const personXrefs = assignXrefs(
+    people.map((person) => person.id),
+    "I"
+  )
+
+  const media: GedcomMedia[] = []
+  for (const person of [...people].sort((a, b) => a.id.localeCompare(b.id))) {
+    const mime = person.photoId && photoMimes.get(person.photoId)
+    if (!person.photoId || !mime) continue
+    const stem = personXrefs.get(person.id)!.replaceAll("@", "")
+    const extension = extensionForMime(mime)
+    media.push({
+      personId: person.id,
+      photoId: person.photoId,
+      path: `${GEDCOM_MEDIA_DIR}/${stem}.${extension}`,
+      form: gedcomFormForExtension(extension),
+      title: displayName(person),
+    })
+  }
+  return media
+}
+
+// The .ged sits at the archive root beside media/, because importers resolve a
+// relative FILE path against the directory holding the .ged.
+export async function exportGedcomZip(now: Date = new Date()): Promise<Blob> {
+  const [people, relationships, photos] = await Promise.all([
+    db.people.toArray(),
+    db.relationships.toArray(),
+    db.photos.toArray(),
+  ])
+
+  const photosById = new Map(photos.map((photo) => [photo.id, photo]))
+  const plan = planGedcomMedia(
+    people,
+    new Map(photos.map((photo) => [photo.id, photo.mime]))
+  )
+
+  const entries: ZipEntries = {}
+  for (const media of plan) {
+    const photo = photosById.get(media.photoId)!
+    entries[media.path] = [await blobToBytes(photo.blob), 0]
+  }
+
+  const text = buildGedcomText(
+    people,
+    relationships,
+    new Map(plan.map((media) => [media.personId, media]))
+  )
+  entries[gedcomFilename(now)] = [new TextEncoder().encode(text), 6]
+
+  return zipEntries(entries, now)
 }

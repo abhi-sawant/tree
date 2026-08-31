@@ -16,8 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { triggerDownload } from "~/lib/download"
-import { gedcomFilename } from "~/lib/export/filenames"
-import { exportGedcom } from "~/lib/export/gedcom"
+import { gedcomFilename, gedcomZipFilename } from "~/lib/export/filenames"
+import { exportGedcom, exportGedcomZip } from "~/lib/export/gedcom"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import { toast } from "~/lib/ui/toast-store"
 import { cn } from "~/lib/utils"
@@ -34,6 +34,7 @@ interface AppTopbarProps {
   rootName: string
   onCreateTree: () => void
   onExportBackup: () => void
+  exportingBackup?: boolean
 }
 
 export function AppTopbar({
@@ -44,6 +45,7 @@ export function AppTopbar({
   rootName,
   onCreateTree,
   onExportBackup,
+  exportingBackup,
 }: AppTopbarProps) {
   const view = useAppShellStore((s) => s.view)
   const setView = useAppShellStore((s) => s.setView)
@@ -58,9 +60,23 @@ export function AppTopbar({
   const canvasExportsAvailable = view === "tree"
 
   async function handleExportGedcom() {
-    const blob = await exportGedcom()
-    triggerDownload(blob, gedcomFilename())
-    toast("GEDCOM exported")
+    try {
+      const blob = await exportGedcom()
+      triggerDownload(blob, gedcomFilename())
+      toast("GEDCOM exported")
+    } catch {
+      toast("GEDCOM export failed — nothing was downloaded")
+    }
+  }
+
+  async function handleExportGedcomZip() {
+    try {
+      const blob = await exportGedcomZip()
+      triggerDownload(blob, gedcomZipFilename())
+      toast("GEDCOM and photos exported")
+    } catch {
+      toast("GEDCOM export failed — nothing was downloaded")
+    }
   }
 
   return (
@@ -152,11 +168,17 @@ export function AppTopbar({
             >
               PDF
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onExportBackup}>
-              JSON backup
+            <DropdownMenuItem
+              disabled={exportingBackup}
+              onClick={onExportBackup}
+            >
+              {exportingBackup ? "Exporting…" : "Backup (.zip)"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => void handleExportGedcomZip()}>
+              GEDCOM + photos (.zip)
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => void handleExportGedcom()}>
-              GEDCOM 5.5.1
+              GEDCOM 5.5.1 (no photos)
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { exportFilename, gedcomFilename, slugify } from "~/lib/export/filenames"
+import {
+  backupFilename,
+  exportFilename,
+  gedcomFilename,
+  gedcomZipFilename,
+  slugify,
+} from "~/lib/export/filenames"
 
 describe("slugify", () => {
   it("lowercases and hyphenates spaces", () => {
@@ -43,5 +49,21 @@ describe("gedcomFilename", () => {
     expect(gedcomFilename(new Date("2026-01-05"))).toBe(
       "family-tree-2026-01-05.ged"
     )
+  })
+})
+
+describe("backupFilename", () => {
+  it("is a .zip stamped with the export date", () => {
+    expect(backupFilename(new Date("2026-08-31T10:00:00Z"))).toBe(
+      "family-tree-backup-2026-08-31.zip"
+    )
+  })
+})
+
+describe("gedcomZipFilename", () => {
+  it("uses a different stem from backupFilename so the two can't be confused", () => {
+    const date = new Date("2026-08-31T10:00:00Z")
+    expect(gedcomZipFilename(date)).toBe("family-tree-gedcom-2026-08-31.zip")
+    expect(gedcomZipFilename(date)).not.toBe(backupFilename(date))
   })
 })

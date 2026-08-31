@@ -20,3 +20,15 @@ export function exportFilename(
 export function gedcomFilename(date: Date = new Date()): string {
   return `family-tree-${date.toISOString().slice(0, 10)}.ged`
 }
+
+// The native backup is a .zip (manifest + raw photo bytes), not the .json it
+// used to be. Same whole-pool scope as gedcomFilename, so no tree name either.
+export function backupFilename(date: Date = new Date()): string {
+  return `family-tree-backup-${date.toISOString().slice(0, 10)}.zip`
+}
+
+// Distinct stem from backupFilename so the two .zip exports can't be confused
+// for one another once they're sitting side by side in a downloads folder.
+export function gedcomZipFilename(date: Date = new Date()): string {
+  return `family-tree-gedcom-${date.toISOString().slice(0, 10)}.zip`
+}

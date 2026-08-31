@@ -13,16 +13,12 @@ import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { useTreeMembers } from "~/lib/db/hooks"
 import { setLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
+import { backupFilename } from "~/lib/export/filenames"
 import { exportBackup } from "~/lib/export/json"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import { toast } from "~/lib/ui/toast-store"
 import type { Person, Relationship, Tree } from "~/lib/types"
-
-function backupFilename(): string {
-  const date = new Date().toISOString().slice(0, 10)
-  return `family-tree-backup-${date}.json`
-}
 
 interface AppShellProps {
   tree: Tree
@@ -61,6 +57,7 @@ export function AppShell({
 
   const [createTreeOpen, setCreateTreeOpen] = useState(false)
   const [addPersonOpen, setAddPersonOpen] = useState(false)
+  const [exportingBackup, setExportingBackup] = useState(false)
   // Nudged after every backup so the sidebar and Settings re-read app-meta.
   const [exportToken, setExportToken] = useState(0)
 
@@ -88,12 +85,26 @@ export function AppShell({
     )
   }, [people, tree.rootPersonId])
 
+  // Every call site is `() => void handleExportBackup()`, so an unhandled
+  // rejection here would vanish silently — the user would click Export and see
+  // nothing at all happen. Reading every photo into one archive is also the
+  // most likely thing in the app to run out of memory, so it has to report.
   async function handleExportBackup() {
-    const blob = await exportBackup()
-    triggerDownload(blob, backupFilename())
-    await setLastExportDate()
-    setExportToken((t) => t + 1)
-    toast("Backup exported")
+    if (exportingBackup) return
+    setExportingBackup(true)
+    try {
+      const blob = await exportBackup()
+      triggerDownload(blob, backupFilename())
+      // Only on success: "Last export" is a storage-risk signal, and a date
+      // written after a failed export would be actively misleading.
+      await setLastExportDate()
+      setExportToken((t) => t + 1)
+      toast("Backup exported")
+    } catch {
+      toast("Backup export failed — nothing was downloaded")
+    } finally {
+      setExportingBackup(false)
+    }
   }
 
   return (
@@ -103,6 +114,7 @@ export function AppShell({
         activeTreeId={tree.id}
         onCreateTree={() => setCreateTreeOpen(true)}
         onExportBackup={() => void handleExportBackup()}
+        exportingBackup={exportingBackup}
         exportToken={exportToken}
       />
 
@@ -115,6 +127,7 @@ export function AppShell({
           rootName={rootName}
           onCreateTree={() => setCreateTreeOpen(true)}
           onExportBackup={() => void handleExportBackup()}
+          exportingBackup={exportingBackup}
         />
 
         {view === "tree" && (
@@ -138,6 +151,7 @@ export function AppShell({
         {view === "settings" && (
           <SettingsView
             onExportBackup={() => void handleExportBackup()}
+            exportingBackup={exportingBackup}
             exportToken={exportToken}
           />
         )}

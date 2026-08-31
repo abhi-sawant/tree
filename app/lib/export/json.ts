@@ -1,41 +1,26 @@
 import { db } from "~/lib/db/db"
-import { BackupEnvelopeSchema, type BackupEnvelope } from "~/lib/schemas"
-import type { Photo } from "~/lib/types"
+import { buildBackupZip, parseBackupFile } from "~/lib/export/archive"
+import type { Person } from "~/lib/types"
 
-export class InvalidBackupError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = "InvalidBackupError"
+export { InvalidBackupError } from "~/lib/export/archive"
+
+export interface ImportBackupResult {
+  schema: 1 | 2
+  counts: {
+    people: number
+    relationships: number
+    trees: number
+    members: number
+    photos: number
   }
+  // Referenced by the backup but absent from it. Those people keep their data
+  // and fall back to the default avatar.
+  missingPhotoIds: string[]
 }
 
-// FileReader (not Blob.arrayBuffer(), which jsdom's test-environment Blob lacks) works
-// identically across real browsers and jsdom, since both implement it against Blob/File.
-function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as ArrayBuffer)
-    reader.onerror = () =>
-      reject(reader.error ?? new Error("Failed to read blob"))
-    reader.readAsArrayBuffer(blob)
-  })
-}
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  const bytes = new Uint8Array(await blobToArrayBuffer(blob))
-  let binary = ""
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
-
-function base64ToBlob(base64: string, mime: string): Blob {
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  return new Blob([bytes], { type: mime })
-}
-
-export async function exportBackup(): Promise<Blob> {
+// appMeta is deliberately excluded: lastExportDate records when *this* browser
+// last exported, which an imported file has no business overwriting.
+export async function exportBackup(now: Date = new Date()): Promise<Blob> {
   const [people, relationships, trees, members, photos] = await Promise.all([
     db.people.toArray(),
     db.relationships.toArray(),
@@ -44,59 +29,27 @@ export async function exportBackup(): Promise<Blob> {
     db.photos.toArray(),
   ])
 
-  const backupPhotos = await Promise.all(
-    photos.map(async (photo) => ({
-      id: photo.id,
-      mime: photo.mime,
-      data: await blobToBase64(photo.blob),
-    }))
-  )
-
-  const envelope: BackupEnvelope = {
-    schema: 1,
-    people,
-    relationships,
-    trees,
-    members,
-    photos: backupPhotos,
-  }
-
-  return new Blob([JSON.stringify(envelope)], { type: "application/json" })
+  return buildBackupZip({ people, relationships, trees, members, photos }, now)
 }
 
-export async function importBackup(file: Blob): Promise<void> {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(await file.text())
-  } catch {
-    throw new InvalidBackupError(
-      "Not a valid backup file — the file isn't valid JSON."
-    )
-  }
+export async function importBackup(file: Blob): Promise<ImportBackupResult> {
+  const backup = await parseBackupFile(file)
 
-  const result = BackupEnvelopeSchema.safeParse(parsed)
-  if (!result.success) {
-    const schemaValue =
-      typeof parsed === "object" && parsed !== null
-        ? (parsed as Record<string, unknown>).schema
-        : undefined
-    if (schemaValue !== 1) {
-      throw new InvalidBackupError(
-        `Unsupported backup version (${JSON.stringify(schemaValue)}) — this file needs schema version 1.`
+  // Leaving a photoId pointing at a photo that didn't survive the round trip
+  // would render fine (PersonAvatar falls back), but the restored database
+  // would be permanently inconsistent. Only rebuild the array when it matters.
+  const missing = new Set(backup.missingPhotoIds)
+  const people: Person[] = missing.size
+    ? backup.people.map((person) =>
+        person.photoId && missing.has(person.photoId)
+          ? { ...person, photoId: undefined }
+          : person
       )
-    }
-    throw new InvalidBackupError(
-      "Not a valid backup file — the file doesn't match the expected structure."
-    )
-  }
+    : backup.people
 
-  const envelope = result.data
-  const photos: Photo[] = envelope.photos.map((photo) => ({
-    id: photo.id,
-    mime: photo.mime,
-    blob: base64ToBlob(photo.data, photo.mime),
-  }))
-
+  // Every clear and add stays inside one transaction so a failure part-way
+  // through — a QuotaExceededError on a large photo set, say — rolls the whole
+  // restore back and leaves the existing data untouched.
   await db.transaction(
     "rw",
     db.people,
@@ -114,12 +67,24 @@ export async function importBackup(file: Blob): Promise<void> {
       ])
 
       await Promise.all([
-        db.people.bulkAdd(envelope.people),
-        db.relationships.bulkAdd(envelope.relationships),
-        db.trees.bulkAdd(envelope.trees),
-        db.members.bulkAdd(envelope.members),
-        db.photos.bulkAdd(photos),
+        db.people.bulkAdd(people),
+        db.relationships.bulkAdd(backup.relationships),
+        db.trees.bulkAdd(backup.trees),
+        db.members.bulkAdd(backup.members),
+        db.photos.bulkAdd(backup.photos),
       ])
     }
   )
+
+  return {
+    schema: backup.schema,
+    counts: {
+      people: people.length,
+      relationships: backup.relationships.length,
+      trees: backup.trees.length,
+      members: backup.members.length,
+      photos: backup.photos.length,
+    },
+    missingPhotoIds: backup.missingPhotoIds,
+  }
 }

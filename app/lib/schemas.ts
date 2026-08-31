@@ -53,21 +53,73 @@ export const TreeMemberSchema = z.object({
   y: z.number().optional(),
 })
 
-// Photos can't carry a raw Blob through JSON — export encodes them as base64;
-// import decodes this shape back into a Blob.
-export const BackupPhotoSchema = z.object({
+// A path pointing at an entry inside a .zip backup. We only ever use it as a
+// lookup key into fflate's Unzipped record, never as a filesystem path, but
+// rejecting traversal here keeps a hostile archive away from any code that
+// might one day write these to disk.
+const ArchivePathSchema = z
+  .string()
+  .min(1)
+  .refine(
+    (path) => {
+      const segments = path.split("/")
+      return (
+        !path.startsWith("/") &&
+        !path.includes("\\") &&
+        !/^[a-zA-Z]:/.test(path) &&
+        !segments.includes("..") &&
+        !segments.includes("__proto__")
+      )
+    },
+    { message: "Photo path must be a relative path inside the archive" }
+  )
+
+const backupTables = {
+  people: z.array(PersonSchema),
+  relationships: z.array(RelationshipSchema),
+  trees: z.array(TreeSchema),
+  members: z.array(TreeMemberSchema),
+}
+
+// Schema 1 (legacy): a single .json file with every photo base64-inlined.
+// Still accepted on import forever — backups already in users' hands.
+export const BackupPhotoV1Schema = z.object({
   id: z.string(),
   mime: z.string(),
   data: z.string(), // base64, no "data:" prefix
 })
 
-export const BackupEnvelopeSchema = z.object({
+export const BackupEnvelopeV1Schema = z.object({
   schema: z.literal(1),
-  people: z.array(PersonSchema),
-  relationships: z.array(RelationshipSchema),
-  trees: z.array(TreeSchema),
-  members: z.array(TreeMemberSchema),
-  photos: z.array(BackupPhotoSchema).default([]),
+  ...backupTables,
+  photos: z.array(BackupPhotoV1Schema).default([]),
 })
 
-export type BackupEnvelope = z.infer<typeof BackupEnvelopeSchema>
+// Schema 2 (current): the manifest inside a .zip. Photo bytes live as sibling
+// entries in the archive, so `file` points at one instead of carrying base64.
+export const BackupPhotoV2Schema = z.object({
+  id: z.string(),
+  mime: z.string(),
+  file: ArchivePathSchema, // e.g. "photos/<id>.jpg"
+})
+
+export const BackupEnvelopeV2Schema = z.object({
+  schema: z.literal(2),
+  exportedAt: z.iso.datetime().optional(),
+  ...backupTables,
+  photos: z.array(BackupPhotoV2Schema).default([]),
+})
+
+export const AnyBackupEnvelopeSchema = z.discriminatedUnion("schema", [
+  BackupEnvelopeV1Schema,
+  BackupEnvelopeV2Schema,
+])
+
+// Pre-zip names, kept pointing at V1 so existing imports keep working.
+export const BackupPhotoSchema = BackupPhotoV1Schema
+export const BackupEnvelopeSchema = BackupEnvelopeV1Schema
+
+export type BackupEnvelopeV1 = z.infer<typeof BackupEnvelopeV1Schema>
+export type BackupEnvelopeV2 = z.infer<typeof BackupEnvelopeV2Schema>
+export type AnyBackupEnvelope = z.infer<typeof AnyBackupEnvelopeSchema>
+export type BackupEnvelope = BackupEnvelopeV1

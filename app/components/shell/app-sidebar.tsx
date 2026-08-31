@@ -13,6 +13,7 @@ interface AppSidebarProps {
   activeTreeId: string | undefined
   onCreateTree: () => void
   onExportBackup: () => void
+  exportingBackup?: boolean
   // Bumped by whatever last wrote a backup, so the "Last backup" line
   // refreshes without the sidebar having to poll app-meta.
   exportToken: number
@@ -23,6 +24,7 @@ export function AppSidebar({
   activeTreeId,
   onCreateTree,
   onExportBackup,
+  exportingBackup,
   exportToken,
 }: AppSidebarProps) {
   const people = usePeople()
@@ -147,9 +149,10 @@ export function AppSidebar({
           variant="link"
           size="xs"
           className="h-auto justify-start p-0 text-11 tracking-normal normal-case"
+          disabled={exportingBackup}
           onClick={onExportBackup}
         >
-          Export now
+          {exportingBackup ? "Exporting…" : "Export now"}
         </Button>
       </div>
     </div>

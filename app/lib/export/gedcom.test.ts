@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest"
 
 import { db } from "~/lib/db/db"
-import { buildGedcomText, exportGedcom } from "~/lib/export/gedcom"
+import {
+  buildGedcomText,
+  exportGedcom,
+  exportGedcomZip,
+  planGedcomMedia,
+} from "~/lib/export/gedcom"
 import type { Person, Relationship } from "~/lib/types"
 
 function person(overrides: Partial<Person> & { id: string }): Person {
@@ -235,5 +240,149 @@ describe("exportGedcom", () => {
     expect(text).toContain("NoTreeB")
 
     await db.members.clear()
+  })
+})
+
+describe("planGedcomMedia", () => {
+  it("names each media file after the person's own xref", () => {
+    const withPhotos = [
+      person({ id: "p-a", givenName: "Alice", photoId: "photo-a" }),
+      person({ id: "p-b", givenName: "Bob", photoId: "photo-b" }),
+    ]
+    const plan = planGedcomMedia(
+      withPhotos,
+      new Map([
+        ["photo-a", "image/jpeg"],
+        ["photo-b", "image/png"],
+      ])
+    )
+
+    // Ids sort ascending, so p-a is @I1@ and p-b is @I2@.
+    expect(plan).toEqual([
+      {
+        personId: "p-a",
+        photoId: "photo-a",
+        path: "media/I1.jpg",
+        form: "jpg",
+        title: "Alice",
+      },
+      {
+        personId: "p-b",
+        photoId: "photo-b",
+        path: "media/I2.png",
+        form: "png",
+        title: "Bob",
+      },
+    ])
+  })
+
+  it("skips people with no photo, and photos missing from the pool", () => {
+    const plan = planGedcomMedia(
+      [
+        person({ id: "p-a", givenName: "Alice" }),
+        person({ id: "p-b", givenName: "Bob", photoId: "orphaned" }),
+      ],
+      new Map()
+    )
+
+    expect(plan).toEqual([])
+  })
+
+  // The one real coupling risk: paths are planned separately from the text, so
+  // if the two ever disagreed on numbering, photos would attach to the wrong
+  // people. Both sort ids ascending — pin that.
+  it("agrees with buildGedcomText's xref numbering", () => {
+    const withPhotos = people.map((p) => ({ ...p, photoId: `photo-${p.id}` }))
+    const mimes = new Map(withPhotos.map((p) => [p.photoId!, "image/jpeg"]))
+    const plan = planGedcomMedia(withPhotos, mimes)
+    const text = buildGedcomText(
+      withPhotos,
+      relationships,
+      new Map(plan.map((media) => [media.personId, media]))
+    )
+
+    for (const media of plan) {
+      const stem = media.path.replace("media/", "").replace(".jpg", "")
+      const record = text.split(`0 @${stem}@ INDI\n`)[1].split("\n0 ")[0]
+      expect(record).toContain(`2 FILE ${media.path}`)
+    }
+  })
+})
+
+describe("buildGedcomText with media", () => {
+  it("emits the embedded OBJE block last in the INDI record", () => {
+    const withPhoto = [
+      person({
+        id: "p-a",
+        givenName: "Alice",
+        familyName: "Smith",
+        photoId: "photo-a",
+      }),
+    ]
+    const plan = planGedcomMedia(
+      withPhoto,
+      new Map([["photo-a", "image/jpeg"]])
+    )
+    const text = buildGedcomText(
+      withPhoto,
+      [],
+      new Map(plan.map((media) => [media.personId, media]))
+    )
+
+    expect(text).toContain(
+      [
+        "0 @I1@ INDI",
+        "1 NAME Alice /Smith/",
+        "1 OBJE",
+        "2 FILE media/I1.jpg",
+        "3 FORM jpg",
+        "2 TITL Alice Smith",
+      ].join("\n")
+    )
+  })
+
+  // The media argument is optional so every existing call site and golden-text
+  // assertion keeps working untouched.
+  it("is byte-identical to the no-media output when media is omitted", () => {
+    expect(buildGedcomText(people, relationships, new Map())).toBe(
+      buildGedcomText(people, relationships)
+    )
+  })
+})
+
+describe("exportGedcomZip", () => {
+  afterEach(async () => {
+    await Promise.all([
+      db.people.clear(),
+      db.relationships.clear(),
+      db.photos.clear(),
+    ])
+  })
+
+  it("packs the .ged at the archive root beside its media/ folder", async () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 7, 8, 9])
+    await db.photos.add({
+      id: "photo-a",
+      mime: "image/jpeg",
+      blob: new Blob([bytes], { type: "image/jpeg" }),
+    })
+    await db.people.add(
+      person({ id: "p-a", givenName: "Alice", photoId: "photo-a" })
+    )
+
+    const zip = await exportGedcomZip(new Date("2026-08-31T10:00:00Z"))
+    const { unzipSync, strFromU8 } = await import("fflate")
+    const entries = unzipSync(new Uint8Array(await zip.arrayBuffer()))
+
+    // Relative FILE paths resolve against the directory holding the .ged, so
+    // both must sit at the archive root.
+    expect(Object.keys(entries).sort()).toEqual([
+      "family-tree-2026-08-31.ged",
+      "media/I1.jpg",
+    ])
+    expect(entries["media/I1.jpg"]).toEqual(bytes)
+    expect(strFromU8(entries["family-tree-2026-08-31.ged"])).toContain(
+      "2 FILE media/I1.jpg"
+    )
   })
 })
