@@ -15,6 +15,8 @@ export interface AppearanceSettings {
   edgeStrokeWidth: number
   layoutDirection: LayoutDirection
   edgeRouting: EdgeRouting
+  showPhoto: boolean
+  showDates: boolean
   spouseColor: string | null
   parentChildColor: string | null
   generationColors: (string | null)[]
@@ -33,6 +35,8 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   edgeStrokeWidth: 2,
   layoutDirection: "DOWN",
   edgeRouting: "smoothstep",
+  showPhoto: true,
+  showDates: true,
   spouseColor: null,
   parentChildColor: null,
   generationColors: Array.from({ length: GENERATION_LEVELS }, () => null),

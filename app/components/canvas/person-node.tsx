@@ -48,6 +48,8 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
     (s) => s.settings.generationColors
   )
   const avatarSize = useAppearanceStore((s) => s.settings.avatarSize)
+  const showPhoto = useAppearanceStore((s) => s.settings.showPhoto)
+  const showDates = useAppearanceStore((s) => s.settings.showDates)
   const levelColor = resolveGenerationColor(generation, generationColors)
   const requestAddRelative = useCanvasUIStore((s) => s.requestAddRelative)
   // The node array is controlled, so React Flow's own `selected` prop never
@@ -93,7 +95,13 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
         id={HANDLE.crossEnd}
         isConnectable={false}
       />
-      <PersonAvatar photoId={person.photoId} size="card" sizePx={avatarSize} />
+      {showPhoto && (
+        <PersonAvatar
+          photoId={person.photoId}
+          size="card"
+          sizePx={avatarSize}
+        />
+      )}
       <div className="flex min-w-0 flex-col gap-px">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-xl font-semibold">{name}</span>
@@ -108,7 +116,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
             <Pin className="size-3 shrink-0 text-muted-foreground" />
           )}
         </div>
-        {dates && (
+        {showDates && dates && (
           <span className="truncate text-sm text-muted-foreground">
             {dates}
           </span>

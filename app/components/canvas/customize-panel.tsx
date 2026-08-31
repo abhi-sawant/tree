@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
+import { Checkbox } from "~/components/ui/checkbox"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
@@ -123,6 +124,35 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
               hand keep their saved position in either direction — use Re-layout
               to release them. Connector shape applies to parent–child lines; a
               marriage line is always drawn straight across between the couple.
+            </p>
+          </section>
+
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>What each card shows</SectionHeading>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <Label className="text-sm font-normal normal-case">
+                <Checkbox
+                  checked={settings.showPhoto}
+                  onCheckedChange={(checked) =>
+                    setSetting("showPhoto", checked === true)
+                  }
+                />
+                Photo
+              </Label>
+              <Label className="text-sm font-normal normal-case">
+                <Checkbox
+                  checked={settings.showDates}
+                  onCheckedChange={(checked) =>
+                    setSetting("showDates", checked === true)
+                  }
+                />
+                Dates
+              </Label>
+            </div>
+            <p className="text-11 leading-relaxed text-muted-foreground">
+              Turning both off leaves a name-only card, which fits far more of a
+              large tree on screen — shrink the card size below to take
+              advantage of it.
             </p>
           </section>
 
