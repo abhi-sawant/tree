@@ -25,12 +25,19 @@ interface CreateTreeDialogProps {
 
 type RootMode = "new" | "existing"
 
-export function CreateTreeDialog({ open, onOpenChange, onCreated }: CreateTreeDialogProps) {
+export function CreateTreeDialog({
+  open,
+  onOpenChange,
+  onCreated,
+}: CreateTreeDialogProps) {
   const [name, setName] = useState("")
   const [mode, setMode] = useState<RootMode>("new")
   const [pickedRoot, setPickedRoot] = useState<Person | undefined>(undefined)
 
-  async function handleCreateWithNewRoot(values: PersonFormValues, photoAction: PhotoAction) {
+  async function handleCreateWithNewRoot(
+    values: PersonFormValues,
+    photoAction: PhotoAction
+  ) {
     if (!name.trim()) return
     const root = await createPerson(values)
     if (photoAction.kind === "staged") {
@@ -44,7 +51,10 @@ export function CreateTreeDialog({ open, onOpenChange, onCreated }: CreateTreeDi
   async function handleCreateWithExistingRoot(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim() || !pickedRoot) return
-    const tree = await createTree({ name: name.trim(), rootPersonId: pickedRoot.id })
+    const tree = await createTree({
+      name: name.trim(),
+      rootPersonId: pickedRoot.id,
+    })
     reset()
     onCreated(tree)
   }
@@ -109,16 +119,25 @@ export function CreateTreeDialog({ open, onOpenChange, onCreated }: CreateTreeDi
               submitLabel="Create tree"
             />
           ) : (
-            <form onSubmit={handleCreateWithExistingRoot} className="flex flex-col gap-4">
+            <form
+              onSubmit={handleCreateWithExistingRoot}
+              className="flex flex-col gap-4"
+            >
               <PersonPicker onSelect={setPickedRoot} />
               {pickedRoot && (
                 <p className="text-sm">
                   Selected:{" "}
-                  {[pickedRoot.givenName, pickedRoot.familyName].filter(Boolean).join(" ")}
+                  {[pickedRoot.givenName, pickedRoot.familyName]
+                    .filter(Boolean)
+                    .join(" ")}
                 </p>
               )}
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={!pickedRoot || !name.trim()}>

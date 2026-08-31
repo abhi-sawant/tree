@@ -16,6 +16,11 @@ export interface Person {
   id: string
   givenName: string
   familyName?: string
+  // The surname a person was born under, where it differs from familyName.
+  // Recorded separately rather than replacing familyName because both are
+  // real: one is how the family knows them, the other is how the records do.
+  maidenName?: string
+  nickname?: string
   sex?: Sex
   birth?: PartialDate
   death?: PartialDate

@@ -114,8 +114,21 @@ function buildFamilyGroups(
   return groups.sort((a, b) => a.key.localeCompare(b.key))
 }
 
-function formatGedcomName(person: Person): string {
-  return `${person.givenName} /${person.familyName ?? ""}/`
+function formatGedcomName(person: Person, surname?: string): string {
+  return `${person.givenName} /${surname ?? person.familyName ?? ""}/`
+}
+
+// 5.5.1 allows an INDI to carry several NAME structures, so a maiden name goes
+// out as a second one; importers treat the first as primary, which keeps the
+// name the family uses in front. Nickname is not emitted: 5.5.1 has no field
+// for it (NICK arrives in GEDCOM 7), and smuggling it into NAME would corrupt
+// the surname parsing every importer does on that line.
+function nameLines(person: Person): string[] {
+  const lines = [`1 NAME ${formatGedcomName(person)}`]
+  if (person.maidenName && person.maidenName !== person.familyName) {
+    lines.push(`1 NAME ${formatGedcomName(person, person.maidenName)}`)
+  }
+  return lines
 }
 
 // A bare BIRT/DEAT tag with no DATE would assert the event happened with an
@@ -168,7 +181,7 @@ function emitIndividual(
 ): string[] {
   return [
     `0 ${xref} INDI`,
-    `1 NAME ${formatGedcomName(person)}`,
+    ...nameLines(person),
     ...sexLines(person.sex),
     ...dateEventLines("BIRT", person.birth),
     ...dateEventLines("DEAT", person.death),

@@ -44,6 +44,8 @@ export function PersonForm({
 
   const [givenName, setGivenName] = useState(initialValues?.givenName ?? "")
   const [familyName, setFamilyName] = useState(initialValues?.familyName ?? "")
+  const [maidenName, setMaidenName] = useState(initialValues?.maidenName ?? "")
+  const [nickname, setNickname] = useState(initialValues?.nickname ?? "")
   const [sex, setSex] = useState<Sex | "">(initialValues?.sex ?? "")
   const [birth, setBirth] = useState(initialValues?.birth)
   const [death, setDeath] = useState(initialValues?.death)
@@ -107,6 +109,8 @@ export function PersonForm({
     const result = PersonFormSchema.safeParse({
       givenName,
       familyName: familyName || undefined,
+      maidenName: maidenName || undefined,
+      nickname: nickname || undefined,
       sex: sex || undefined,
       birth,
       death,
@@ -144,6 +148,26 @@ export function PersonForm({
               value={familyName}
               onChange={(e) => setFamilyName(e.target.value)}
             />
+          </div>
+
+          <div className="flex flex-wrap gap-x-3 gap-y-4">
+            <div className="flex min-w-0 flex-1 basis-40 flex-col gap-1">
+              <Label htmlFor="maidenName">Maiden name</Label>
+              <Input
+                id="maidenName"
+                value={maidenName}
+                onChange={(e) => setMaidenName(e.target.value)}
+                placeholder="If different"
+              />
+            </div>
+            <div className="flex min-w-0 flex-1 basis-40 flex-col gap-1">
+              <Label htmlFor="nickname">Nickname</Label>
+              <Input
+                id="nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-1">

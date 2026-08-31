@@ -227,13 +227,35 @@ describe("getImmediateFamilyIds", () => {
     await addRelationship({ type: "parent-child", from: parent, to: person })
     await addRelationship({ type: "spouse", from: person, to: firstSpouse })
     await addRelationship({ type: "spouse", from: person, to: secondSpouse })
-    await addRelationship({ type: "parent-child", from: person, to: childWithFirst })
-    await addRelationship({ type: "parent-child", from: firstSpouse, to: childWithFirst })
-    await addRelationship({ type: "parent-child", from: person, to: childWithSecond })
-    await addRelationship({ type: "parent-child", from: secondSpouse, to: childWithSecond })
+    await addRelationship({
+      type: "parent-child",
+      from: person,
+      to: childWithFirst,
+    })
+    await addRelationship({
+      type: "parent-child",
+      from: firstSpouse,
+      to: childWithFirst,
+    })
+    await addRelationship({
+      type: "parent-child",
+      from: person,
+      to: childWithSecond,
+    })
+    await addRelationship({
+      type: "parent-child",
+      from: secondSpouse,
+      to: childWithSecond,
+    })
 
     expect(new Set(await getImmediateFamilyIds(person))).toEqual(
-      new Set([parent, firstSpouse, secondSpouse, childWithFirst, childWithSecond])
+      new Set([
+        parent,
+        firstSpouse,
+        secondSpouse,
+        childWithFirst,
+        childWithSecond,
+      ])
     )
   })
 })

@@ -275,6 +275,47 @@ describe("buildGedcomText", () => {
     expect(family).toContain("1 WIFE @I2@")
   })
 
+  it("emits a maiden name as a second NAME, primary name first", () => {
+    const text = buildGedcomText(
+      [
+        person({
+          id: "p-1",
+          givenName: "Ada",
+          familyName: "King",
+          maidenName: "Byron",
+        }),
+      ],
+      []
+    )
+    expect(text).toContain("1 NAME Ada /King/\n1 NAME Ada /Byron/")
+  })
+
+  it("skips a maiden name that just repeats the family name", () => {
+    const text = buildGedcomText(
+      [
+        person({
+          id: "p-1",
+          givenName: "Ada",
+          familyName: "Byron",
+          maidenName: "Byron",
+        }),
+      ],
+      []
+    )
+    const record = text.split("0 @I1@ INDI")[1].split("\n0 ")[0]
+    expect(record.match(/1 NAME/g)).toHaveLength(1)
+  })
+
+  it("does not put a nickname on the NAME line", () => {
+    // 5.5.1 has no nickname field, and every importer parses the surname out
+    // of NAME — a nickname smuggled in there would corrupt that.
+    const text = buildGedcomText(
+      [person({ id: "p-1", givenName: "Augusta", nickname: "Ada" })],
+      []
+    )
+    expect(text).not.toContain("Ada")
+  })
+
   it("silently excludes a malformed 3-parent child without throwing", () => {
     const threeParents: Relationship[] = [
       parentChild("p-a", "p-child-a"),

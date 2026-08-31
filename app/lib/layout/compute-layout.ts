@@ -1,7 +1,11 @@
 import ElkConstructor from "elkjs"
 import type { ElkNode } from "elkjs"
 
-import { DEFAULT_LAYOUT_OPTIONS, runLayout, type NodePosition } from "~/lib/layout/run-layout"
+import {
+  DEFAULT_LAYOUT_OPTIONS,
+  runLayout,
+  type NodePosition,
+} from "~/lib/layout/run-layout"
 
 // Node-only: elkjs's default entry point auto-selects a synchronous
 // in-process "fake worker" whose own environment check only takes the
@@ -11,7 +15,7 @@ import { DEFAULT_LAYOUT_OPTIONS, runLayout, type NodePosition } from "~/lib/layo
 // Worker.
 export async function computeLayout(
   graph: ElkNode,
-  layoutOptions: Record<string, string> = DEFAULT_LAYOUT_OPTIONS,
+  layoutOptions: Record<string, string> = DEFAULT_LAYOUT_OPTIONS
 ): Promise<Record<string, NodePosition>> {
   return runLayout(new ElkConstructor(), graph, layoutOptions)
 }

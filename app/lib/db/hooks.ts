@@ -2,7 +2,12 @@ import { useLiveQuery } from "dexie-react-hooks"
 import { useEffect, useState } from "react"
 
 import { db } from "~/lib/db/db"
-import { getTreesForPerson, searchPeople, type SearchPeopleOptions, type TreeRef } from "~/lib/db/people"
+import {
+  getTreesForPerson,
+  searchPeople,
+  type SearchPeopleOptions,
+  type TreeRef,
+} from "~/lib/db/people"
 import type { Person, Photo, Relationship, Tree, TreeMember } from "~/lib/types"
 
 export function usePerson(id: string | undefined): Person | undefined {
@@ -21,10 +26,12 @@ export function useTrees(): Tree[] | undefined {
   return useLiveQuery(() => db.trees.toArray(), [])
 }
 
-export function useTreeMembers(treeId: string | undefined): TreeMember[] | undefined {
+export function useTreeMembers(
+  treeId: string | undefined
+): TreeMember[] | undefined {
   return useLiveQuery(
     () => (treeId ? db.members.where("treeId").equals(treeId).toArray() : []),
-    [treeId],
+    [treeId]
   )
 }
 
@@ -33,7 +40,7 @@ export function useRelationships(): Relationship[] | undefined {
 }
 
 export function useRelationshipsForPerson(
-  personId: string | undefined,
+  personId: string | undefined
 ): Relationship[] | undefined {
   return useLiveQuery(async () => {
     if (!personId) return []
@@ -46,7 +53,10 @@ export function useRelationshipsForPerson(
 }
 
 export function usePhoto(photoId: string | undefined): Photo | undefined {
-  return useLiveQuery(() => (photoId ? db.photos.get(photoId) : undefined), [photoId])
+  return useLiveQuery(
+    () => (photoId ? db.photos.get(photoId) : undefined),
+    [photoId]
+  )
 }
 
 export function usePhotoUrl(photoId: string | undefined): string | undefined {
@@ -68,11 +78,11 @@ export function usePhotoUrl(photoId: string | undefined): string | undefined {
 
 export function useSearchPeople(
   query: string,
-  options?: SearchPeopleOptions,
+  options?: SearchPeopleOptions
 ): Person[] | undefined {
   return useLiveQuery(
     () => searchPeople(query, options),
-    [query, options?.includePlaceholders],
+    [query, options?.includePlaceholders]
   )
 }
 
@@ -80,6 +90,11 @@ export function useMembers(): TreeMember[] | undefined {
   return useLiveQuery(() => db.members.toArray(), [])
 }
 
-export function useTreesForPerson(personId: string | undefined): TreeRef[] | undefined {
-  return useLiveQuery(() => (personId ? getTreesForPerson(personId) : []), [personId])
+export function useTreesForPerson(
+  personId: string | undefined
+): TreeRef[] | undefined {
+  return useLiveQuery(
+    () => (personId ? getTreesForPerson(personId) : []),
+    [personId]
+  )
 }

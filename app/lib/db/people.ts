@@ -59,9 +59,19 @@ export async function searchPeople(
   return people.filter((person) => {
     if (!includePlaceholders && person.isPlaceholder) return false
     if (!normalized) return true
-    const fullName =
-      `${person.givenName} ${person.familyName ?? ""}`.toLowerCase()
-    return fullName.includes(normalized)
+    // Maiden name and nickname are searched alongside the display name: a
+    // woman recorded under her married name is otherwise unfindable by the
+    // name her birth records carry, which is the name a researcher has.
+    const haystack = [
+      person.givenName,
+      person.familyName,
+      person.maidenName,
+      person.nickname,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+    return haystack.includes(normalized)
   })
 }
 

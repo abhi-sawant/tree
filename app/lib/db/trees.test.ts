@@ -114,7 +114,11 @@ describe("removeMember", () => {
       { treeId: tree.id, personId: root.id },
       { treeId: tree.id, personId: member.id },
     ])
-    await addRelationship({ type: "parent-child", from: root.id, to: member.id })
+    await addRelationship({
+      type: "parent-child",
+      from: root.id,
+      to: member.id,
+    })
 
     await removeMember(tree.id, member.id)
 
@@ -193,7 +197,11 @@ describe("addExistingPersonToTree", () => {
     const parent = await seedPerson()
     const tree = await seedTree({ rootPersonId: root.id })
     await db.members.put({ treeId: tree.id, personId: root.id })
-    await addRelationship({ type: "parent-child", from: parent.id, to: person.id })
+    await addRelationship({
+      type: "parent-child",
+      from: parent.id,
+      to: person.id,
+    })
 
     const result = await addExistingPersonToTree(tree.id, person.id)
 
@@ -210,9 +218,17 @@ describe("addExistingPersonToTree", () => {
     const child = await seedPerson()
     const tree = await seedTree({ rootPersonId: root.id })
     await db.members.put({ treeId: tree.id, personId: root.id })
-    await addRelationship({ type: "parent-child", from: parent.id, to: person.id })
+    await addRelationship({
+      type: "parent-child",
+      from: parent.id,
+      to: person.id,
+    })
     await addRelationship({ type: "spouse", from: person.id, to: spouse.id })
-    await addRelationship({ type: "parent-child", from: person.id, to: child.id })
+    await addRelationship({
+      type: "parent-child",
+      from: person.id,
+      to: child.id,
+    })
 
     const result = await addExistingPersonToTree(tree.id, person.id, {
       includeFamily: true,
@@ -235,7 +251,11 @@ describe("addExistingPersonToTree", () => {
       { treeId: tree.id, personId: root.id },
       { treeId: tree.id, personId: parent.id },
     ])
-    await addRelationship({ type: "parent-child", from: parent.id, to: person.id })
+    await addRelationship({
+      type: "parent-child",
+      from: parent.id,
+      to: person.id,
+    })
 
     const result = await addExistingPersonToTree(tree.id, person.id, {
       includeFamily: true,
@@ -262,12 +282,16 @@ describe("addExistingPersonToTree", () => {
 describe("addPersonToTree (existing coverage)", () => {
   it("throws when the tree doesn't exist", async () => {
     const person = await seedPerson()
-    await expect(addPersonToTree(id(), person.id)).rejects.toThrow("Tree not found")
+    await expect(addPersonToTree(id(), person.id)).rejects.toThrow(
+      "Tree not found"
+    )
   })
 
   it("throws when the person doesn't exist", async () => {
     const tree = await seedTree()
-    await expect(addPersonToTree(tree.id, id())).rejects.toThrow("Person not found")
+    await expect(addPersonToTree(tree.id, id())).rejects.toThrow(
+      "Person not found"
+    )
   })
 })
 

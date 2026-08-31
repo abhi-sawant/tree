@@ -101,7 +101,10 @@ export function RelativeForm({
   }
 
   if (mode === "new") {
-    async function handleSubmit(values: PersonFormValues, photoAction: PhotoAction) {
+    async function handleSubmit(
+      values: PersonFormValues,
+      photoAction: PhotoAction
+    ) {
       setError(undefined)
       try {
         await onSubmitNew?.(values, dates, photoAction)

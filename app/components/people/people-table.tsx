@@ -14,6 +14,7 @@ import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import { formatPartialDate } from "~/lib/partial-date"
 import type { Person, Tree } from "~/lib/types"
+import { personDisplayName } from "~/lib/person-name"
 
 function relativesSummary(counts: RelativeCounts): string {
   const plural = (n: number, word: string) =>
@@ -97,9 +98,7 @@ export function PeopleTable({
                     className="cursor-pointer text-13 font-medium hover:underline"
                     onClick={() => onOpenInTree(person)}
                   >
-                    {[person.givenName, person.familyName]
-                      .filter(Boolean)
-                      .join(" ") || "Unnamed"}
+                    {personDisplayName(person)}
                   </button>
                   {person.isPlaceholder && <PlaceholderBadge />}
                 </div>

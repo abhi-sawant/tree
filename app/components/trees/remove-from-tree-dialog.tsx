@@ -44,10 +44,13 @@ export function RemoveFromTreeDialog({
   // Skip the tree-picker step entirely when there's only one tree to choose
   // from — no need to make the user click through a single-option list.
   const effectiveTreeId =
-    chosenTreeId ?? (treesForPerson?.length === 1 ? treesForPerson[0].id : undefined)
+    chosenTreeId ??
+    (treesForPerson?.length === 1 ? treesForPerson[0].id : undefined)
   const chosenTree = useTree(effectiveTreeId)
 
-  const displayName = [person.givenName, person.familyName].filter(Boolean).join(" ")
+  const displayName = [person.givenName, person.familyName]
+    .filter(Boolean)
+    .join(" ")
 
   async function handleConfirm() {
     if (!effectiveTreeId) return
