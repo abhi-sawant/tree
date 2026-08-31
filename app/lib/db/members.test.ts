@@ -14,9 +14,7 @@ afterEach(async () => {
 
 const id = () => crypto.randomUUID()
 
-async function seedMember(
-  overrides: Partial<TreeMember> = {}
-): Promise<TreeMember> {
+async function seedMember(overrides: Partial<TreeMember> = {}): Promise<TreeMember> {
   const member: TreeMember = { treeId: id(), personId: id(), ...overrides }
   await db.members.put(member)
   return member
@@ -54,7 +52,9 @@ describe("clearMemberPosition", () => {
   })
 
   it("is a no-op when the member row doesn't exist", async () => {
-    await expect(clearMemberPosition(id(), id())).resolves.toBeUndefined()
+    await expect(
+      clearMemberPosition(id(), id())
+    ).resolves.toBeUndefined()
   })
 })
 

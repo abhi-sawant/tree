@@ -13,7 +13,7 @@ const DEFAULT_QUALITY = 0.8
 export function computeTargetDimensions(
   width: number,
   height: number,
-  maxEdge: number = DEFAULT_MAX_EDGE
+  maxEdge: number = DEFAULT_MAX_EDGE,
 ): Dimensions {
   const longestEdge = Math.max(width, height)
   if (longestEdge <= maxEdge) return { width, height }
@@ -32,16 +32,12 @@ export interface ResizeOptions {
 
 export async function resizeAndCompressImage(
   input: Blob,
-  options: ResizeOptions = {}
+  options: ResizeOptions = {},
 ): Promise<Blob> {
   const { maxEdge = DEFAULT_MAX_EDGE, quality = DEFAULT_QUALITY } = options
 
   const bitmap = await createImageBitmap(input)
-  const { width, height } = computeTargetDimensions(
-    bitmap.width,
-    bitmap.height,
-    maxEdge
-  )
+  const { width, height } = computeTargetDimensions(bitmap.width, bitmap.height, maxEdge)
 
   const canvas = document.createElement("canvas")
   canvas.width = width
@@ -52,10 +48,9 @@ export async function resizeAndCompressImage(
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
-      (blob) =>
-        blob ? resolve(blob) : reject(new Error("Image encoding failed")),
+      (blob) => (blob ? resolve(blob) : reject(new Error("Image encoding failed"))),
       "image/jpeg",
-      quality
+      quality,
     )
   })
 }
@@ -63,7 +58,7 @@ export async function resizeAndCompressImage(
 export async function setPersonPhoto(
   personId: string,
   blob: Blob,
-  mime: string
+  mime: string,
 ): Promise<string> {
   const newPhotoId = crypto.randomUUID()
 

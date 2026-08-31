@@ -80,9 +80,7 @@ describe("computeGenerations", () => {
       relationships
     )
 
-    expect(generations.get(spouseFromOutside.id)).toBe(
-      generations.get(child.id)
-    )
+    expect(generations.get(spouseFromOutside.id)).toBe(generations.get(child.id))
   })
 
   it("takes the deepest ancestor chain when parents are at different generations", () => {

@@ -60,22 +60,12 @@ describe("FamilyTreeDB", () => {
   })
 
   it("enforces one membership row per (treeId, personId) via the compound key", async () => {
-    const member: TreeMember = {
-      treeId: "tree-1",
-      personId: "person-1",
-      x: 10,
-      y: 20,
-    }
+    const member: TreeMember = { treeId: "tree-1", personId: "person-1", x: 10, y: 20 }
     await db.members.put(member)
     await db.members.put({ ...member, x: 99, y: 99 })
 
     const rows = await db.members.where("treeId").equals("tree-1").toArray()
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toEqual({
-      treeId: "tree-1",
-      personId: "person-1",
-      x: 99,
-      y: 99,
-    })
+    expect(rows[0]).toEqual({ treeId: "tree-1", personId: "person-1", x: 99, y: 99 })
   })
 })

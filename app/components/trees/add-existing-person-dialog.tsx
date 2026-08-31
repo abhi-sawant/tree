@@ -82,17 +82,13 @@ export function AddExistingPersonDialog({
             <>
               <p className="text-sm">
                 Selected:{" "}
-                {[picked.givenName, picked.familyName]
-                  .filter(Boolean)
-                  .join(" ")}
+                {[picked.givenName, picked.familyName].filter(Boolean).join(" ")}
               </p>
               {newFamilyIds.length > 0 && (
                 <Label>
                   <Checkbox
                     checked={includeFamily}
-                    onCheckedChange={(checked) =>
-                      setIncludeFamily(checked === true)
-                    }
+                    onCheckedChange={(checked) => setIncludeFamily(checked === true)}
                   />
                   Also add their immediate family — {newFamilyIds.length}{" "}
                   {newFamilyIds.length === 1 ? "person" : "people"}
@@ -103,11 +99,7 @@ export function AddExistingPersonDialog({
         </div>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button type="button" disabled={!picked} onClick={handleSubmit}>

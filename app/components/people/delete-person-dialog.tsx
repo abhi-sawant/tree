@@ -10,11 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
-import {
-  deletePerson,
-  getDeleteImpact,
-  type DeleteImpact,
-} from "~/lib/db/people"
+import { deletePerson, getDeleteImpact, type DeleteImpact } from "~/lib/db/people"
 import type { Person } from "~/lib/types"
 
 interface DeletePersonDialogProps {
@@ -23,11 +19,7 @@ interface DeletePersonDialogProps {
   person: Person
 }
 
-export function DeletePersonDialog({
-  open,
-  onOpenChange,
-  person,
-}: DeletePersonDialogProps) {
+export function DeletePersonDialog({ open, onOpenChange, person }: DeletePersonDialogProps) {
   const [impact, setImpact] = useState<DeleteImpact | undefined>(undefined)
 
   useEffect(() => {
@@ -50,9 +42,7 @@ export function DeletePersonDialog({
     }
   }
 
-  const displayName = [person.givenName, person.familyName]
-    .filter(Boolean)
-    .join(" ")
+  const displayName = [person.givenName, person.familyName].filter(Boolean).join(" ")
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -63,8 +53,8 @@ export function DeletePersonDialog({
               <AlertDialogTitle>Can't delete {displayName}</AlertDialogTitle>
               <AlertDialogDescription>
                 {displayName} is the root of trees:{" "}
-                {impact?.blockingTrees.map((t) => t.name).join(", ")} — reassign
-                root before deleting.
+                {impact?.blockingTrees.map((t) => t.name).join(", ")} — reassign root before
+                deleting.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

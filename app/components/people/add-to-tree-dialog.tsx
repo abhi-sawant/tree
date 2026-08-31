@@ -20,11 +20,7 @@ interface AddToTreeDialogProps {
   person: Person
 }
 
-export function AddToTreeDialog({
-  open,
-  onOpenChange,
-  person,
-}: AddToTreeDialogProps) {
+export function AddToTreeDialog({ open, onOpenChange, person }: AddToTreeDialogProps) {
   const trees = useTrees()
   const memberOfTrees = useTreesForPerson(person.id)
   const memberOfTreeIds = new Set(memberOfTrees?.map((t) => t.id))
@@ -67,10 +63,7 @@ export function AddToTreeDialog({
                   >
                     {tree.name}
                     {alreadyMember && (
-                      <span className="text-muted-foreground normal-case">
-                        {" "}
-                        (already added)
-                      </span>
+                      <span className="text-muted-foreground normal-case"> (already added)</span>
                     )}
                   </Button>
                 )
@@ -93,11 +86,7 @@ export function AddToTreeDialog({
         </div>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
         </DialogFooter>

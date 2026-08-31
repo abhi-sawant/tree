@@ -41,10 +41,7 @@ export async function addPersonToTree(
   if (!existing) await db.members.put({ treeId, personId })
 }
 
-export async function updateTreeName(
-  treeId: string,
-  name: string
-): Promise<void> {
+export async function updateTreeName(treeId: string, name: string): Promise<void> {
   const trimmed = name.trim()
   if (!trimmed) throw new Error("Tree name cannot be empty")
 
@@ -74,10 +71,7 @@ export class PersonIsRootOfTreeError extends Error {
 // TreeMember row is the entire operation. toElkGraph scopes purely off
 // membership, so the canvas drops this person (and any edges touching them)
 // on the next reactive re-render for free.
-export async function removeMember(
-  treeId: string,
-  personId: string
-): Promise<void> {
+export async function removeMember(treeId: string, personId: string): Promise<void> {
   const tree = await db.trees.get(treeId)
   if (!tree) throw new Error(`Tree not found: ${treeId}`)
 
@@ -102,18 +96,13 @@ export async function deleteTree(treeId: string): Promise<void> {
 // Root reassignment is limited to people already in the tree (D12: root is a
 // layout anchor for that tree specifically) — add them as a member first via
 // addPersonToTree/addExistingPersonToTree if they aren't already.
-export async function reassignRoot(
-  treeId: string,
-  newRootPersonId: string
-): Promise<void> {
+export async function reassignRoot(treeId: string, newRootPersonId: string): Promise<void> {
   const tree = await db.trees.get(treeId)
   if (!tree) throw new Error(`Tree not found: ${treeId}`)
 
   const membership = await db.members.get([treeId, newRootPersonId])
   if (!membership) {
-    throw new Error(
-      `Person ${newRootPersonId} is not a member of tree ${treeId}`
-    )
+    throw new Error(`Person ${newRootPersonId} is not a member of tree ${treeId}`)
   }
 
   await db.trees.update(treeId, { rootPersonId: newRootPersonId })

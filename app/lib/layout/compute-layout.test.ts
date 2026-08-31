@@ -78,9 +78,7 @@ describe("computeLayout", () => {
     expect(positions["person:a"].x).not.toEqual(positions["person:b"].x)
     // Same generation ends up in the same layer (equal y under top-down layered layout).
     expect(positions["person:a"].y).toEqual(positions["person:b"].y)
-    expect(positions["person:child"].y).toBeGreaterThan(
-      positions["union:a:b"].y
-    )
+    expect(positions["person:child"].y).toBeGreaterThan(positions["union:a:b"].y)
   })
 
   it("keeps a neighboring couple's union from drifting into a wider family's children columns", async () => {
