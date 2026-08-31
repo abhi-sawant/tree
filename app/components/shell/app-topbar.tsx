@@ -16,8 +16,13 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { triggerDownload } from "~/lib/download"
-import { gedcomFilename, gedcomZipFilename } from "~/lib/export/filenames"
+import {
+  anniversariesIcsFilename,
+  gedcomFilename,
+  gedcomZipFilename,
+} from "~/lib/export/filenames"
 import { exportGedcom, exportGedcomZip } from "~/lib/export/gedcom"
+import { exportAnniversariesIcs } from "~/lib/export/ics"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import { toast } from "~/lib/ui/toast-store"
 import { cn } from "~/lib/utils"
@@ -76,6 +81,16 @@ export function AppTopbar({
       toast("GEDCOM and photos exported")
     } catch {
       toast("GEDCOM export failed — nothing was downloaded")
+    }
+  }
+
+  async function handleExportIcs() {
+    try {
+      const blob = await exportAnniversariesIcs()
+      triggerDownload(blob, anniversariesIcsFilename())
+      toast("Anniversaries exported")
+    } catch {
+      toast("Calendar export failed — nothing was downloaded")
     }
   }
 
@@ -179,6 +194,9 @@ export function AppTopbar({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => void handleExportGedcom()}>
               GEDCOM 5.5.1 (no photos)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => void handleExportIcs()}>
+              Anniversaries (.ics)
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

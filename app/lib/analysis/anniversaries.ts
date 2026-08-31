@@ -19,15 +19,23 @@ export interface Anniversary {
 
 const MS_PER_DAY = 86_400_000
 
+export interface CalendarDay {
+  month: number
+  day: number
+  year?: number
+}
+
 // A date can only land on a calendar day if it records one. A year alone, or a
 // year and month, cannot.
 //
 // Approximate dates are excluded too: "c. 3 May 1890" says the day is a guess,
 // and marking an anniversary on a guessed day would present an estimate as a
 // fact — the same rule the validator follows.
-function calendarDay(
-  date?: PartialDate
-): { month: number; day: number; year?: number } | undefined {
+//
+// Exported because the .ics writer must apply exactly this rule: a calendar
+// file and this view disagreeing about which dates are real would be a bug
+// nobody would think to look for.
+export function exactCalendarDay(date?: PartialDate): CalendarDay | undefined {
   if (!date || date.month === undefined || date.day === undefined)
     return undefined
   if (date.approximate) return undefined
@@ -77,7 +85,7 @@ export function findAnniversaries(
       daysUntil: number
     }) => Anniversary | undefined
   ) => {
-    const occurrence = calendarDay(date)
+    const occurrence = exactCalendarDay(date)
     if (!occurrence) return
     const days = daysUntil(occurrence.month, occurrence.day, today)
     if (days > withinDays) return
