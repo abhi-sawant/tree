@@ -8,6 +8,7 @@ import { Toaster } from "~/components/ui/toast"
 import { useAutoSnapshots } from "~/lib/backup/use-auto-snapshots"
 import { useFolderBackup } from "~/lib/backup/use-folder-backup"
 import { usePeople, useRelationships, useTrees } from "~/lib/db/hooks"
+import { useChangeStamp } from "~/lib/db/use-change-stamp"
 import { computeGenerations } from "~/lib/graph/compute-generations"
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { getLastTreeId } from "~/lib/last-tree"
@@ -22,6 +23,7 @@ export default function App() {
   // stop being taken whenever the boot skeleton showed.
   useAutoSnapshots()
   useFolderBackup()
+  useChangeStamp()
 
   const trees = useTrees()
   const people = usePeople()

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 
 import { AppSidebar } from "~/components/shell/app-sidebar"
 import { AppTopbar } from "~/components/shell/app-topbar"
+import { BackupNudgeBanner } from "~/components/shell/backup-nudge"
 import { CommandPalette } from "~/components/shell/command-palette"
 import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
@@ -11,9 +12,10 @@ import { InsightsView } from "~/components/views/insights-view"
 import { SettingsView } from "~/components/views/settings-view"
 import { TableView } from "~/components/views/table-view"
 import { TreeView } from "~/components/views/tree-view"
+import { useBackupNudge } from "~/lib/backup/use-backup-nudge"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { useTreeMembers } from "~/lib/db/hooks"
-import { setLastExportDate } from "~/lib/db/app-meta"
+import { clearBackupNudgeDismissal, setLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
 import { backupFilename } from "~/lib/export/filenames"
 import { exportBackup } from "~/lib/export/json"
@@ -65,6 +67,8 @@ export function AppShell({
   // Nudged after every backup so the sidebar and Settings re-read app-meta.
   const [exportToken, setExportToken] = useState(0)
 
+  const backupNudge = useBackupNudge(people, exportToken)
+
   const memberIds = useMemo(
     () => new Set((treeMembers ?? []).map((m) => m.personId)),
     [treeMembers]
@@ -102,6 +106,9 @@ export function AppShell({
       // Only on success: "Last export" is a storage-risk signal, and a date
       // written after a failed export would be actively misleading.
       await setLastExportDate()
+      // A dismissal that outlived the thing it dismissed would swallow the next
+      // nudge a week into the following month.
+      await clearBackupNudgeDismissal()
       setExportToken((t) => t + 1)
       toast("Backup exported")
     } catch {
@@ -132,6 +139,13 @@ export function AppShell({
           onCreateTree={() => setCreateTreeOpen(true)}
           onExportBackup={() => void handleExportBackup()}
           exportingBackup={exportingBackup}
+        />
+
+        <BackupNudgeBanner
+          verdict={backupNudge.verdict}
+          exporting={exportingBackup}
+          onExport={() => void handleExportBackup()}
+          onDismiss={backupNudge.dismiss}
         />
 
         {view === "tree" && (
