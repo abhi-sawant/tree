@@ -1,16 +1,13 @@
 import { db } from "~/lib/db/db"
-import { PersonFormSchema } from "~/lib/schemas"
+import { PersonFormSchema, type PersonFormValues } from "~/lib/schemas"
 import { requestPersistentStorage } from "~/lib/storage"
-import type { Person, PartialDate } from "~/lib/types"
+import type { Person } from "~/lib/types"
 
-export interface CreatePersonInput {
-  givenName: string
-  familyName?: string
-  birth?: PartialDate
-  death?: PartialDate
-  notes?: string
-  isPlaceholder?: boolean
-}
+// Derived from the form schema rather than restated, so adding a Person field
+// only means touching schemas.ts. `photoId` is excluded because photos are
+// written through setPersonPhoto (it owns the blob's lifecycle), never as part
+// of a plain create.
+export type CreatePersonInput = Omit<PersonFormValues, "photoId">
 
 export async function createPerson(input: CreatePersonInput): Promise<Person> {
   const now = Date.now()

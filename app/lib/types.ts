@@ -5,10 +5,18 @@ export type PartialDate = {
   approximate?: boolean
 }
 
+// GEDCOM 5.5.1 only knows M/F/U. "other" is kept as a distinct stored value
+// rather than folded into the absent case, because the export mapping is a
+// lossy detail of one output format and shouldn't reach back into the model.
+// An absent sex means unrecorded — there is deliberately no "unknown" member,
+// which would be a second way to say the same thing.
+export type Sex = "male" | "female" | "other"
+
 export interface Person {
   id: string
   givenName: string
   familyName?: string
+  sex?: Sex
   birth?: PartialDate
   death?: PartialDate
   photoId?: string

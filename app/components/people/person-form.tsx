@@ -6,9 +6,11 @@ import { PersonAvatar } from "~/components/people/person-avatar"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
+import { Select } from "~/components/ui/select"
 import { Textarea } from "~/components/ui/textarea"
 import { resizeAndCompressImage } from "~/lib/photos"
 import { PersonFormSchema, type PersonFormValues } from "~/lib/schemas"
+import type { Sex } from "~/lib/types"
 
 export type PhotoAction =
   | { kind: "unchanged" }
@@ -42,6 +44,7 @@ export function PersonForm({
 
   const [givenName, setGivenName] = useState(initialValues?.givenName ?? "")
   const [familyName, setFamilyName] = useState(initialValues?.familyName ?? "")
+  const [sex, setSex] = useState<Sex | "">(initialValues?.sex ?? "")
   const [birth, setBirth] = useState(initialValues?.birth)
   const [death, setDeath] = useState(initialValues?.death)
   const [notes, setNotes] = useState(initialValues?.notes ?? "")
@@ -104,6 +107,7 @@ export function PersonForm({
     const result = PersonFormSchema.safeParse({
       givenName,
       familyName: familyName || undefined,
+      sex: sex || undefined,
       birth,
       death,
       notes: notes || undefined,
@@ -140,6 +144,20 @@ export function PersonForm({
               value={familyName}
               onChange={(e) => setFamilyName(e.target.value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="sex">Sex</Label>
+            <Select
+              id="sex"
+              value={sex}
+              onChange={(e) => setSex(e.target.value as Sex | "")}
+            >
+              <option value="">Not recorded</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="other">Other</option>
+            </Select>
           </div>
 
           <PartialDateFields legend="Birth" value={birth} onChange={setBirth} />

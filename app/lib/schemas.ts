@@ -7,10 +7,13 @@ export const PartialDateSchema = z.object({
   approximate: z.boolean().optional(),
 })
 
+export const SexSchema = z.enum(["male", "female", "other"])
+
 export const PersonSchema = z.object({
   id: z.string(),
   givenName: z.string().min(1),
   familyName: z.string().optional(),
+  sex: SexSchema.optional(),
   birth: PartialDateSchema.optional(),
   death: PartialDateSchema.optional(),
   photoId: z.string().optional(),

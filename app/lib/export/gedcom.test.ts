@@ -186,6 +186,95 @@ describe("buildGedcomText", () => {
     )
   })
 
+  it("omits SEX entirely when sex is not recorded", () => {
+    const text = buildGedcomText(people, relationships)
+    expect(text).not.toContain("1 SEX")
+  })
+
+  it("emits SEX between NAME and the events, mapping other to U", () => {
+    const text = buildGedcomText(
+      [
+        person({ id: "p-1", givenName: "Fern", sex: "female" }),
+        person({
+          id: "p-2",
+          givenName: "Mel",
+          sex: "male",
+          birth: { year: 1900 },
+        }),
+        person({ id: "p-3", givenName: "Ori", sex: "other" }),
+      ],
+      []
+    )
+    expect(text).toContain("0 @I1@ INDI\n1 NAME Fern //\n1 SEX F")
+    expect(text).toContain("0 @I2@ INDI\n1 NAME Mel //\n1 SEX M\n1 BIRT")
+    expect(text).toContain("0 @I3@ INDI\n1 NAME Ori //\n1 SEX U")
+  })
+
+  it("assigns HUSB/WIFE by recorded sex, not by id order", () => {
+    // p-a sorts first but is female, so the id-order fallback would have put
+    // her in HUSB.
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ada", sex: "female" }),
+        person({ id: "p-b", givenName: "Ben", sex: "male" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        parentChild("p-a", "p-c"),
+        parentChild("p-b", "p-c"),
+      ]
+    )
+    const family = text.split("0 @F1@ FAM")[1].split("\n0 ")[0]
+    expect(family).toContain("1 HUSB @I2@")
+    expect(family).toContain("1 WIFE @I1@")
+  })
+
+  it("falls back to id order when sex cannot decide the pair", () => {
+    // Both female, and a couple with sex recorded on neither: in both cases
+    // the ascending id sort has to settle it so exports stay reproducible.
+    const bothFemale = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ada", sex: "female" }),
+        person({ id: "p-b", givenName: "Bea", sex: "female" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        parentChild("p-a", "p-c"),
+        parentChild("p-b", "p-c"),
+      ]
+    )
+    const family = bothFemale.split("0 @F1@ FAM")[1].split("\n0 ")[0]
+    expect(family).toContain("1 HUSB @I1@")
+    expect(family).toContain("1 WIFE @I2@")
+
+    const neitherRecorded = buildGedcomText(people, relationships)
+    expect(neitherRecorded.split("0 @F2@ FAM")[1].split("\n0 ")[0]).toContain(
+      "1 HUSB @I1@"
+    )
+  })
+
+  it("pairs an unrecorded parent against a recorded one by the recorded sex", () => {
+    // Only p-b's sex is known. A female known parent must still take WIFE,
+    // leaving HUSB for the parent we know nothing about.
+    const text = buildGedcomText(
+      [
+        person({ id: "p-a", givenName: "Ada" }),
+        person({ id: "p-b", givenName: "Bea", sex: "female" }),
+        person({ id: "p-c", givenName: "Cass" }),
+      ],
+      [
+        spouse("p-a", "p-b"),
+        parentChild("p-a", "p-c"),
+        parentChild("p-b", "p-c"),
+      ]
+    )
+    const family = text.split("0 @F1@ FAM")[1].split("\n0 ")[0]
+    expect(family).toContain("1 HUSB @I1@")
+    expect(family).toContain("1 WIFE @I2@")
+  })
+
   it("silently excludes a malformed 3-parent child without throwing", () => {
     const threeParents: Relationship[] = [
       parentChild("p-a", "p-child-a"),

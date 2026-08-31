@@ -4,7 +4,7 @@ import { db } from "~/lib/db/db"
 import { blobToBytes, zipEntries, type ZipEntries } from "~/lib/export/archive"
 import { gedcomFilename } from "~/lib/export/filenames"
 import { extensionForMime, gedcomFormForExtension } from "~/lib/export/mime"
-import type { PartialDate, Person, Relationship } from "~/lib/types"
+import type { PartialDate, Person, Relationship, Sex } from "~/lib/types"
 
 export const GEDCOM_MEDIA_DIR = "media"
 
@@ -49,6 +49,29 @@ function assignXrefs(ids: string[], prefix: string): Map<string, string> {
   return map
 }
 
+// GEDCOM 5.5.1 gives FAM two sex-specific parent slots, HUSB and WIFE, with no
+// neutral alternative — so the pair has to be ordered by recorded sex for the
+// tags to mean what they claim. Where sex can't decide it (unrecorded on either
+// side, "other", or both the same), fall back to the ascending id sort so the
+// output stays deterministic across exports.
+function orderParentsForFamily(
+  parentIds: string[],
+  peopleById: ReadonlyMap<string, Person>
+): string[] {
+  const sorted = [...parentIds].sort()
+  if (sorted.length !== 2) return sorted
+
+  const [a, b] = sorted
+  const sexA = peopleById.get(a)?.sex
+  const sexB = peopleById.get(b)?.sex
+
+  if (sexA === "male" && sexB !== "male") return [a, b]
+  if (sexB === "male" && sexA !== "male") return [b, a]
+  if (sexA === "female" && sexB !== "female") return [b, a]
+  if (sexB === "female" && sexA !== "female") return [a, b]
+  return sorted
+}
+
 // deriveUnions groups two-parent children into UnionNodes but leaves
 // single-parent children as a flat list — group those by parent here so
 // every recorded parent-child link ends up in exactly one FamilyGroup.
@@ -60,10 +83,11 @@ function buildFamilyGroups(
     people,
     relationships
   )
+  const peopleById = new Map(people.map((person) => [person.id, person]))
 
   const groups: FamilyGroup[] = unions.map((union) => ({
     key: union.id,
-    parents: [...union.parents].sort(),
+    parents: orderParentsForFamily([...union.parents], peopleById),
     children: twoParentLinks
       .filter((link) => link.unionId === union.id)
       .map((link) => link.childId)
@@ -102,6 +126,17 @@ function dateEventLines(tag: string, date?: PartialDate): string[] {
   return gedcomDate ? [`1 ${tag}`, `2 DATE ${gedcomDate}`] : []
 }
 
+// SEX is optional in 5.5.1, which admits only M, F and U. An unrecorded sex is
+// omitted rather than written as U, for the same reason dateEventLines omits a
+// bare BIRT: absent data must not be exported as an assertion. "other" has no
+// 5.5.1 representation and maps to U — recorded but undetermined is the closest
+// the version allows (GEDCOM 7 adds X).
+function sexLines(sex?: Sex): string[] {
+  if (!sex) return []
+  const code = sex === "male" ? "M" : sex === "female" ? "F" : "U"
+  return [`1 SEX ${code}`]
+}
+
 function noteLines(notes?: string): string[] {
   if (!notes) return []
   const [first, ...rest] = notes.split("\n")
@@ -134,6 +169,7 @@ function emitIndividual(
   return [
     `0 ${xref} INDI`,
     `1 NAME ${formatGedcomName(person)}`,
+    ...sexLines(person.sex),
     ...dateEventLines("BIRT", person.birth),
     ...dateEventLines("DEAT", person.death),
     ...noteLines(person.notes),
