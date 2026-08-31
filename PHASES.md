@@ -3,7 +3,7 @@
 **Purpose:** a self-contained handoff document. Anyone (or any new session) picking up this work
 should be able to read only this file plus `SPEC.md` and continue without re-deriving anything.
 
-**Status:** Phase 1 and Phase 2 complete and merged/branched. Phase 3 in progress.
+**Status:** Phases 1–3 complete. Phase 4 (Durability) is next.
 
 ---
 
@@ -128,7 +128,7 @@ These are load-bearing. Later phases should stay consistent with them.
 |---|---|---|---|
 | 1 | Model fidelity & the validator | 7 | ✅ Complete, merged (PR #15) |
 | 2 | Derived insight | 5 | ✅ Complete on `feat/v2-phase-2` |
-| 3 | Canvas navigation & readability | 7 | 🚧 In progress |
+| 3 | Canvas navigation & readability | 7 | ✅ Complete on `feat/v2-phase-3` |
 | 4 | Durability | 5 | Not started |
 | 5 | Fast entry | 7 | Not started |
 | 6 | Media & output | 5 | Not started |
@@ -234,25 +234,72 @@ On `feat/v2-phase-2`. 5 commits, 469 tests passing.
 
 ---
 
-## Phase 3 — Canvas navigation & readability 🚧
+## Phase 3 — Canvas navigation & readability ✅
 
-**Why:** large trees become unreadable, and the canvas ships exactly one layout. Extends the
-existing `appearance-store` and `hiddenGenerations` machinery rather than adding parallel systems.
+On `feat/v2-phase-3`. 7 commits, 534 tests passing.
 
-| # | Feature | Notes |
-|---|---|---|
-| 3.1 | Ancestor / descendant focus modes | "Ancestors of X only", "descendants of X only", N generations up/down. Extends `app/lib/canvas/filter-generations.ts` and `hiddenGenerations` in `canvas-ui-store.ts`. Filter *after* layout so unfiltered nodes keep their positions. |
-| 3.2 | Bloodline highlight | Select a person, glow the edge path back to the tree root. Pure graph walk over `deriveUnions` output. |
-| 3.3 | Layout direction toggle | `elk.direction` `DOWN` / `RIGHT` in `run-layout.ts`. Separate from the radial work in `FUTURE-SCOPE §8`. Node handle positions must follow the direction. |
-| 3.4 | Edge routing style picker | orthogonal / bezier / straight. Extends `AppearanceSettings`. |
-| 3.5 | Node card templates | Choose what a card shows: photo on/off, dates on/off, compact initials-only for big trees. Slots into `AppearanceSettings`. |
-| 3.6 | Colour by surname or root ancestor | Alternative to colour-by-generation; reuses the `generationColors` plumbing in `appearance-store.ts` / `appearance-resolve.ts`. |
-| 3.7 | Theme toggle | No light/dark switch exists — only a `theme-color` meta tag in `index.html`. Also worth a high-contrast mode. |
+| Feature | Commit |
+|---|---|
+| Focus on a person's ancestors / descendants | `2cb3343` |
+| Bloodline highlight to the tree root | `924c93d` |
+| Layout direction (top-to-bottom / left-to-right) | `1e9b6c6` |
+| Connector shape picker | `bf5c64e` |
+| Choose what each card shows | `35288ea` |
+| Colour cards by surname or branch | `8797981` |
+| Light/dark theme toggle | `5f7bf6b` |
 
-**Watch out:** position overrides (`D9`) are layout-specific. Switching direction should either warn
-that it clears overrides, or namespace them per layout mode.
+### New modules
 
----
+`app/lib/canvas/focus-scope.ts` · `app/lib/canvas/bloodline.ts` ·
+`app/lib/canvas/layout-direction.ts` · `app/lib/canvas/edge-routing.ts` ·
+`app/lib/canvas/color-groups.ts` · `app/lib/ui/theme-store.ts`
+
+### Judgement calls to preserve
+
+- **Focus filters *before* layout; hidden generations filter *after*.** That asymmetry is
+  deliberate: toggling a generation off and on again must not reshuffle the tree, while a focus
+  view is meant to be compact rather than the full tree with holes in it. `toElkGraph` already
+  scopes off membership, so focus just narrows the member list.
+- **Focus pulls in spouses but never traverses through them.** Without them a couple is split and
+  the union node between them is stranded, since `deriveUnions` needs both parents present to
+  produce one. Traversing through a spouse would drag in their whole separate family.
+- **Handles are named by role, not by side** — `in`, `children`, `cross-start`, `cross-end`. This
+  is what makes the direction toggle tractable: switching direction moves where a handle sits
+  without renaming it. A test asserts the ids carry no side name.
+- **Everything else about direction reduces to one idea:** generations advance along the main
+  axis, siblings and spouses spread along the cross axis. `unionPosition` needs no branch at all —
+  the midpoint of the couple's two centres is the true midpoint on the cross axis and collapses to
+  the row/column centre on the main axis.
+- **Position overrides are not cleared on a direction change.** They are layout-specific, so the
+  panel warns rather than silently discarding hand-placed cards.
+- **Bloodline never traverses a marriage** (not a step in a line of descent) and highlights an edge
+  only when *both* ends are on the line — which is what keeps the off-line parent's half of a
+  shared marriage line plain. Its colour is deliberately not customisable.
+- **`PersonNodeData.colorIndex` is separate from `generation`.** They were the same number until
+  colour grouping existed, but they answer different questions — `generation` still drives the
+  generation filter, and conflating them would make the filter follow the colour scheme.
+- **"Branch" means which of the root person's children a person descends from.** Well defined,
+  unlike "their root ancestor": with two parents everyone has two lineages, so any single answer
+  there is an arbitrary pick presented as meaning.
+- **The theme is applied by an inline script in `index.html` before first paint.** Without it,
+  dark-mode users get a white flash on every load. That makes the localStorage key a contract
+  between a `.ts` file and an `.html` file with nothing linking them, so a test reads `index.html`
+  and asserts it — verified by breaking the key and watching the test fail.
+
+### Verified live
+
+Built a three-person family, exercised every feature, then deleted it. Confirmed: descendants-only
+focus from a childless person leaves just them, laid out compactly at the origin; the bloodline
+glows the path Arjun → union → root with **only** the root's half of the marriage line highlighted
+and the other parent's half left plain; left-to-right stacks the couple vertically with the union
+between them and the child flowing right; straight routing and name-only cards both apply; surname
+colouring puts both Sawants on `--level-0` and Iyer on `--level-1`; dark theme survives a reload
+with no flash.
+
+### Deferred from this phase
+
+**High-contrast mode.** It needs a third palette of real colour choices, and inventing values here
+would mean guessing at what ought to be designed. Left undone rather than half-done.
 
 ## Phase 4 — Durability
 
