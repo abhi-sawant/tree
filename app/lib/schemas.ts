@@ -21,6 +21,12 @@ export const PersonSchema = z.object({
   death: PartialDateSchema.optional(),
   photoId: z.string().optional(),
   notes: z.string().optional(),
+  // A blank label would make the entry unreadable wherever it is shown, and
+  // unparseable in the GEDCOM NOTE block it exports into — the form drops
+  // incomplete rows before they reach here.
+  customFields: z
+    .array(z.object({ label: z.string().min(1), value: z.string() }))
+    .optional(),
   isPlaceholder: z.boolean().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),

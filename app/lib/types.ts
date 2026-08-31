@@ -12,6 +12,15 @@ export type PartialDate = {
 // which would be a second way to say the same thing.
 export type Sex = "male" | "female" | "other"
 
+// A user-named fact with no place in the fixed schema — occupation, religion,
+// military service. Deliberately unstructured: it is an escape hatch for the
+// facts people want to record now, not a substitute for the events/places/
+// sources model, which needs its own design pass.
+export interface CustomField {
+  label: string
+  value: string
+}
+
 export interface Person {
   id: string
   givenName: string
@@ -30,6 +39,7 @@ export interface Person {
   death?: PartialDate
   photoId?: string
   notes?: string
+  customFields?: CustomField[]
   isPlaceholder?: boolean // D6
   createdAt: number
   updatedAt: number

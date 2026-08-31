@@ -365,6 +365,47 @@ describe("buildGedcomText", () => {
     expect(buildGedcomText(people, relationships)).not.toContain("PEDI")
   })
 
+  it("appends custom fields to the NOTE block as label: value", () => {
+    const text = buildGedcomText(
+      [
+        person({
+          id: "p-1",
+          givenName: "Ada",
+          notes: "A note",
+          customFields: [
+            { label: "Occupation", value: "Mathematician" },
+            { label: "Residence", value: "London" },
+          ],
+        }),
+      ],
+      []
+    )
+    expect(text).toContain(
+      "1 NOTE A note\n2 CONT Occupation: Mathematician\n2 CONT Residence: London"
+    )
+  })
+
+  it("opens the NOTE block with a custom field when there are no notes", () => {
+    const text = buildGedcomText(
+      [
+        person({
+          id: "p-1",
+          givenName: "Ada",
+          customFields: [{ label: "Occupation", value: "Mathematician" }],
+        }),
+      ],
+      []
+    )
+    expect(text).toContain("1 NOTE Occupation: Mathematician")
+    expect(text).not.toContain("2 CONT")
+  })
+
+  it("emits no NOTE at all when neither notes nor custom fields exist", () => {
+    const text = buildGedcomText([person({ id: "p-1", givenName: "Ada" })], [])
+    const record = text.split("0 @I1@ INDI")[1].split("\n0 ")[0]
+    expect(record).not.toContain("NOTE")
+  })
+
   it("silently excludes a malformed 3-parent child without throwing", () => {
     const threeParents: Relationship[] = [
       parentChild("p-a", "p-child-a"),

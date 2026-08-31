@@ -157,9 +157,19 @@ function sexLines(sex?: Sex): string[] {
   return [`1 SEX ${code}`]
 }
 
-function noteLines(notes?: string): string[] {
-  if (!notes) return []
-  const [first, ...rest] = notes.split("\n")
+// Custom fields ride along in the NOTE block as "label: value" lines rather
+// than inventing non-standard tags for them: an underscore-prefixed extension
+// tag would be dropped or flagged by other genealogy tools, while a note is
+// something every importer keeps and every reader can read.
+function noteLines(person: Person): string[] {
+  const lines = [
+    ...(person.notes ? person.notes.split("\n") : []),
+    ...(person.customFields ?? []).map(
+      ({ label, value }) => `${label}: ${value}`
+    ),
+  ]
+  if (lines.length === 0) return []
+  const [first, ...rest] = lines
   return [`1 NOTE ${first}`, ...rest.map((line) => `2 CONT ${line}`)]
 }
 
@@ -194,7 +204,7 @@ function emitIndividual(
     ...sexLines(person.sex),
     ...dateEventLines("BIRT", person.birth),
     ...dateEventLines("DEAT", person.death),
-    ...noteLines(person.notes),
+    ...noteLines(person),
     ...famcLines(famcXref, person, famcGroup, relationships),
     ...famsXrefs.map((famsXref) => `1 FAMS ${famsXref}`),
     // Last in the INDI record, matching the 5.5.1 substructure order.
