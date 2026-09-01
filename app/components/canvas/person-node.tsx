@@ -55,7 +55,13 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   // The node array is controlled, so React Flow's own `selected` prop never
   // makes it back onto these nodes — the canvas UI store is the one source
   // of truth for what's selected, on the canvas and in the detail panel alike.
-  const selected = useCanvasUIStore((s) => s.selectedNodeId === id)
+  const selected = useCanvasUIStore((s) => s.selectedNodeIds.includes(id))
+  // The quick-add buttons act on one person, so they appear only when this
+  // card is the whole selection — four toolbars floating under a multi-select
+  // would each be offering to add a relative to a different person.
+  const onlySelected = useCanvasUIStore(
+    (s) => s.selectedNodeIds.length === 1 && s.selectedNodeIds[0] === id
+  )
   const [removeOpen, setRemoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const name = personDisplayName(person)
@@ -136,7 +142,11 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
 
   return (
     <>
-      <NodeToolbar isVisible={selected} position={Position.Bottom} offset={8}>
+      <NodeToolbar
+        isVisible={onlySelected}
+        position={Position.Bottom}
+        offset={8}
+      >
         <div className="flex gap-1">
           {QUICK_ADD.map(({ kind, label }) => (
             <button

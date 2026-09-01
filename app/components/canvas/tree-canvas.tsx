@@ -15,6 +15,7 @@ import { Maximize2, Minus, Plus } from "lucide-react"
 import { useEffect, useMemo } from "react"
 
 import { PersonNode } from "~/components/canvas/person-node"
+import { MultiSelectPanel } from "~/components/canvas/multi-select-panel"
 import { TreeToolbar } from "~/components/canvas/tree-toolbar"
 import { UnionNode } from "~/components/canvas/union-node"
 import {
@@ -55,6 +56,8 @@ export function TreeCanvas({
   edges,
 }: TreeCanvasProps) {
   const select = useCanvasUIStore((s) => s.select)
+  const toggleSelected = useCanvasUIStore((s) => s.toggleSelected)
+  const selectedNodeIds = useCanvasUIStore((s) => s.selectedNodeIds)
   // Derived from the rendered node array rather than from membership, so focus
   // scoping and hidden generations are already accounted for — the keyboard can
   // only reach a card that is genuinely on screen.
@@ -67,6 +70,28 @@ export function TreeCanvas({
     return ids
   }, [nodes])
   useCanvasKeyboard({ people, relationships, visiblePersonIds })
+
+  // Bulk actions are about people, so union dots in the selection are dropped
+  // rather than counted: a union has no membership of its own to add or remove
+  // and no position to align, being pinned to the midpoint of its couple.
+  const selectedPeople = useMemo(() => {
+    const peopleById = new Map(people.map((p) => [p.id, p]))
+    return selectedNodeIds.flatMap((nodeId) => {
+      const parsed = parseNodeId(nodeId)
+      if (parsed?.kind !== "person") return []
+      const person = peopleById.get(parsed.personId)
+      return person ? [person] : []
+    })
+  }, [selectedNodeIds, people])
+
+  const positions = useMemo(() => {
+    const map = new Map<string, { x: number; y: number }>()
+    for (const node of nodes) {
+      const parsed = parseNodeId(node.id)
+      if (parsed?.kind === "person") map.set(parsed.personId, node.position)
+    }
+    return map
+  }, [nodes])
   const appearance = useAppearanceStore((s) => s.settings)
   const legend = [
     {
@@ -143,59 +168,81 @@ export function TreeCanvas({
   }
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      nodesDraggable
-      nodesConnectable
-      // Loose lets a link be drawn from either end — dragging up from a child's
-      // parent handle is the same link as dragging down from the parent's. The
-      // handles are typed source/target for the *rendered* edges' sake, which
-      // strict mode would otherwise read as a rule about which way a user may
-      // draw one.
-      connectionMode={ConnectionMode.Loose}
-      onConnect={handleConnect}
-      isValidConnection={isValidConnection}
-      // Selection is ours, not React Flow's: the node array is controlled and
-      // we deliberately don't feed node changes back into it, so React Flow's
-      // internal selection would never reach the nodes. Click handlers keep
-      // the canvas and the detail panel reading from one source of truth.
-      elementsSelectable={false}
-      onNodeClick={(_event, node) => select(node.id)}
-      onPaneClick={() => select(null)}
-      onNodeDragStop={handleNodeDragStop}
-      fitView
-      // Cards are designed at 184x60; letting fitView magnify a small tree
-      // past 1:1 blows them up out of all proportion.
-      fitViewOptions={{ maxZoom: 1 }}
-    >
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={22}
-        size={1}
-        color="var(--canvas-dot)"
-      />
-      <TreeToolbar
-        treeId={treeId}
-        generationCount={generationCount}
-        people={people}
-      />
-      <Panel position="bottom-left">
-        <div className="flex gap-3 border border-border bg-card px-2.5 py-2">
-          {legend.map((item) => (
-            <div key={item.label} className="flex items-center gap-1.5">
-              <span className="h-0.5 w-2" style={{ background: item.color }} />
-              <span className="font-heading text-9-5 font-medium tracking-wider text-muted-foreground uppercase">
-                {item.label}
-              </span>
+    <div className="flex h-full w-full flex-col">
+      {selectedPeople.length > 1 && (
+        <MultiSelectPanel
+          treeId={treeId}
+          selectedPeople={selectedPeople}
+          positions={positions}
+        />
+      )}
+      <div className="min-h-0 flex-1">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          nodesDraggable
+          nodesConnectable
+          // Loose lets a link be drawn from either end — dragging up from a child's
+          // parent handle is the same link as dragging down from the parent's. The
+          // handles are typed source/target for the *rendered* edges' sake, which
+          // strict mode would otherwise read as a rule about which way a user may
+          // draw one.
+          connectionMode={ConnectionMode.Loose}
+          onConnect={handleConnect}
+          isValidConnection={isValidConnection}
+          // Selection is ours, not React Flow's: the node array is controlled and
+          // we deliberately don't feed node changes back into it, so React Flow's
+          // internal selection would never reach the nodes. Click handlers keep
+          // the canvas and the detail panel reading from one source of truth.
+          elementsSelectable={false}
+          // Shift or ⌘/Ctrl extends the selection; a plain click replaces it. This
+          // rather than React Flow's own box selection, which needs
+          // elementsSelectable and would put a second selection model alongside
+          // the store's — see the note on elementsSelectable above.
+          onNodeClick={(event, node) =>
+            event.shiftKey || event.metaKey || event.ctrlKey
+              ? toggleSelected(node.id)
+              : select(node.id)
+          }
+          onPaneClick={() => select(null)}
+          onNodeDragStop={handleNodeDragStop}
+          fitView
+          // Cards are designed at 184x60; letting fitView magnify a small tree
+          // past 1:1 blows them up out of all proportion.
+          fitViewOptions={{ maxZoom: 1 }}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={22}
+            size={1}
+            color="var(--canvas-dot)"
+          />
+          <TreeToolbar
+            treeId={treeId}
+            generationCount={generationCount}
+            people={people}
+          />
+          <Panel position="bottom-left">
+            <div className="flex gap-3 border border-border bg-card px-2.5 py-2">
+              {legend.map((item) => (
+                <div key={item.label} className="flex items-center gap-1.5">
+                  <span
+                    className="h-0.5 w-2"
+                    style={{ background: item.color }}
+                  />
+                  <span className="font-heading text-9-5 font-medium tracking-wider text-muted-foreground uppercase">
+                    {item.label}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </Panel>
-      <ZoomControls />
-      <CenterOnPendingNode nodes={nodes} />
-    </ReactFlow>
+          </Panel>
+          <ZoomControls />
+          <CenterOnPendingNode nodes={nodes} />
+        </ReactFlow>
+      </div>
+    </div>
   )
 }
 

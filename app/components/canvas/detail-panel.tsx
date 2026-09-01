@@ -14,7 +14,10 @@ import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { PartialDateFields } from "~/components/people/partial-date-fields"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import { Button } from "~/components/ui/button"
-import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import {
+  useCanvasUIStore,
+  useSelectedNodeId,
+} from "~/lib/canvas/canvas-ui-store"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import { resolveSelection } from "~/lib/canvas/resolve-selection"
@@ -87,7 +90,8 @@ export function DetailPanel({
   unions,
   generations,
 }: DetailPanelProps) {
-  const selectedNodeId = useCanvasUIStore((s) => s.selectedNodeId)
+  const selectedNodeId = useSelectedNodeId()
+  const selectedCount = useCanvasUIStore((s) => s.selectedNodeIds.length)
   const pendingMarriage = useCanvasUIStore((s) => s.pendingMarriage)
   const clearPendingMarriage = useCanvasUIStore((s) => s.clearPendingMarriage)
   const pendingAddRelative = useCanvasUIStore((s) => s.pendingAddRelative)
@@ -146,6 +150,23 @@ export function DetailPanel({
     setTab("family")
     clearPendingAddRelative()
   }, [pendingAddRelative, selectedNodeId, clearPendingAddRelative])
+
+  // A multi-selection has no one person to describe. The bulk actions live in
+  // the canvas panel, next to the cards they act on, so this only has to say
+  // what is selected and how to get back to one person.
+  if (selectedCount > 1) {
+    return (
+      <aside className="flex h-full w-78 shrink-0 flex-col overflow-y-auto border-l border-border">
+        <div className="p-4">
+          <p className="text-13 leading-relaxed text-muted-foreground">
+            {selectedCount} cards selected. Use the bar at the top of the canvas
+            to align them or change which trees they belong to. Click any card
+            on its own to go back to one person.
+          </p>
+        </div>
+      </aside>
+    )
+  }
 
   if (!selection) {
     return (

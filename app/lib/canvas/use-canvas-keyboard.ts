@@ -1,7 +1,10 @@
 import { useEffect } from "react"
 
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
-import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import {
+  selectedNodeIdOf,
+  useCanvasUIStore,
+} from "~/lib/canvas/canvas-ui-store"
 import {
   addRelativeKindForKey,
   arrowKeyToStep,
@@ -47,9 +50,10 @@ export function useCanvasKeyboard({
       // props, so the effect doesn't have to re-subscribe on every selection
       // change — and so a stale closure can never act on the wrong person.
       const state = useCanvasUIStore.getState()
-      const parsed = state.selectedNodeId
-        ? parseNodeId(state.selectedNodeId)
-        : undefined
+      // Only ever acts on a single selection: "add a child to these five
+      // people" is not a thing a keystroke should be able to mean.
+      const selectedNodeId = selectedNodeIdOf(state.selectedNodeIds)
+      const parsed = selectedNodeId ? parseNodeId(selectedNodeId) : undefined
       // A union dot is a marriage, not a person: it has no parents of its own
       // and no row to walk along, so the shortcuts simply don't apply to it.
       if (parsed?.kind !== "person") return

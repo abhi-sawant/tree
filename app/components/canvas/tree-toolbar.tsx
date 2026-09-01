@@ -14,7 +14,10 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
-import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import {
+  useCanvasUIStore,
+  useSelectedNodeId,
+} from "~/lib/canvas/canvas-ui-store"
 import {
   FOCUS_DEPTHS,
   focusDepthLabel,
@@ -46,7 +49,7 @@ export function TreeToolbar({
   const { fitView } = useReactFlow()
   const hiddenGenerations = useCanvasUIStore((s) => s.hiddenGenerations)
   const toggleGeneration = useCanvasUIStore((s) => s.toggleGeneration)
-  const selectedNodeId = useCanvasUIStore((s) => s.selectedNodeId)
+  const selectedNodeId = useSelectedNodeId()
   const focus = useCanvasUIStore((s) => s.focus)
   const setFocus = useCanvasUIStore((s) => s.setFocus)
   const setFocusMode = useCanvasUIStore((s) => s.setFocusMode)
