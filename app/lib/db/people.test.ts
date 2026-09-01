@@ -177,6 +177,21 @@ describe("getDeleteImpact", () => {
 })
 
 describe("deletePerson", () => {
+  // Deleting a person used to remove only their cover photo, leaving the rest
+  // as orphans the storage panel could count but never attribute.
+  it("deletes every one of the person's photos, not just the cover", async () => {
+    const target = await createPerson({ givenName: "Target" })
+    const ids = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()]
+    await db.photos.bulkAdd(
+      ids.map((id) => ({ id, blob: new Blob(["x"]), mime: "image/jpeg" }))
+    )
+    await updatePerson(target.id, { photoIds: ids, photoId: ids[0] })
+
+    await deletePerson(target.id)
+
+    expect(await db.photos.count()).toBe(0)
+  })
+
   it("cascades relationships, memberships, and the photo, without touching unrelated people", async () => {
     const target = await createPerson({ givenName: "Target" })
     const other = await createPerson({ givenName: "Other" })

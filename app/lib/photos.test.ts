@@ -2,13 +2,18 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { db } from "~/lib/db/db"
 import { createPerson } from "~/lib/db/people"
+import { personPhotoIds } from "~/lib/person-photos"
 import {
+  addPersonPhoto,
   computeTargetDimensions,
   recompressAllPhotos,
   recompressPhoto,
   removePersonPhoto,
+  removePersonPhotoById,
   resizeAndCompressImage,
+  setPersonCoverPhoto,
   setPersonPhoto,
+  setPersonPhotoOrder,
   shouldKeepRecompressed,
 } from "~/lib/photos"
 
@@ -113,6 +118,144 @@ describe("removePersonPhoto", () => {
     const person = await createPerson({ givenName: "Ada" })
 
     await expect(removePersonPhoto(person.id)).resolves.toBeUndefined()
+  })
+})
+
+describe("addPersonPhoto", () => {
+  it("appends without disturbing the cover", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
+    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+
+    const stored = await db.people.get(person.id)
+    expect(personPhotoIds(stored)).toEqual([first, second])
+    expect(stored?.photoId).toBe(first)
+  })
+
+  it("refuses to add a photo to a person who doesn't exist", async () => {
+    await expect(
+      addPersonPhoto("nobody", new Blob(["a"]), "image/jpeg")
+    ).rejects.toThrow(/not found/i)
+    expect(await db.photos.count()).toBe(0)
+  })
+})
+
+describe("setPersonPhoto with a gallery", () => {
+  // The form shows one avatar, so "Change photo" can only mean the cover.
+  // Dropping the other three silently would be a data loss nothing warned of.
+  it("replaces only the cover and leaves the rest in place", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
+    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+
+    const replacement = await setPersonPhoto(
+      person.id,
+      new Blob(["c"]),
+      "image/jpeg"
+    )
+
+    expect(personPhotoIds(await db.people.get(person.id))).toEqual([
+      replacement,
+      second,
+    ])
+    expect(await db.photos.get(first)).toBeUndefined()
+    expect(await db.photos.get(second)).toBeDefined()
+  })
+})
+
+describe("removePersonPhotoById", () => {
+  it("removes one photo and promotes nothing when it wasn't the cover", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
+    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+
+    await removePersonPhotoById(person.id, second)
+
+    const stored = await db.people.get(person.id)
+    expect(personPhotoIds(stored)).toEqual([first])
+    expect(stored?.photoId).toBe(first)
+    expect(await db.photos.get(second)).toBeUndefined()
+  })
+
+  it("promotes the next photo when the cover is removed", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
+    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+
+    await removePersonPhoto(person.id)
+
+    const stored = await db.people.get(person.id)
+    expect(personPhotoIds(stored)).toEqual([second])
+    expect(stored?.photoId).toBe(second)
+    expect(await db.photos.get(first)).toBeUndefined()
+  })
+
+  it("leaves a photo belonging to someone else alone", async () => {
+    const [ada, grace] = await Promise.all([
+      createPerson({ givenName: "Ada" }),
+      createPerson({ givenName: "Grace" }),
+    ])
+    const hers = await addPersonPhoto(grace.id, new Blob(["a"]), "image/jpeg")
+
+    await removePersonPhotoById(ada.id, hers)
+
+    expect(await db.photos.get(hers)).toBeDefined()
+    expect(personPhotoIds(await db.people.get(grace.id))).toEqual([hers])
+  })
+
+  it("clears both fields when the last photo goes", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    const only = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
+
+    await removePersonPhotoById(person.id, only)
+
+    // Both cleared to undefined rather than left as an empty array, so a
+    // person with no photos looks exactly as they always have on disk.
+    const stored = await db.people.get(person.id)
+    expect(stored?.photoIds).toBeUndefined()
+    expect(stored?.photoId).toBeUndefined()
+    expect(personPhotoIds(stored)).toEqual([])
+  })
+})
+
+describe("setPersonCoverPhoto", () => {
+  it("promotes a photo and mirrors it into the legacy field", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
+    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+    const third = await addPersonPhoto(person.id, new Blob(["c"]), "image/jpeg")
+
+    await setPersonCoverPhoto(person.id, third)
+
+    const stored = await db.people.get(person.id)
+    expect(personPhotoIds(stored)).toEqual([third, first, second])
+    expect(stored?.photoId).toBe(third)
+  })
+})
+
+describe("setPersonPhotoOrder", () => {
+  it("writes a reordering of the same set", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    const a = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
+    const b = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+
+    await setPersonPhotoOrder(person.id, [b, a])
+
+    expect(personPhotoIds(await db.people.get(person.id))).toEqual([b, a])
+  })
+
+  // A stale list is the dangerous case: writing it verbatim would drop photos
+  // the person still has, or claim ones that belong to somebody else.
+  it("refuses an order that isn't a permutation of what the person has", async () => {
+    const person = await createPerson({ givenName: "Ada" })
+    const a = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
+    const b = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+
+    await setPersonPhotoOrder(person.id, [a])
+    await setPersonPhotoOrder(person.id, [a, b, "ghost"])
+    await setPersonPhotoOrder(person.id, [a, a])
+
+    expect(personPhotoIds(await db.people.get(person.id))).toEqual([a, b])
   })
 })
 

@@ -39,6 +39,15 @@ export interface Person {
   sex?: Sex
   birth?: PartialDate
   death?: PartialDate
+  // Every photo of this person, in display order; the first is the cover that
+  // single-avatar surfaces draw. Written only through lib/photos.ts, and only
+  // ever alongside photoId — see lib/person-photos.ts, which owns the rule.
+  photoIds?: string[]
+  // The cover photo as the model recorded it before a person could have more
+  // than one. Kept because data already in a browser, and backups already in
+  // people's hands, carry only this — and because a build older than this one
+  // importing a new backup would otherwise show every face as the default
+  // avatar. Never read directly: go through personPhotoIds/coverPhotoId.
   photoId?: string
   notes?: string
   customFields?: CustomField[]

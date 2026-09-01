@@ -18,6 +18,7 @@ import { useState } from "react"
 import type { Person, Tree } from "~/lib/types"
 import { personDisplayName, personNameSegments } from "~/lib/person-name"
 import type { InlineField } from "~/lib/people/inline-edit"
+import { coverPhotoId } from "~/lib/person-photos"
 
 function relativesSummary(counts: RelativeCounts): string {
   const plural = (n: number, word: string) =>
@@ -112,7 +113,7 @@ export function PeopleTable({
                     aria-label={`Open ${personDisplayName(person)} in the tree`}
                     title="Open in tree"
                   >
-                    <PersonAvatar photoId={person.photoId} size="sm" />
+                    <PersonAvatar photoId={coverPhotoId(person)} size="sm" />
                   </button>
                   {/* Given, nickname and family laid out in personNameSegments'
                       order, so the editable cell can't drift from the way the

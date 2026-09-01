@@ -10,6 +10,7 @@ import { formatPartialDate } from "~/lib/partial-date"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import type { Person } from "~/lib/types"
 import { personDisplayName } from "~/lib/person-name"
+import { coverPhotoId } from "~/lib/person-photos"
 
 const MAX_RESULTS = 24
 
@@ -95,7 +96,7 @@ export function CommandPalette({
                 onClick={() => handlePick(person)}
                 className="flex w-full cursor-pointer items-center gap-2.5 px-2.5 py-2 text-left hover:bg-muted"
               >
-                <PersonAvatar photoId={person.photoId} size="md" />
+                <PersonAvatar photoId={coverPhotoId(person)} size="md" />
                 <span className="truncate text-13 font-medium">
                   {personDisplayName(person)}
                 </span>

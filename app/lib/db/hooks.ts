@@ -67,6 +67,41 @@ export function usePhotoUrl(photoId: string | undefined): string | undefined {
   return url
 }
 
+// One object URL per photo, in the order the ids were given, with the whole set
+// revoked and rebuilt whenever that order or membership changes.
+//
+// Deliberately not built out of N usePhotoUrl calls: the id list is dynamic, and
+// a hook per photo would break the rules of hooks the moment a photo is added
+// or removed. The join key is what makes the effect fire on a reorder as well
+// as on an add — a gallery that reordered without re-rendering its images would
+// show the right pictures in the wrong places.
+export function usePhotoUrls(photoIds: string[]): Map<string, string> {
+  const key = photoIds.join(",")
+  const photos = useLiveQuery(
+    async () => (photoIds.length ? db.photos.bulkGet(photoIds) : []),
+    [key],
+  )
+  const [urls, setUrls] = useState<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    if (!photos) return
+    const created: string[] = []
+    const next = new Map<string, string>()
+    for (const photo of photos) {
+      if (!photo) continue
+      const url = URL.createObjectURL(photo.blob)
+      created.push(url)
+      next.set(photo.id, url)
+    }
+    setUrls(next)
+    return () => {
+      for (const url of created) URL.revokeObjectURL(url)
+    }
+  }, [photos])
+
+  return urls
+}
+
 export function useSearchPeople(
   query: string,
   options?: SearchPeopleOptions,

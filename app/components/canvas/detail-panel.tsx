@@ -9,6 +9,7 @@ import { AddFamilyForm } from "~/components/canvas/add-family-form"
 import { RelativeForm } from "~/components/canvas/relative-form"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
+import { PersonPhotosPanel } from "~/components/people/person-photos-panel"
 import { PersonForm, type PhotoAction } from "~/components/people/person-form"
 import { NotesView } from "~/components/people/notes-view"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
@@ -53,12 +54,14 @@ import type { PersonFormValues } from "~/lib/schemas"
 import { toast } from "~/lib/ui/toast-store"
 import { cn } from "~/lib/utils"
 import type { ParentChildSubtype, Person, Relationship } from "~/lib/types"
+import { coverPhotoId } from "~/lib/person-photos"
 
-type DetailTab = "details" | "family" | "notes"
+type DetailTab = "details" | "family" | "photos" | "notes"
 
 const TABS: Array<{ id: DetailTab; label: string }> = [
   { id: "details", label: "Details" },
   { id: "family", label: "Family" },
+  { id: "photos", label: "Photos" },
   { id: "notes", label: "Notes" },
 ]
 
@@ -308,7 +311,7 @@ function PersonDetail({
   return (
     <>
       <div className="flex flex-none items-center gap-3 border-b border-border p-4">
-        <PersonAvatar photoId={person.photoId} size="panel" />
+        <PersonAvatar photoId={coverPhotoId(person)} size="panel" />
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-2">
             <h2 className="truncate font-heading text-sm font-semibold tracking-wide uppercase">
@@ -354,6 +357,8 @@ function PersonDetail({
             submitLabel="Save"
           />
         )}
+
+        {tab === "photos" && <PersonPhotosPanel person={person} />}
 
         {tab === "notes" &&
           (editingNotes ? (
@@ -806,7 +811,7 @@ function UnionChildren({
           key={childId}
           className="flex items-center gap-2 border border-border/60 px-2 py-1.5"
         >
-          <PersonAvatar photoId={people.get(childId)?.photoId} size="xs" />
+          <PersonAvatar photoId={coverPhotoId(people.get(childId))} size="xs" />
           <button
             type="button"
             className="cursor-pointer text-xs hover:underline"
@@ -909,7 +914,7 @@ function RelationshipList({
             className="flex flex-col gap-2 border border-border/60 p-2"
           >
             <div className="flex items-center gap-2">
-              <PersonAvatar photoId={other?.photoId} size="xs" />
+              <PersonAvatar photoId={coverPhotoId(other)} size="xs" />
               <div className="flex min-w-0 flex-col">
                 <button
                   type="button"

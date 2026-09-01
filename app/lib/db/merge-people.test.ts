@@ -11,6 +11,7 @@ import { createPerson } from "~/lib/db/people"
 import { addRelationship } from "~/lib/db/relationships"
 import { createTree } from "~/lib/db/trees"
 import type { Person } from "~/lib/types"
+import { personPhotoIds } from "~/lib/person-photos"
 
 afterEach(async () => {
   await Promise.all([
@@ -307,25 +308,47 @@ describe("mergePeople — the surviving record", () => {
 
     const result = await mergePeople({ winnerId: winner.id, loserId: loser.id })
 
-    expect(result.adoptedPhoto).toBe(true)
-    expect(result.winner.photoId).toBe("photo-1")
+    expect(result.adoptedPhotos).toBe(1)
+    expect(personPhotoIds(result.winner)).toEqual(["photo-1"])
     expect(await db.photos.get("photo-1")).toBeTruthy()
   })
 
-  it("keeps the winner's photo and discards the loser's", async () => {
+  // Both records describe the same person, so both photos are of them. This
+  // used to delete the loser's — an unrecoverable loss on a path the user
+  // thought was a tidy-up.
+  it("keeps both photos, with the winner's still the cover", async () => {
     const [winner, loser] = await pair()
     await db.photos.bulkAdd([
       { id: "keep", blob: new Blob(["a"]), mime: "image/jpeg" },
-      { id: "drop", blob: new Blob(["b"]), mime: "image/jpeg" },
+      { id: "theirs", blob: new Blob(["b"]), mime: "image/jpeg" },
     ])
     await db.people.update(winner.id, { photoId: "keep" })
-    await db.people.update(loser.id, { photoId: "drop" })
+    await db.people.update(loser.id, { photoId: "theirs" })
 
     const result = await mergePeople({ winnerId: winner.id, loserId: loser.id })
 
-    expect(result.adoptedPhoto).toBe(false)
+    expect(result.adoptedPhotos).toBe(1)
+    expect(personPhotoIds(result.winner)).toEqual(["keep", "theirs"])
     expect(result.winner.photoId).toBe("keep")
-    expect(await db.photos.get("drop")).toBeUndefined()
+    expect(await db.photos.get("theirs")).toBeTruthy()
+  })
+
+  it("appends whole galleries and doesn't duplicate a shared photo", async () => {
+    const [winner, loser] = await pair()
+    await db.photos.bulkAdd([
+      { id: "w1", blob: new Blob(["a"]), mime: "image/jpeg" },
+      { id: "shared", blob: new Blob(["b"]), mime: "image/jpeg" },
+      { id: "l1", blob: new Blob(["c"]), mime: "image/jpeg" },
+    ])
+    await db.people.update(winner.id, { photoIds: ["w1", "shared"] })
+    await db.people.update(loser.id, { photoIds: ["shared", "l1"] })
+
+    const result = await mergePeople({ winnerId: winner.id, loserId: loser.id })
+
+    expect(personPhotoIds(result.winner)).toEqual(["w1", "shared", "l1"])
+    expect(result.adoptedPhotos).toBe(1)
+    // The shared row is one row: skipping it must not mean deleting it.
+    expect(await db.photos.get("shared")).toBeTruthy()
   })
 
   it("adopts the loser's multiple-birth group when the winner has none", async () => {

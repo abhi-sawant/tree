@@ -19,6 +19,7 @@ export const PersonSchema = z.object({
   sex: SexSchema.optional(),
   birth: PartialDateSchema.optional(),
   death: PartialDateSchema.optional(),
+  photoIds: z.array(z.string()).optional(),
   photoId: z.string().optional(),
   notes: z.string().optional(),
   // A blank label would make the entry unreadable wherever it is shown, and

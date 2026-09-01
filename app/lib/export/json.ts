@@ -1,4 +1,5 @@
 import { db } from "~/lib/db/db"
+import { personPhotoIds, photoFieldsFor } from "~/lib/person-photos"
 import {
   buildBackupZip,
   parseBackupFile,
@@ -59,19 +60,24 @@ export async function applyBackup(
       ? new Set(backup.photos.map((photo) => photo.id))
       : new Set((await db.photos.toCollection().primaryKeys()) as string[])
 
-  // Leaving a photoId pointing at a photo that isn't there would render fine
-  // (PersonAvatar falls back), but the restored database would be permanently
-  // inconsistent. Only rebuild the array when it actually matters.
-  const dangling = backup.people.filter(
-    (person) => person.photoId && !knownPhotoIds.has(person.photoId)
-  )
-  const missing = new Set(dangling.map((person) => person.photoId!))
+  // Leaving a photo reference pointing at a photo that isn't there would render
+  // fine (PersonAvatar falls back), but the restored database would be
+  // permanently inconsistent. A person can hold several photos, so this drops
+  // the missing ones and keeps the rest — losing one photo out of four must not
+  // cost the other three. Only rebuild the array when it actually matters.
+  const missing = new Set<string>()
+  for (const person of backup.people) {
+    for (const photoId of personPhotoIds(person)) {
+      if (!knownPhotoIds.has(photoId)) missing.add(photoId)
+    }
+  }
   const people: Person[] = missing.size
-    ? backup.people.map((person) =>
-        person.photoId && missing.has(person.photoId)
-          ? { ...person, photoId: undefined }
-          : person
-      )
+    ? backup.people.map((person) => {
+        const kept = personPhotoIds(person).filter((id) => !missing.has(id))
+        return kept.length === personPhotoIds(person).length
+          ? person
+          : { ...person, ...photoFieldsFor(kept) }
+      })
     : backup.people
 
   // Every clear and add stays inside one transaction so a failure part-way

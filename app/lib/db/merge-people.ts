@@ -1,5 +1,6 @@
 import { db } from "~/lib/db/db"
 import { updatePerson, type UpdatePersonInput } from "~/lib/db/people"
+import { personPhotoIds, photoFieldsFor } from "~/lib/person-photos"
 import type { Person, Relationship } from "~/lib/types"
 
 export class SelfMergeError extends Error {
@@ -59,7 +60,10 @@ export interface MergeResult {
   dedupedRelationships: number
   treesJoined: number
   rootsReassigned: number
-  adoptedPhoto: boolean
+  // How many of the loser's photos the winner took on. Now that a person can
+  // hold several, a merge never has to choose between two pictures of the same
+  // face, so this counts what moved rather than reporting whether one did.
+  adoptedPhotos: number
 }
 
 // A link's identity for dedupe purposes: same type, same other person, same
@@ -215,19 +219,28 @@ export async function mergePeople({
         await db.trees.update(tree.id, { rootPersonId: winnerId })
       }
 
-      const adoptedPhoto = !winner.photoId && !!loser.photoId
+      // Both records are the same person, so both sets of photos are of them.
+      // Before a person could hold more than one, a merge had to pick and
+      // delete the other — an unrecoverable loss on a path the user thought was
+      // a tidy-up. Now they are appended after the winner's, which keeps the
+      // winner's cover as the cover and throws nothing away.
+      const winnerPhotoIds = personPhotoIds(winner)
+      const adopted = personPhotoIds(loser).filter(
+        (photoId) => !winnerPhotoIds.includes(photoId)
+      )
       const patch: UpdatePersonInput = { ...resolved }
-      if (adoptedPhoto) patch.photoId = loser.photoId
+      if (adopted.length > 0) {
+        Object.assign(patch, photoFieldsFor([...winnerPhotoIds, ...adopted]))
+      }
       if (!winner.multipleBirthGroup && loser.multipleBirthGroup) {
         patch.multipleBirthGroup = loser.multipleBirthGroup
       }
 
       const updated = await updatePerson(winnerId, patch)
 
-      // Only delete the loser's photo if the winner didn't just adopt it.
-      if (loser.photoId && !adoptedPhoto) {
-        await db.photos.delete(loser.photoId)
-      }
+      // No photo row is deleted here: every one of the loser's is now on the
+      // winner. The only ones skipped above are those the winner already held,
+      // which are the same rows and must not be deleted either.
       await db.people.delete(loserId)
 
       return {
@@ -236,7 +249,7 @@ export async function mergePeople({
         dedupedRelationships: deduped,
         treesJoined,
         rootsReassigned: rootTrees.length,
-        adoptedPhoto,
+        adoptedPhotos: adopted.length,
       }
     }
   )

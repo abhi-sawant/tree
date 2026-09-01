@@ -1,13 +1,14 @@
 import { db } from "~/lib/db/db"
+import { personPhotoIds } from "~/lib/person-photos"
 import { PersonFormSchema, type PersonFormValues } from "~/lib/schemas"
 import { requestPersistentStorage } from "~/lib/storage"
 import type { Person } from "~/lib/types"
 
 // Derived from the form schema rather than restated, so adding a Person field
-// only means touching schemas.ts. `photoId` is excluded because photos are
-// written through setPersonPhoto (it owns the blob's lifecycle), never as part
-// of a plain create.
-export type CreatePersonInput = Omit<PersonFormValues, "photoId">
+// only means touching schemas.ts. Both photo fields are excluded because photos
+// are written through lib/photos.ts (it owns the blob's lifecycle and the rule
+// tying the two fields together), never as part of a plain create.
+export type CreatePersonInput = Omit<PersonFormValues, "photoId" | "photoIds">
 
 export interface CreatePersonOptions {
   // Overrides the clock. createdAt is what orderFamilyGraph sorts a sibling row
@@ -159,7 +160,10 @@ export async function deletePerson(id: string): Promise<void> {
       await db.members.where("personId").equals(id).delete()
 
       const person = await db.people.get(id)
-      if (person?.photoId) await db.photos.delete(person.photoId)
+      // Every photo, not just the cover: a person deleted with four photos
+      // would otherwise leave three blobs behind that nothing points at, which
+      // the storage panel can only report as orphans and never attribute.
+      await db.photos.bulkDelete(personPhotoIds(person))
 
       await db.people.delete(id)
     }

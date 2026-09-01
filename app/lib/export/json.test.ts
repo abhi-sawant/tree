@@ -194,6 +194,43 @@ describe("importBackup", () => {
     expect((await db.people.get(person.id))?.photoId).toBeUndefined()
   })
 
+  // Losing one photo out of three must not cost the other two — the repair
+  // drops only what is actually missing.
+  it("keeps the photos that survived when only some of a gallery is missing", async () => {
+    const kept = crypto.randomUUID()
+    const gone = crypto.randomUUID()
+    const person = makePerson({ photoIds: [gone, kept], photoId: gone })
+    const manifest = {
+      schema: 2,
+      people: [person],
+      relationships: [],
+      trees: [],
+      members: [],
+      photos: [
+        { id: gone, mime: "image/jpeg", file: "photos/gone.jpg" },
+        { id: kept, mime: "image/jpeg", file: "photos/kept.jpg" },
+      ],
+    }
+    const { zipSync, strToU8 } = await import("fflate")
+    const zip = new Blob([
+      zipSync(
+        {
+          "backup.json": strToU8(JSON.stringify(manifest)),
+          "photos/kept.jpg": PHOTO_BYTES,
+        },
+        { mtime: EXPORTED_AT }
+      ),
+    ])
+
+    const result = await importBackup(zip)
+
+    expect(result.missingPhotoIds).toEqual([gone])
+    const restored = await db.people.get(person.id)
+    expect(restored?.photoIds).toEqual([kept])
+    // The mirror is repaired too: it pointed at the photo that vanished.
+    expect(restored?.photoId).toBe(kept)
+  })
+
   it("replaces existing data rather than merging it", async () => {
     await seedFixture()
     const blob = await exportBackup(EXPORTED_AT)

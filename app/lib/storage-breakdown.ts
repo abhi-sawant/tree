@@ -1,4 +1,5 @@
 import { personDisplayName } from "~/lib/person-name"
+import { personPhotoIds } from "~/lib/person-photos"
 import type { Person } from "~/lib/types"
 
 // Only the fields this module needs. A Photo carries a Blob, and reading
@@ -40,7 +41,7 @@ export function buildStorageBreakdown(
   photos: PhotoSize[],
   people: Pick<
     Person,
-    "id" | "photoId" | "givenName" | "familyName" | "nickname"
+    "id" | "photoId" | "photoIds" | "givenName" | "familyName" | "nickname"
   >[],
   options: BreakdownOptions = {}
 ): StorageBreakdown {
@@ -52,9 +53,11 @@ export function buildStorageBreakdown(
   const ownerByPhotoId = new Map<string, Person["id"]>()
   const nameByPhotoId = new Map<string, string>()
   for (const person of people) {
-    if (!person.photoId || ownerByPhotoId.has(person.photoId)) continue
-    ownerByPhotoId.set(person.photoId, person.id)
-    nameByPhotoId.set(person.photoId, personDisplayName(person))
+    for (const photoId of personPhotoIds(person)) {
+      if (ownerByPhotoId.has(photoId)) continue
+      ownerByPhotoId.set(photoId, person.id)
+      nameByPhotoId.set(photoId, personDisplayName(person))
+    }
   }
 
   let photoBytes = 0

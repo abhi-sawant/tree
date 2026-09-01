@@ -6,6 +6,7 @@ import {
   exportGedcom,
   exportGedcomZip,
   planGedcomMedia,
+  type GedcomMedia,
 } from "~/lib/export/gedcom"
 import type { Person, Relationship } from "~/lib/types"
 
@@ -127,6 +128,18 @@ const EXPECTED_GEDCOM = `0 HEAD
 1 CHIL @I4@
 0 TRLR
 `
+
+// planGedcomMedia returns a flat list; buildGedcomText wants it grouped, since
+// a person can now carry several photos.
+function mediaByPerson(plan: GedcomMedia[]): Map<string, GedcomMedia[]> {
+  const byPerson = new Map<string, GedcomMedia[]>()
+  for (const media of plan) {
+    const list = byPerson.get(media.personId) ?? []
+    list.push(media)
+    byPerson.set(media.personId, list)
+  }
+  return byPerson
+}
 
 describe("buildGedcomText", () => {
   it("produces the exact expected GEDCOM text for a fixture family", () => {
@@ -515,17 +528,94 @@ describe("planGedcomMedia", () => {
     const withPhotos = people.map((p) => ({ ...p, photoId: `photo-${p.id}` }))
     const mimes = new Map(withPhotos.map((p) => [p.photoId!, "image/jpeg"]))
     const plan = planGedcomMedia(withPhotos, mimes)
-    const text = buildGedcomText(
-      withPhotos,
-      relationships,
-      new Map(plan.map((media) => [media.personId, media]))
-    )
+    const text = buildGedcomText(withPhotos, relationships, mediaByPerson(plan))
 
     for (const media of plan) {
       const stem = media.path.replace("media/", "").replace(".jpg", "")
       const record = text.split(`0 @${stem}@ INDI\n`)[1].split("\n0 ")[0]
       expect(record).toContain(`2 FILE ${media.path}`)
     }
+  })
+})
+
+describe("planGedcomMedia with several photos per person", () => {
+  it("numbers a person's later photos and keeps the first path unchanged", () => {
+    const plan = planGedcomMedia(
+      [
+        person({
+          id: "p-a",
+          givenName: "Alice",
+          photoIds: ["ph-1", "ph-2", "ph-3"],
+        }),
+      ],
+      new Map([
+        ["ph-1", "image/jpeg"],
+        ["ph-2", "image/png"],
+        ["ph-3", "image/jpeg"],
+      ])
+    )
+
+    expect(plan.map((media) => media.path)).toEqual([
+      "media/I1.jpg",
+      "media/I1-2.png",
+      "media/I1-3.jpg",
+    ])
+    expect(plan.map((media) => media.photoId)).toEqual(["ph-1", "ph-2", "ph-3"])
+  })
+
+  // Numbering counts what resolved, not the person's whole list: a gap would
+  // make the same tree export under different filenames depending on which
+  // blobs happened to be readable.
+  it("leaves no gap in the numbering when a photo's blob is missing", () => {
+    const plan = planGedcomMedia(
+      [
+        person({
+          id: "p-a",
+          givenName: "Alice",
+          photoIds: ["ph-1", "gone", "ph-3"],
+        }),
+      ],
+      new Map([
+        ["ph-1", "image/jpeg"],
+        ["ph-3", "image/jpeg"],
+      ])
+    )
+
+    expect(plan.map((media) => media.path)).toEqual([
+      "media/I1.jpg",
+      "media/I1-2.jpg",
+    ])
+  })
+
+  it("emits one OBJE block per photo, in gallery order", () => {
+    const withPhotos = [
+      person({
+        id: "p-a",
+        givenName: "Alice",
+        familyName: "Smith",
+        photoIds: ["ph-1", "ph-2"],
+      }),
+    ]
+    const plan = planGedcomMedia(
+      withPhotos,
+      new Map([
+        ["ph-1", "image/jpeg"],
+        ["ph-2", "image/jpeg"],
+      ])
+    )
+
+    expect(buildGedcomText(withPhotos, [], mediaByPerson(plan))).toContain(
+      [
+        "1 OBJE",
+        "2 FILE media/I1.jpg",
+        "3 FORM jpg",
+        "2 TITL Alice Smith",
+        "1 OBJE",
+        "2 FILE media/I1-2.jpg",
+        "3 FORM jpg",
+        "2 TITL Alice Smith",
+      ].join("\n")
+    )
   })
 })
 
@@ -543,11 +633,7 @@ describe("buildGedcomText with media", () => {
       withPhoto,
       new Map([["photo-a", "image/jpeg"]])
     )
-    const text = buildGedcomText(
-      withPhoto,
-      [],
-      new Map(plan.map((media) => [media.personId, media]))
-    )
+    const text = buildGedcomText(withPhoto, [], mediaByPerson(plan))
 
     expect(text).toContain(
       [
