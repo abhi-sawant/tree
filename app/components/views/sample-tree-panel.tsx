@@ -139,7 +139,9 @@ export function SampleTreePanel() {
               kept, including anyone you added to the sample tree — they stay in
               your own trees. If you linked one of your relatives to a sample
               person, that link goes too, because the person on the other end of
-              it does.
+              it does. A snapshot taken while the sample was here still contains
+              it, so rolling back to one would bring it back — delete those from
+              Snapshots if you would rather it couldn&apos;t.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

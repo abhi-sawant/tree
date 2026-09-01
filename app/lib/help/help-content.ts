@@ -635,6 +635,26 @@ export const HELP_TOPICS: HelpTopic[] = [
         ]),
       },
       {
+        heading: "Reading the tree as a list",
+        body: md([
+          "**Outline** puts the same tree beside the canvas as a nested list:",
+          "each person, then who they married, then the children of that",
+          "couple, indented one level per generation. Selecting an entry",
+          "selects the card and scrolls to it.",
+          "",
+          "It exists because everything that makes a canvas readable — what is",
+          "above what, which line goes where — is geometry, and a screen",
+          "reader cannot see geometry. Cards are labelled with their dates and",
+          "their relatives so each one can be described; the outline is how the",
+          "*shape* can be read. It is a normal panel rather than a hidden one,",
+          "because it is just as useful for finding somebody in a large tree",
+          "with the keyboard.",
+          "",
+          "It follows whatever the canvas is showing, so a focus view or a",
+          "hidden generation narrows the list too.",
+        ]),
+      },
+      {
         heading: "Light and dark",
         body: md([
           "The theme follows your system by default and can be set to light",

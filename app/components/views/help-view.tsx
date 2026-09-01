@@ -107,9 +107,10 @@ export function HelpView() {
             {hiddenCount > 0 && (
               <div className="flex flex-wrap items-center gap-2 border border-border p-2.5">
                 <span className="text-12-5 text-muted-foreground">
-                  Showing the {sections.length}{" "}
-                  {sections.length === 1 ? "part" : "parts"} of this page that
-                  match &ldquo;{query.trim()}&rdquo;.
+                  {sections.length === 1
+                    ? "Showing the one part of this page that mentions"
+                    : `Showing the ${sections.length} parts of this page that mention`}{" "}
+                  &ldquo;{query.trim()}&rdquo;.
                 </span>
                 <Button
                   variant="outline"

@@ -1,6 +1,10 @@
 import type { Edge, Node } from "@xyflow/react"
 import type { ElkNode } from "elkjs"
 
+import {
+  personNodeAriaLabel,
+  unionNodeAriaLabel,
+} from "~/lib/canvas/aria-labels"
 import type { EdgeRouting } from "~/lib/canvas/edge-routing"
 import {
   HANDLE,
@@ -134,6 +138,17 @@ export function toReactFlowGraph({
           id: elkNode.id,
           type: "person",
           position,
+          // React Flow puts this on the focusable wrapper. Without it a card is
+          // announced as "group, node" and nothing else — and the lines around
+          // it, which are the tree, are announced not at all. See
+          // lib/canvas/aria-labels.ts.
+          ariaLabel: personNodeAriaLabel({
+            person,
+            people,
+            relationships,
+            generation: generations.get(person.id),
+            pinned: overridden.has(elkNode.id),
+          }),
           data: {
             person,
             treeId,
@@ -157,6 +172,15 @@ export function toReactFlowGraph({
         id: elkNode.id,
         type: "union",
         position,
+        // Deliberately not a tab stop. A union is a 12px dot whose whole
+        // meaning — who is married to whom, and when — is already said by both
+        // spouses' labels and spelled out in the outline, and the union nodes
+        // sit together at the end of the node array, so leaving them focusable
+        // would append a run of near-identical stops to the end of every
+        // tree's tab order for no information at all. Labelled anyway, for a
+        // reader who reaches it some other way.
+        focusable: false,
+        ariaLabel: unionNodeAriaLabel(union, people),
         data: {
           union,
           onBloodline: bloodline.has(elkNode.id),

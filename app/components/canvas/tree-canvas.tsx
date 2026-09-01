@@ -16,6 +16,7 @@ import { useEffect, useMemo } from "react"
 
 import { PersonNode } from "~/components/canvas/person-node"
 import { MultiSelectPanel } from "~/components/canvas/multi-select-panel"
+import { TreeOutlinePanel } from "~/components/canvas/tree-outline-panel"
 import { TreeToolbar } from "~/components/canvas/tree-toolbar"
 import { UnionNode } from "~/components/canvas/union-node"
 import {
@@ -37,6 +38,25 @@ import { parseNodeId } from "~/lib/graph/node-ids"
 import type { Person, Relationship } from "~/lib/types"
 
 const nodeTypes = { person: PersonNode, union: UnionNode }
+
+// React Flow's own description of a node — the one thing a screen reader reads
+// out on every single card — says to press delete to remove it and the arrow
+// keys to move it around. Neither is true here: elementsSelectable is off,
+// nothing is bound to Delete, and the arrows walk the family rather than
+// dragging a card. A description that is wrong is worse than none, so it is
+// replaced with the keys this app actually binds.
+//
+// Both variants, because which one React Flow renders depends on its own
+// keyboard-a11y flag and only one of them is ever on screen — overriding the
+// one and not the other leaves the wrong text showing half the time. Verified
+// in the browser: overriding only `default` left the original wording in place.
+const NODE_KEYS_DESCRIPTION =
+  "Arrow keys move to a relative. Enter edits this person. P, S and C add a parent, spouse or child. Turn on the tree outline for the whole tree as a list."
+
+const ARIA_LABEL_CONFIG = {
+  "node.a11yDescription.default": NODE_KEYS_DESCRIPTION,
+  "node.a11yDescription.keyboardDisabled": NODE_KEYS_DESCRIPTION,
+}
 
 interface TreeCanvasProps {
   treeId: string
@@ -70,6 +90,7 @@ export function TreeCanvas({
     return ids
   }, [nodes])
   useCanvasKeyboard({ people, relationships, visiblePersonIds })
+  const showOutline = useCanvasUIStore((s) => s.showOutline)
 
   // Bulk actions are about people, so union dots in the selection are dropped
   // rather than counted: a union has no membership of its own to add or remove
@@ -176,8 +197,20 @@ export function TreeCanvas({
           positions={positions}
         />
       )}
-      <div className="min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1">
+        {showOutline && (
+          <TreeOutlinePanel
+            people={people}
+            relationships={relationships}
+            memberIds={visiblePersonIds}
+          />
+        )}
         <ReactFlow
+          className="min-w-0 flex-1"
+          // The wrapper React Flow renders already carries role="application";
+          // without a name it is announced as an unlabelled application region.
+          aria-label="Family tree canvas"
+          ariaLabelConfig={ARIA_LABEL_CONFIG}
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
