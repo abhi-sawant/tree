@@ -10,6 +10,7 @@ import { PersonFormDialog } from "~/components/people/person-form-dialog"
 import { Toaster } from "~/components/ui/toast"
 import { HealthView } from "~/components/views/health-view"
 import { InsightsView } from "~/components/views/insights-view"
+import { PhotoWallView } from "~/components/views/photo-wall-view"
 import { SettingsView } from "~/components/views/settings-view"
 import { TableView } from "~/components/views/table-view"
 import { TreeView } from "~/components/views/tree-view"
@@ -174,6 +175,9 @@ export function AppShell({
             generations={generations}
             totalPeople={people.length}
           />
+        )}
+        {view === "photos" && (
+          <PhotoWallView tree={tree} people={people} memberIds={memberIds} />
         )}
         {view === "insights" && (
           <InsightsView

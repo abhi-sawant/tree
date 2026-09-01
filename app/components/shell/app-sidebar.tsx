@@ -118,6 +118,12 @@ export function AppSidebar({
           onSelect={setView}
         />
         <SidebarNavItem
+          label="Photo wall"
+          target="photos"
+          view={view}
+          onSelect={setView}
+        />
+        <SidebarNavItem
           label="Insights"
           target="insights"
           view={view}
