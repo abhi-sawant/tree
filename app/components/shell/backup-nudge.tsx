@@ -27,7 +27,10 @@ export function BackupNudgeBanner({
   if (!verdict.stale) return null
 
   return (
-    <div className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-primary/30 bg-primary/8 px-4 py-2">
+    <div
+      data-print="hide"
+      className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-primary/30 bg-primary/8 px-4 py-2"
+    >
       <span className="text-12-5 leading-snug">
         {verdict.neverExported
           ? `You've been building this for ${verdict.days} days and haven't exported a backup yet.`

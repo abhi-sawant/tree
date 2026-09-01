@@ -158,6 +158,44 @@ export function parseNotes(source: string): Block[] {
   return blocks
 }
 
+// A note flattened to plain lines, with every marker dropped and every
+// [[link]] left as the name it names. For output that has no links to follow —
+// the family-book PDF, where "[[Priya Iyer]]" on paper is just noise. Built on
+// the same parse the on-screen renderer uses, so the two can't disagree about
+// what a note says; a second regex pass would drift the first time the subset
+// grows.
+export function notesToPlainText(source: string): string[] {
+  return parseNotes(source).flatMap((block) => {
+    if (block.kind === "list") {
+      // The bullet is re-added because a list read as unmarked paragraphs is a
+      // different document. Ordered lists are renumbered from their position
+      // rather than from the digits typed, which is what the renderer does too.
+      return block.items.map(
+        (item, i) =>
+          `${block.ordered ? `${i + 1}.` : "•"} ${inlineToPlainText(item)}`
+      )
+    }
+    return [inlineToPlainText(block.children)]
+  })
+}
+
+function inlineToPlainText(nodes: Inline[]): string {
+  return nodes
+    .map((node) => {
+      switch (node.kind) {
+        case "text":
+          return node.text
+        case "code":
+          return node.text
+        case "person":
+          return node.name
+        default:
+          return inlineToPlainText(node.children)
+      }
+    })
+    .join("")
+}
+
 // Every [[name]] in a note, in the order written and deduplicated. Used to show
 // a person's outgoing links without rendering the whole note.
 export function wikiLinkNames(source: string): string[] {

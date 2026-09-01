@@ -40,6 +40,8 @@ interface AppTopbarProps {
   onCreateTree: () => void
   onExportBackup: () => void
   exportingBackup?: boolean
+  onExportFamilyBook: () => void
+  exportingFamilyBook?: boolean
 }
 
 export function AppTopbar({
@@ -51,6 +53,8 @@ export function AppTopbar({
   onCreateTree,
   onExportBackup,
   exportingBackup,
+  onExportFamilyBook,
+  exportingFamilyBook,
 }: AppTopbarProps) {
   const view = useAppShellStore((s) => s.view)
   const setView = useAppShellStore((s) => s.setView)
@@ -95,7 +99,10 @@ export function AppTopbar({
   }
 
   return (
-    <header className="relative z-30 flex h-15 flex-none items-center justify-between gap-4 border-b border-border px-4">
+    <header
+      data-print="hide"
+      className="relative z-30 flex h-15 flex-none items-center justify-between gap-4 border-b border-border px-4"
+    >
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -183,6 +190,15 @@ export function AppTopbar({
             >
               PDF
             </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={exportingFamilyBook}
+              onClick={onExportFamilyBook}
+            >
+              {exportingFamilyBook
+                ? "Building…"
+                : "Family book (PDF, a page each)"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               disabled={exportingBackup}
               onClick={onExportBackup}

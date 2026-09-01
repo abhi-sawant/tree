@@ -38,6 +38,16 @@ export function anniversariesIcsFilename(date: Date = new Date()): string {
   return `family-tree-anniversaries-${date.toISOString().slice(0, 10)}.ics`
 }
 
+// The one export scoped to a single tree rather than the whole pool, so unlike
+// the others it carries the tree's name — a book of the Sawants and a book of
+// the Iyers sitting in the same folder have to be tellable apart.
+export function familyBookFilename(
+  treeName: string,
+  date: Date = new Date()
+): string {
+  return `${slugify(treeName)}-family-book-${date.toISOString().slice(0, 10)}.pdf`
+}
+
 // The spreadsheet view of the pool. Same whole-pool scope as the others, and a
 // distinct stem so it can't be mistaken for the GEDCOM or the backup.
 export function peopleCsvFilename(date: Date = new Date()): string {

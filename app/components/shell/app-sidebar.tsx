@@ -48,7 +48,10 @@ export function AppSidebar({
     (members ?? []).filter((m) => m.treeId === treeId).length
 
   return (
-    <div className="flex w-53 flex-none flex-col gap-4.5 border-r border-border bg-sidebar px-3 py-4">
+    <div
+      data-print="hide"
+      className="flex w-53 flex-none flex-col gap-4.5 border-r border-border bg-sidebar px-3 py-4"
+    >
       <div className="flex items-center gap-2 px-1">
         <div className="flex size-5.5 items-center justify-center bg-primary font-heading text-11 font-bold text-primary-foreground">
           FT

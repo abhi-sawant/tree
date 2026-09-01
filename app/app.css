@@ -172,3 +172,69 @@
     @apply font-sans;
     }
 }
+
+/* Printing.
+
+   The family-book PDF is the thing to hand a relative, and it is generated
+   rather than printed. This stylesheet is for the other half: pressing Cmd+P on
+   the People table, the photo wall or Insights and getting the content on
+   paper instead of a screenshot of an app.
+
+   Chrome opts out by attribute rather than by a Tailwind `print:hidden` on each
+   element, so the whole rule set is readable in one place — and so rules that
+   have no variant (page margins, unclipping the scroll containers, forcing a
+   light palette) sit beside the ones that do. */
+@media print {
+    [data-print="hide"] {
+        display: none !important;
+    }
+
+    @page {
+        margin: 12mm;
+    }
+
+    /* The app is a full-height flex shell with its own scrollers, which on
+       paper means everything below the fold is simply cut off. Unwind that so
+       the content flows onto as many sheets as it needs. */
+    html,
+    body,
+    #root,
+    [data-print="flow"] {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+
+    /* Always the light palette, for the reason EXPORT_BACKGROUND_COLOR exists:
+       a dark-mode page prints as a sheet of solid ink. */
+    body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    /* Backgrounds are dropped by most browsers when printing anyway, so a
+       muted-on-muted row would come out invisible. */
+    [data-print] *,
+    body * {
+        box-shadow: none !important;
+    }
+
+    /* A row or a tile split across a page break is unreadable at both ends. */
+    tr,
+    li {
+        break-inside: avoid;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    /* React Flow's own overlays: toolbar, zoom controls, legend, minimap. */
+    .react-flow__panel,
+    .react-flow__controls,
+    .react-flow__minimap,
+    .react-flow__attribution {
+        display: none !important;
+    }
+}

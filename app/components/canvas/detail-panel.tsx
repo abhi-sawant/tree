@@ -164,7 +164,10 @@ export function DetailPanel({
   // what is selected and how to get back to one person.
   if (selectedCount > 1) {
     return (
-      <aside className="flex h-full w-78 shrink-0 flex-col overflow-y-auto border-l border-border">
+      <aside
+        data-print="hide"
+        className="flex h-full w-78 shrink-0 flex-col overflow-y-auto border-l border-border"
+      >
         <div className="p-4">
           <p className="text-13 leading-relaxed text-muted-foreground">
             {selectedCount} cards selected. Use the bar at the top of the canvas
@@ -178,7 +181,10 @@ export function DetailPanel({
 
   if (!selection) {
     return (
-      <aside className="flex h-full w-90 shrink-0 flex-col overflow-y-auto border-l border-border">
+      <aside
+        data-print="hide"
+        className="flex h-full w-90 shrink-0 flex-col overflow-y-auto border-l border-border"
+      >
         <div className="p-4">
           <p className="text-13 leading-relaxed text-muted-foreground">
             Select a person or a marriage dot on the canvas. Drag a card to pin
@@ -196,6 +202,7 @@ export function DetailPanel({
 
   return (
     <aside
+      data-print="hide"
       key={selectedNodeId}
       className="flex h-full w-90 shrink-0 flex-col overflow-hidden border-l border-border"
     >

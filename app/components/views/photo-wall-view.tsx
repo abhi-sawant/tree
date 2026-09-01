@@ -52,7 +52,10 @@ export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
         <h2 className="font-heading text-xs font-semibold tracking-widest uppercase">
           Photo wall
         </h2>
-        <Label className="flex-row items-center gap-2 text-sm font-normal normal-case">
+        <Label
+          data-print="hide"
+          className="flex-row items-center gap-2 text-sm font-normal normal-case"
+        >
           <Checkbox
             checked={treeOnly}
             onCheckedChange={(checked) => setTreeOnly(checked === true)}
@@ -60,6 +63,7 @@ export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
           Only {tree.name}
         </Label>
         <Select
+          data-print="hide"
           className="h-8 w-40"
           value={sort}
           onChange={(e) => setSort(e.target.value as PhotoWallSort)}

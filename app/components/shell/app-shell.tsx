@@ -19,7 +19,8 @@ import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { useTreeMembers } from "~/lib/db/hooks"
 import { clearBackupNudgeDismissal, setLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
-import { backupFilename } from "~/lib/export/filenames"
+import { backupFilename, familyBookFilename } from "~/lib/export/filenames"
+import { buildFamilyBookPdf } from "~/lib/export/family-book-export"
 import { exportBackup } from "~/lib/export/json"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import type { TabPresenceState } from "~/lib/db/use-tab-presence"
@@ -69,6 +70,7 @@ export function AppShell({
   const [createTreeOpen, setCreateTreeOpen] = useState(false)
   const [addPersonOpen, setAddPersonOpen] = useState(false)
   const [exportingBackup, setExportingBackup] = useState(false)
+  const [exportingBook, setExportingBook] = useState(false)
   // Nudged after every backup so the sidebar and Settings re-read app-meta.
   const [exportToken, setExportToken] = useState(0)
 
@@ -123,8 +125,35 @@ export function AppShell({
     }
   }
 
+  // Scoped to the open tree's members, not the whole pool: a family book is a
+  // document about one family, and a book of everyone the browser happens to
+  // hold is not a thing anyone would hand to a relative.
+  async function handleExportFamilyBook() {
+    if (exportingBook) return
+    const members = people.filter((person) => memberIds.has(person.id))
+    if (members.length === 0) {
+      toast("Nothing to print — this tree has no people in it yet")
+      return
+    }
+    setExportingBook(true)
+    try {
+      const blob = await buildFamilyBookPdf({
+        tree,
+        people: members,
+        relationships,
+        generations,
+      })
+      triggerDownload(blob, familyBookFilename(tree.name))
+      toast("Family book exported")
+    } catch {
+      toast("Family book export failed — nothing was downloaded")
+    } finally {
+      setExportingBook(false)
+    }
+  }
+
   return (
-    <div className="flex h-svh w-full">
+    <div data-print="flow" className="flex h-svh w-full">
       <AppSidebar
         trees={trees}
         activeTreeId={tree.id}
@@ -134,7 +163,7 @@ export function AppShell({
         exportToken={exportToken}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div data-print="flow" className="flex min-w-0 flex-1 flex-col">
         <AppTopbar
           tree={tree}
           trees={trees}
@@ -144,6 +173,8 @@ export function AppShell({
           onCreateTree={() => setCreateTreeOpen(true)}
           onExportBackup={() => void handleExportBackup()}
           exportingBackup={exportingBackup}
+          onExportFamilyBook={() => void handleExportFamilyBook()}
+          exportingFamilyBook={exportingBook}
         />
 
         <TabNotice
