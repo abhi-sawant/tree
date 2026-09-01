@@ -75,7 +75,7 @@ export function InsightsView({
   }
 
   return (
-    <div className="flex max-w-175 flex-1 flex-col gap-7 overflow-y-auto p-6">
+    <div className="flex flex-1 flex-col gap-7 overflow-y-auto p-6">
       <section className="flex flex-col gap-2">
         <SectionHeading>{tree.name}</SectionHeading>
         <div className="flex flex-wrap gap-x-8 gap-y-3 border border-border p-3">
