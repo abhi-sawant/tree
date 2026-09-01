@@ -5,6 +5,7 @@ import {
   exportFilename,
   gedcomFilename,
   gedcomZipFilename,
+  peopleCsvFilename,
   slugify,
 } from "~/lib/export/filenames"
 
@@ -65,5 +66,12 @@ describe("gedcomZipFilename", () => {
     const date = new Date("2026-08-31T10:00:00Z")
     expect(gedcomZipFilename(date)).toBe("family-tree-gedcom-2026-08-31.zip")
     expect(gedcomZipFilename(date)).not.toBe(backupFilename(date))
+  })
+})
+
+describe("peopleCsvFilename", () => {
+  it("is a .csv with its own stem, stamped with the export date", () => {
+    const date = new Date("2026-08-31T10:00:00Z")
+    expect(peopleCsvFilename(date)).toBe("family-tree-people-2026-08-31.csv")
   })
 })

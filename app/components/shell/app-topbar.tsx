@@ -170,7 +170,7 @@ export function AppTopbar({
               </Button>
             }
           />
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuItem
               disabled={!canvasExportsAvailable}
               onClick={() => void exportPng()}
@@ -255,7 +255,7 @@ function ViewTab({
       type="button"
       onClick={onClick}
       className={cn(
-        "h-8 cursor-pointer px-3 font-heading text-10 font-semibold tracking-widest uppercase",
+        "h-8 cursor-pointer px-3 font-heading text-xs font-semibold tracking-widest uppercase",
         active
           ? "bg-foreground text-background"
           : "bg-transparent text-muted-foreground hover:text-foreground"

@@ -12,7 +12,10 @@ import { bloodlineToRoot } from "~/lib/canvas/bloodline"
 import { computeColorIndices } from "~/lib/canvas/color-groups"
 import { filterHiddenGenerations } from "~/lib/canvas/filter-generations"
 import { personIdsInFocus } from "~/lib/canvas/focus-scope"
-import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import {
+  useCanvasUIStore,
+  useSelectedNodeId,
+} from "~/lib/canvas/canvas-ui-store"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import { resolveEdgeColor } from "~/lib/canvas/appearance-resolve"
 import type { UnionNode } from "~/lib/graph/derive-unions"
@@ -53,7 +56,7 @@ export function TreeView({
     (s) => s.resetHiddenGenerations
   )
   const focus = useCanvasUIStore((s) => s.focus)
-  const selectedNodeId = useCanvasUIStore((s) => s.selectedNodeId)
+  const selectedNodeId = useSelectedNodeId()
   const showBloodline = useCanvasUIStore((s) => s.showBloodline)
   const appearance = useAppearanceStore((s) => s.settings)
   const treeMembers = useTreeMembers(tree.id)
@@ -242,6 +245,7 @@ export function TreeView({
           treeId={tree.id}
           generationCount={generationCount}
           people={people}
+          relationships={relationships}
           nodes={visibleGraph.nodes}
           edges={visibleGraph.edges}
         />

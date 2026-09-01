@@ -13,12 +13,21 @@ interface PendingAddRelative {
 }
 
 interface CanvasUIState {
-  selectedNodeId: string | null
+  // An array rather than one id, because a bulk action needs several cards and
+  // a second "multi-selection" alongside the single one would be two sources of
+  // truth for the same question. Everything that wants *the* selected node asks
+  // selectedNodeIdOf/useSelectedNodeId, which answers only when there is
+  // exactly one — a detail panel showing one of five selected people would be
+  // claiming something the selection doesn't say.
+  selectedNodeIds: string[]
   select: (nodeId: string | null) => void
+  // Shift/⌘-click. Toggling rather than adding, so the same gesture takes a
+  // card back out of the selection.
+  toggleSelected: (nodeId: string) => void
 
   // One-shot handoff from an implicit union node's "Record marriage" context
   // menu item to the detail panel, consumed once then cleared. Not folded
-  // into selectedNodeId because the same union can be selected repeatedly
+  // into the selection because the same union can be selected repeatedly
   // without re-triggering this.
   pendingMarriage: PendingMarriage | null
   requestRecordMarriage: (parents: [string, string]) => void
@@ -30,6 +39,15 @@ interface CanvasUIState {
   pendingAddRelative: PendingAddRelative | null
   requestAddRelative: (nodeId: string, kind: AddActionKind) => void
   clearPendingAddRelative: () => void
+
+  // Same one-shot pattern again, for the keyboard's Enter: it asks the detail
+  // panel to put the cursor in the selected person's first field, which is the
+  // whole of what "edit" means when the panel is already showing that person's
+  // form. Kept out of the selection because selecting a card must not steal
+  // focus from the canvas — only Enter does.
+  pendingEditNodeId: string | null
+  requestEdit: (nodeId: string) => void
+  clearPendingEdit: () => void
 
   // A node the canvas should scroll to once it exists on screen. Set from
   // the command palette and the table's "open in tree", both of which can
@@ -62,8 +80,14 @@ interface CanvasUIState {
 }
 
 export const useCanvasUIStore = create<CanvasUIState>((set) => ({
-  selectedNodeId: null,
-  select: (nodeId) => set({ selectedNodeId: nodeId }),
+  selectedNodeIds: [],
+  select: (nodeId) => set({ selectedNodeIds: nodeId ? [nodeId] : [] }),
+  toggleSelected: (nodeId) =>
+    set((state) => ({
+      selectedNodeIds: state.selectedNodeIds.includes(nodeId)
+        ? state.selectedNodeIds.filter((id) => id !== nodeId)
+        : [...state.selectedNodeIds, nodeId],
+    })),
 
   pendingMarriage: null,
   requestRecordMarriage: (parents) => set({ pendingMarriage: { parents } }),
@@ -71,12 +95,16 @@ export const useCanvasUIStore = create<CanvasUIState>((set) => ({
 
   pendingAddRelative: null,
   requestAddRelative: (nodeId, kind) =>
-    set({ selectedNodeId: nodeId, pendingAddRelative: { nodeId, kind } }),
+    set({ selectedNodeIds: [nodeId], pendingAddRelative: { nodeId, kind } }),
   clearPendingAddRelative: () => set({ pendingAddRelative: null }),
+
+  pendingEditNodeId: null,
+  requestEdit: (nodeId) => set({ pendingEditNodeId: nodeId }),
+  clearPendingEdit: () => set({ pendingEditNodeId: null }),
 
   pendingCenterNodeId: null,
   requestCenter: (nodeId) =>
-    set({ selectedNodeId: nodeId, pendingCenterNodeId: nodeId }),
+    set({ selectedNodeIds: [nodeId], pendingCenterNodeId: nodeId }),
   clearPendingCenter: () => set({ pendingCenterNodeId: null }),
 
   showBloodline: false,
@@ -104,3 +132,15 @@ export const useCanvasUIStore = create<CanvasUIState>((set) => ({
     })),
   resetHiddenGenerations: () => set({ hiddenGenerations: [] }),
 }))
+
+// The one selected node, or null when the selection is empty or holds several.
+// Anything that renders or acts on "the" selection — the detail panel, the
+// keyboard shortcuts, the bloodline highlight — has to answer null for a
+// multi-selection rather than silently picking a member of it.
+export function selectedNodeIdOf(selectedNodeIds: string[]): string | null {
+  return selectedNodeIds.length === 1 ? selectedNodeIds[0] : null
+}
+
+export function useSelectedNodeId(): string | null {
+  return useCanvasUIStore((s) => selectedNodeIdOf(s.selectedNodeIds))
+}

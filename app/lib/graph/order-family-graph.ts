@@ -6,6 +6,59 @@ export interface OrderedFamilyGraph {
   unionOrder: string[]
 }
 
+// The order the canvas lays a row of people out in: whichever was recorded
+// first comes first, with the id breaking a tie so the result never depends on
+// insertion order. Exported because anything that has to agree with what is on
+// screen — keyboard navigation across a sibling row, for one — must read the
+// order from here rather than restate it and drift.
+export function recordOrderComparator(
+  peopleById: Map<string, Person>
+): (aId: string, bId: string) => number {
+  return (aId, bId) => {
+    const aCreated = peopleById.get(aId)?.createdAt ?? 0
+    const bCreated = peopleById.get(bId)?.createdAt ?? 0
+    return aCreated !== bCreated ? aCreated - bCreated : aId.localeCompare(bId)
+  }
+}
+
+// Twins must not be split apart by a sibling recorded between them: a
+// multiple birth is one event, and seeing them side by side is the whole
+// point of having recorded it. Each multiple-birth group sorts as a single
+// block, anchored at the position its earliest member would have taken on
+// its own — so the surrounding birth-order intent is preserved and only the
+// group's own members are pulled together.
+export function sortSiblingIds(
+  ids: string[],
+  peopleById: Map<string, Person>
+): string[] {
+  const compare = recordOrderComparator(peopleById)
+  const sorted = [...ids]
+
+  const anchorByGroup = new Map<string, string>()
+  for (const id of sorted) {
+    const group = peopleById.get(id)?.multipleBirthGroup
+    if (!group) continue
+    const current = anchorByGroup.get(group)
+    if (current === undefined || compare(id, current) < 0) {
+      anchorByGroup.set(group, id)
+    }
+  }
+  if (anchorByGroup.size === 0) {
+    sorted.sort(compare)
+    return sorted
+  }
+
+  const anchorOf = (id: string): string => {
+    const group = peopleById.get(id)?.multipleBirthGroup
+    return (group && anchorByGroup.get(group)) || id
+  }
+  sorted.sort((a, b) => {
+    const byAnchor = compare(anchorOf(a), anchorOf(b))
+    return byAnchor !== 0 ? byAnchor : compare(a, b)
+  })
+  return sorted
+}
+
 // ELK's crossing-minimization has no notion of "these people are siblings" —
 // it only ever respects an order it's explicitly told to prefer (see
 // considerModelOrder/forceNodeModelOrder in run-layout.ts), and the order
@@ -31,41 +84,9 @@ export function orderFamilyGraph(
 ): OrderedFamilyGraph {
   const peopleById = new Map(people.map((p) => [p.id, p]))
 
-  const compare = (aId: string, bId: string): number => {
-    const aCreated = peopleById.get(aId)?.createdAt ?? 0
-    const bCreated = peopleById.get(bId)?.createdAt ?? 0
-    return aCreated !== bCreated ? aCreated - bCreated : aId.localeCompare(bId)
-  }
-
-  // Twins must not be split apart by a sibling recorded between them: a
-  // multiple birth is one event, and seeing them side by side is the whole
-  // point of having recorded it. Each multiple-birth group sorts as a single
-  // block, anchored at the position its earliest member would have taken on
-  // its own — so the surrounding birth-order intent is preserved and only the
-  // group's own members are pulled together.
+  const compare = recordOrderComparator(peopleById)
   const sortSiblings = (ids: string[]): void => {
-    const anchorByGroup = new Map<string, string>()
-    for (const id of ids) {
-      const group = peopleById.get(id)?.multipleBirthGroup
-      if (!group) continue
-      const current = anchorByGroup.get(group)
-      if (current === undefined || compare(id, current) < 0) {
-        anchorByGroup.set(group, id)
-      }
-    }
-    if (anchorByGroup.size === 0) {
-      ids.sort(compare)
-      return
-    }
-
-    const anchorOf = (id: string): string => {
-      const group = peopleById.get(id)?.multipleBirthGroup
-      return (group && anchorByGroup.get(group)) || id
-    }
-    ids.sort((a, b) => {
-      const byAnchor = compare(anchorOf(a), anchorOf(b))
-      return byAnchor !== 0 ? byAnchor : compare(a, b)
-    })
+    ids.splice(0, ids.length, ...sortSiblingIds(ids, peopleById))
   }
 
   const childrenByUnion = new Map<string, string[]>()

@@ -5,15 +5,20 @@ import {
   type AddAction,
   type AddActionKind,
 } from "~/components/canvas/add-relative-menu"
+import { AddFamilyForm } from "~/components/canvas/add-family-form"
 import { RelativeForm } from "~/components/canvas/relative-form"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
 import { PersonForm, type PhotoAction } from "~/components/people/person-form"
+import { NotesView } from "~/components/people/notes-view"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { PartialDateFields } from "~/components/people/partial-date-fields"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import { Button } from "~/components/ui/button"
-import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import {
+  useCanvasUIStore,
+  useSelectedNodeId,
+} from "~/lib/canvas/canvas-ui-store"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import { resolveSelection } from "~/lib/canvas/resolve-selection"
@@ -35,6 +40,7 @@ import {
   updateRelationshipSubtype,
   type RelationshipDates,
 } from "~/lib/db/relationship-actions"
+import { addFamily } from "~/lib/db/add-family"
 import { removeRelationship } from "~/lib/db/relationships"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Label } from "~/components/ui/label"
@@ -85,13 +91,16 @@ export function DetailPanel({
   unions,
   generations,
 }: DetailPanelProps) {
-  const selectedNodeId = useCanvasUIStore((s) => s.selectedNodeId)
+  const selectedNodeId = useSelectedNodeId()
+  const selectedCount = useCanvasUIStore((s) => s.selectedNodeIds.length)
   const pendingMarriage = useCanvasUIStore((s) => s.pendingMarriage)
   const clearPendingMarriage = useCanvasUIStore((s) => s.clearPendingMarriage)
   const pendingAddRelative = useCanvasUIStore((s) => s.pendingAddRelative)
   const clearPendingAddRelative = useCanvasUIStore(
     (s) => s.clearPendingAddRelative
   )
+  const pendingEditNodeId = useCanvasUIStore((s) => s.pendingEditNodeId)
+  const clearPendingEdit = useCanvasUIStore((s) => s.clearPendingEdit)
 
   const peopleById = useMemo(
     () => new Map(people.map((p) => [p.id, p])),
@@ -104,12 +113,24 @@ export function DetailPanel({
 
   const [action, setAction] = useState<AddAction | undefined>(undefined)
   const [tab, setTab] = useState<DetailTab>("details")
+  const [focusSignal, setFocusSignal] = useState(0)
 
   // A new selection always starts on Details with no add-relative sub-form.
   useEffect(() => {
     setAction(undefined)
     setTab("details")
   }, [selectedNodeId])
+
+  // One-shot handoff from the canvas's Enter shortcut. "Edit" means putting the
+  // cursor in the panel that is already showing this person, rather than
+  // opening a second form on top of it.
+  useEffect(() => {
+    if (!pendingEditNodeId || pendingEditNodeId !== selectedNodeId) return
+    setAction(undefined)
+    setTab("details")
+    setFocusSignal((n) => n + 1)
+    clearPendingEdit()
+  }, [pendingEditNodeId, selectedNodeId, clearPendingEdit])
 
   // One-shot handoff from an implicit union's "Record marriage" context menu.
   useEffect(() => {
@@ -131,13 +152,35 @@ export function DetailPanel({
     clearPendingAddRelative()
   }, [pendingAddRelative, selectedNodeId, clearPendingAddRelative])
 
-  if (!selection) {
+  // A multi-selection has no one person to describe. The bulk actions live in
+  // the canvas panel, next to the cards they act on, so this only has to say
+  // what is selected and how to get back to one person.
+  if (selectedCount > 1) {
     return (
       <aside className="flex h-full w-78 shrink-0 flex-col overflow-y-auto border-l border-border">
         <div className="p-4">
           <p className="text-13 leading-relaxed text-muted-foreground">
+            {selectedCount} cards selected. Use the bar at the top of the canvas
+            to align them or change which trees they belong to. Click any card
+            on its own to go back to one person.
+          </p>
+        </div>
+      </aside>
+    )
+  }
+
+  if (!selection) {
+    return (
+      <aside className="flex h-full w-90 shrink-0 flex-col overflow-y-auto border-l border-border">
+        <div className="p-4">
+          <p className="text-13 leading-relaxed text-muted-foreground">
             Select a person or a marriage dot on the canvas. Drag a card to pin
             it in place; right-click for more actions.
+          </p>
+          <p className="mt-3 text-13 leading-relaxed text-muted-foreground">
+            With a person selected, the arrow keys step through their family the
+            way the tree is drawn, <Key>Enter</Key> edits them, and <Key>P</Key>{" "}
+            <Key>S</Key> <Key>C</Key> start a new parent, spouse or child.
           </p>
         </div>
       </aside>
@@ -147,7 +190,7 @@ export function DetailPanel({
   return (
     <aside
       key={selectedNodeId}
-      className="flex h-full w-78 shrink-0 flex-col overflow-hidden border-l border-border"
+      className="flex h-full w-90 shrink-0 flex-col overflow-hidden border-l border-border"
     >
       {selection.kind === "person" ? (
         <PersonDetail
@@ -160,6 +203,7 @@ export function DetailPanel({
           setAction={setAction}
           tab={tab}
           setTab={setTab}
+          focusSignal={focusSignal}
         />
       ) : (
         <UnionDetail
@@ -172,6 +216,14 @@ export function DetailPanel({
         />
       )}
     </aside>
+  )
+}
+
+function Key({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="border border-border px-1 py-0.5 font-heading text-10 font-medium text-foreground">
+      {children}
+    </kbd>
   )
 }
 
@@ -203,6 +255,7 @@ interface PersonDetailProps {
   setAction: (action: AddAction | undefined) => void
   tab: DetailTab
   setTab: (tab: DetailTab) => void
+  focusSignal: number
 }
 
 function PersonDetail({
@@ -215,6 +268,7 @@ function PersonDetail({
   setAction,
   tab,
   setTab,
+  focusSignal,
 }: PersonDetailProps) {
   const select = useCanvasUIStore((s) => s.select)
   // Bumping this remounts PersonForm, which is how "Revert" throws away
@@ -222,6 +276,11 @@ function PersonDetail({
   const [formKey, setFormKey] = useState(0)
   const [removeOpen, setRemoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [familyOpen, setFamilyOpen] = useState(false)
+  // Notes read as prose by default and edit on request. Leaving the textarea
+  // permanently open would mean the [[links]] were never clickable, which is
+  // the whole point of writing them.
+  const [editingNotes, setEditingNotes] = useState(false)
 
   const parentRels = relationships.filter(
     (r) => r.type === "parent-child" && r.to === person.id
@@ -271,7 +330,7 @@ function PersonDetail({
             type="button"
             onClick={() => setTab(id)}
             className={cn(
-              "h-9.5 flex-1 cursor-pointer border-b-2 font-heading text-10 font-semibold tracking-widest uppercase",
+              "h-9.5 flex-1 cursor-pointer border-b-2 font-heading text-xs font-semibold tracking-widest uppercase",
               tab === id
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -288,6 +347,7 @@ function PersonDetail({
             key={`${person.id}:${formKey}`}
             section="details"
             initialValues={person}
+            focusSignal={focusSignal}
             onSubmit={handleUpdatePerson}
             onCancel={() => setFormKey((k) => k + 1)}
             cancelLabel="Revert"
@@ -295,15 +355,44 @@ function PersonDetail({
           />
         )}
 
-        {tab === "notes" && (
-          <PersonForm
-            key={`${person.id}:notes:${formKey}`}
-            section="notes"
-            initialValues={person}
-            onSubmit={handleUpdatePerson}
-            submitLabel="Save notes"
-          />
-        )}
+        {tab === "notes" &&
+          (editingNotes ? (
+            <div className="flex flex-col gap-2">
+              <PersonForm
+                key={`${person.id}:notes:${formKey}`}
+                section="notes"
+                initialValues={person}
+                onSubmit={async (values, photoAction) => {
+                  await handleUpdatePerson(values, photoAction)
+                  setEditingNotes(false)
+                }}
+                onCancel={() => setEditingNotes(false)}
+                submitLabel="Save notes"
+              />
+              <p className="text-11 leading-relaxed text-muted-foreground">
+                Write <code className="bg-muted px-1">[[Priya Iyer]]</code> to
+                link to someone. <code className="bg-muted px-1">**bold**</code>
+                , <code className="bg-muted px-1">*italic*</code>,{" "}
+                <code className="bg-muted px-1"># headings</code> and{" "}
+                <code className="bg-muted px-1">- lists</code> also work.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <NotesView
+                notes={person.notes ?? ""}
+                people={[...people.values()]}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={() => setEditingNotes(true)}
+              >
+                {person.notes ? "Edit notes" : "Add notes"}
+              </Button>
+            </div>
+          ))}
 
         {tab === "family" && (
           <>
@@ -341,8 +430,65 @@ function PersonDetail({
             <AddRelativeMenu
               selection={{ kind: "person", person }}
               parentCount={parentRels.length}
-              onOpenAction={setAction}
+              onOpenAction={(next) => {
+                setFamilyOpen(false)
+                setAction(next)
+              }}
             />
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() => {
+                setAction(undefined)
+                setFamilyOpen(true)
+              }}
+            >
+              Add whole family…
+            </Button>
+
+            {familyOpen && (
+              <div className="flex flex-col gap-2.5 border border-border bg-muted/40 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-heading text-10 font-semibold tracking-widest uppercase">
+                    Add whole family
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFamilyOpen(false)}
+                    aria-label="Close"
+                    className="cursor-pointer text-13 text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <AddFamilyForm
+                  anchor={person}
+                  currentSpouses={spouseRels
+                    .map((r) =>
+                      people.get(r.from === person.id ? r.to : r.from)
+                    )
+                    .filter((p): p is Person => p !== undefined)}
+                  onSubmit={async (spouse, marriage, children) => {
+                    const result = await addFamily({
+                      anchorPersonId: person.id,
+                      treeId,
+                      spouse,
+                      marriage,
+                      children,
+                    })
+                    setFamilyOpen(false)
+                    const added =
+                      (result.spouse ? 1 : 0) + result.children.length
+                    toast(
+                      added === 1 ? "1 person added" : `${added} people added`
+                    )
+                  }}
+                  onCancel={() => setFamilyOpen(false)}
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -361,9 +507,10 @@ function PersonDetail({
                   : [person.id]
               }
               showDates={action.kind === "add-spouse"}
-              showSubtype={
-                action.kind === "add-parent" || action.kind === "add-child"
-              }
+              // Every kind except a spouse: a marriage has no subtype to
+              // choose. A sibling's subtype is their own link to the shared
+              // parents, which is as ordinary a thing to record as a child's.
+              showSubtype={action.kind !== "add-spouse"}
               onSubmitNew={async (values, dates, photoAction, subtype) => {
                 let created: Person | undefined
                 if (action.kind === "add-parent")
@@ -383,7 +530,12 @@ function PersonDetail({
                     subtype
                   )
                 else if (action.kind === "add-sibling")
-                  created = await addSiblingNew(person.id, treeId, values)
+                  created = await addSiblingNew(
+                    person.id,
+                    treeId,
+                    values,
+                    subtype
+                  )
                 if (created && photoAction.kind === "staged")
                   await setPersonPhoto(
                     created.id,
@@ -406,7 +558,12 @@ function PersonDetail({
                     subtype
                   )
                 else if (action.kind === "add-sibling")
-                  await addSiblingExisting(person.id, treeId, picked.id)
+                  await addSiblingExisting(
+                    person.id,
+                    treeId,
+                    picked.id,
+                    subtype
+                  )
                 setAction(undefined)
                 toast("Relative linked")
               }}

@@ -112,6 +112,9 @@ export function TableView({
         <span className="text-xs text-muted-foreground">
           {sortedPeople.length} of {totalPeople} people
         </span>
+        <span className="text-xs text-muted-foreground">
+          Click a name or date to edit it in place
+        </span>
         <Label className="ml-auto">
           <Checkbox
             checked={showPlaceholders}

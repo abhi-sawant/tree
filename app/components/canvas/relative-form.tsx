@@ -34,8 +34,9 @@ interface RelativeFormProps {
   mode: RelativeFormMode
   excludeIds?: string[]
   showDates?: boolean
-  // Parent and child adds only — a spouse or sibling link has no subtype to
-  // choose (a sibling's link is to the shared parents, recorded there).
+  // Every add except a spouse — a marriage has no subtype to choose. For a
+  // sibling this sets their own link to the shared parents, which is why the
+  // field reads "Relationship" rather than naming the person it started from.
   showSubtype?: boolean
   recordMarriageNames?: [string, string]
   onSubmitNew?: (

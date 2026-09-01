@@ -23,8 +23,16 @@ import {
   anniversariesIcsFilename,
   gedcomFilename,
   gedcomZipFilename,
+  peopleCsvFilename,
 } from "~/lib/export/filenames"
 import { exportGedcom, exportGedcomZip } from "~/lib/export/gedcom"
+import { buildCsvBlob } from "~/lib/export/csv"
+import { InvalidCsvError, peopleToCsvRows } from "~/lib/export/people-csv"
+import {
+  importPeopleCsv,
+  type CsvImportSummary,
+} from "~/lib/db/import-people-csv"
+import { db } from "~/lib/db/db"
 import { exportAnniversariesIcs } from "~/lib/export/ics"
 import {
   InvalidBackupError,
@@ -47,6 +55,9 @@ interface SettingsViewProps {
   // This tab's identity, so a restore can tell the other tabs their view of the
   // data no longer exists.
   tabId: string
+  // New people from a CSV join the open tree, or they'd exist in the pool and
+  // appear on no canvas — which reads as the import having done nothing.
+  treeId: string
 }
 
 export function SettingsView({
@@ -54,6 +65,7 @@ export function SettingsView({
   exportingBackup,
   exportToken,
   tabId,
+  treeId,
 }: SettingsViewProps) {
   const [inputKey, setInputKey] = useState(0)
   const [pendingFile, setPendingFile] = useState<File | undefined>(undefined)
@@ -71,6 +83,50 @@ export function SettingsView({
   useEffect(() => {
     void getLastExportDate().then(setLastExport)
   }, [exportToken])
+
+  const [csvInputKey, setCsvInputKey] = useState(0)
+  const [csvImporting, setCsvImporting] = useState(false)
+  const [csvResult, setCsvResult] = useState<CsvImportSummary | undefined>(
+    undefined
+  )
+  const [csvError, setCsvError] = useState<string | undefined>(undefined)
+
+  async function handleExportCsv() {
+    try {
+      const [people, relationships] = await Promise.all([
+        db.people.toArray(),
+        db.relationships.toArray(),
+      ])
+      triggerDownload(
+        buildCsvBlob(peopleToCsvRows({ people, relationships })),
+        peopleCsvFilename()
+      )
+      toast("People exported")
+    } catch {
+      toast("CSV export failed — nothing was downloaded")
+    }
+  }
+
+  async function handleCsvSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    setCsvInputKey((key) => key + 1)
+    if (!file) return
+
+    setCsvError(undefined)
+    setCsvImporting(true)
+    try {
+      const summary = await importPeopleCsv(await file.text(), { treeId })
+      setCsvResult(summary)
+    } catch (err) {
+      setCsvError(
+        err instanceof InvalidCsvError
+          ? err.message
+          : "Couldn't read that file — nothing was changed."
+      )
+    } finally {
+      setCsvImporting(false)
+    }
+  }
 
   async function handleExportGedcom() {
     try {
@@ -235,6 +291,40 @@ export function SettingsView({
       </section>
 
       <section className="flex flex-col gap-2.5">
+        <SectionHeading>Spreadsheet (CSV)</SectionHeading>
+        <p className="text-12-5 leading-relaxed text-muted-foreground">
+          One row per person, with parents and spouses referred to by name — the
+          shape families already keep this data in. Importing <em>adds</em> to
+          what's here: rows create people or update ones they carry an id for,
+          and links are only ever added, never removed. It carries names, sex,
+          dates and notes only, so photos, custom fields, marriage dates and how
+          a parent-child link came about stay untouched by a round trip. For a
+          complete copy, use the backup below.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => void handleExportCsv()}>
+            Export people (.csv)
+          </Button>
+          <Label className="flex-col items-start gap-2 text-sm font-normal normal-case">
+            <Input
+              key={csvInputKey}
+              type="file"
+              accept=".csv,text/csv"
+              disabled={csvImporting}
+              onChange={(e) => void handleCsvSelected(e)}
+            />
+          </Label>
+        </div>
+        {csvImporting && (
+          <p className="text-sm text-muted-foreground">Importing…</p>
+        )}
+        {csvError && (
+          <p className="max-w-md text-sm text-destructive">{csvError}</p>
+        )}
+        {csvResult && <CsvImportReport result={csvResult} />}
+      </section>
+
+      <section className="flex flex-col gap-2.5">
         <SectionHeading>Import backup</SectionHeading>
         <p className="text-12-5 leading-relaxed text-muted-foreground">
           Restoring replaces everything currently stored. This can't be undone.
@@ -302,6 +392,36 @@ export function SettingsView({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  )
+}
+
+// Reports what landed and, at equal weight, what didn't. A count of successes
+// with no account of the rest is how a mistyped parent name disappears without
+// anyone noticing — the failure this format is most prone to.
+function CsvImportReport({ result }: { result: CsvImportSummary }) {
+  return (
+    <div className="flex flex-col gap-2 border border-border p-3">
+      <p className="text-13">
+        {result.created} added · {result.updated} updated · {result.linksAdded}{" "}
+        links recorded
+      </p>
+      {result.problems.length > 0 && (
+        <>
+          <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+            {result.problems.length === 1
+              ? "1 thing was skipped"
+              : `${result.problems.length} things were skipped`}
+          </p>
+          <ul className="flex list-disc flex-col gap-1 pl-4">
+            {result.problems.map((problem, i) => (
+              <li key={i} className="text-12-5 text-muted-foreground">
+                {problem}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   )
 }

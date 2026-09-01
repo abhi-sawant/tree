@@ -1,28 +1,40 @@
 import {
   Background,
   BackgroundVariant,
+  ConnectionMode,
   Panel,
   ReactFlow,
   useReactFlow,
   type Edge,
+  type IsValidConnection,
   type Node,
+  type OnConnect,
   type OnNodeDrag,
 } from "@xyflow/react"
 import { Maximize2, Minus, Plus } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 
 import { PersonNode } from "~/components/canvas/person-node"
+import { MultiSelectPanel } from "~/components/canvas/multi-select-panel"
 import { TreeToolbar } from "~/components/canvas/tree-toolbar"
 import { UnionNode } from "~/components/canvas/union-node"
+import {
+  connectRefusalMessage,
+  connectionShape,
+  resolveConnection,
+} from "~/lib/canvas/connect-intent"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import { useCanvasKeyboard } from "~/lib/canvas/use-canvas-keyboard"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import {
   resolveEdgeColor,
   resolveGenerationColor,
 } from "~/lib/canvas/appearance-resolve"
 import { setMemberPosition } from "~/lib/db/members"
+import { addRelationship } from "~/lib/db/relationships"
+import { toast } from "~/lib/ui/toast-store"
 import { parseNodeId } from "~/lib/graph/node-ids"
-import type { Person } from "~/lib/types"
+import type { Person, Relationship } from "~/lib/types"
 
 const nodeTypes = { person: PersonNode, union: UnionNode }
 
@@ -30,6 +42,7 @@ interface TreeCanvasProps {
   treeId: string
   generationCount: number
   people: Person[]
+  relationships: Relationship[]
   nodes: Node[]
   edges: Edge[]
 }
@@ -38,10 +51,47 @@ export function TreeCanvas({
   treeId,
   generationCount,
   people,
+  relationships,
   nodes,
   edges,
 }: TreeCanvasProps) {
   const select = useCanvasUIStore((s) => s.select)
+  const toggleSelected = useCanvasUIStore((s) => s.toggleSelected)
+  const selectedNodeIds = useCanvasUIStore((s) => s.selectedNodeIds)
+  // Derived from the rendered node array rather than from membership, so focus
+  // scoping and hidden generations are already accounted for — the keyboard can
+  // only reach a card that is genuinely on screen.
+  const visiblePersonIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const node of nodes) {
+      const parsed = parseNodeId(node.id)
+      if (parsed?.kind === "person") ids.add(parsed.personId)
+    }
+    return ids
+  }, [nodes])
+  useCanvasKeyboard({ people, relationships, visiblePersonIds })
+
+  // Bulk actions are about people, so union dots in the selection are dropped
+  // rather than counted: a union has no membership of its own to add or remove
+  // and no position to align, being pinned to the midpoint of its couple.
+  const selectedPeople = useMemo(() => {
+    const peopleById = new Map(people.map((p) => [p.id, p]))
+    return selectedNodeIds.flatMap((nodeId) => {
+      const parsed = parseNodeId(nodeId)
+      if (parsed?.kind !== "person") return []
+      const person = peopleById.get(parsed.personId)
+      return person ? [person] : []
+    })
+  }, [selectedNodeIds, people])
+
+  const positions = useMemo(() => {
+    const map = new Map<string, { x: number; y: number }>()
+    for (const node of nodes) {
+      const parsed = parseNodeId(node.id)
+      if (parsed?.kind === "person") map.set(parsed.personId, node.position)
+    }
+    return map
+  }, [nodes])
   const appearance = useAppearanceStore((s) => s.settings)
   const legend = [
     {
@@ -61,6 +111,51 @@ export function TreeCanvas({
     },
   ]
 
+  // Only the geometric half of the check gates the drag itself, so a drag that
+  // names a real relationship always lands and is explained afterwards if it
+  // cannot be recorded. A connector that silently refuses to drop tells the
+  // user nothing except that the canvas seems broken.
+  const isValidConnection: IsValidConnection = (connection) =>
+    connectionShape(connection) !== undefined
+
+  const handleConnect: OnConnect = (connection) => {
+    const resolution = resolveConnection(connection, relationships)
+    if (!resolution) return
+    if (!resolution.ok) {
+      toast(connectRefusalMessage(resolution.reason))
+      return
+    }
+
+    const { intent } = resolution
+    // Both people already have a card on this canvas, so they are already
+    // members — this is the relationship write and nothing else.
+    const input =
+      intent.kind === "spouse"
+        ? {
+            type: "spouse" as const,
+            from: intent.personIds[0],
+            to: intent.personIds[1],
+          }
+        : {
+            type: "parent-child" as const,
+            from: intent.parentId,
+            to: intent.childId,
+          }
+
+    void addRelationship(input).then(
+      () =>
+        toast(
+          intent.kind === "spouse"
+            ? "Marriage recorded"
+            : "Parent-child link added"
+        ),
+      // resolveConnection has already ruled out everything addRelationship
+      // rejects, so reaching here means the data changed under the drag —
+      // in another tab, or in the moment between the drop and the write.
+      () => toast("Couldn't record that link — please try again.")
+    )
+  }
+
   const handleNodeDragStop: OnNodeDrag = (_event, node) => {
     const parsed = parseNodeId(node.id)
     if (parsed?.kind !== "person") return
@@ -73,51 +168,81 @@ export function TreeCanvas({
   }
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      nodesDraggable
-      nodesConnectable={false}
-      // Selection is ours, not React Flow's: the node array is controlled and
-      // we deliberately don't feed node changes back into it, so React Flow's
-      // internal selection would never reach the nodes. Click handlers keep
-      // the canvas and the detail panel reading from one source of truth.
-      elementsSelectable={false}
-      onNodeClick={(_event, node) => select(node.id)}
-      onPaneClick={() => select(null)}
-      onNodeDragStop={handleNodeDragStop}
-      fitView
-      // Cards are designed at 184x60; letting fitView magnify a small tree
-      // past 1:1 blows them up out of all proportion.
-      fitViewOptions={{ maxZoom: 1 }}
-    >
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={22}
-        size={1}
-        color="var(--canvas-dot)"
-      />
-      <TreeToolbar
-        treeId={treeId}
-        generationCount={generationCount}
-        people={people}
-      />
-      <Panel position="bottom-left">
-        <div className="flex gap-3 border border-border bg-card px-2.5 py-2">
-          {legend.map((item) => (
-            <div key={item.label} className="flex items-center gap-1.5">
-              <span className="h-0.5 w-2" style={{ background: item.color }} />
-              <span className="font-heading text-9-5 font-medium tracking-wider text-muted-foreground uppercase">
-                {item.label}
-              </span>
+    <div className="flex h-full w-full flex-col">
+      {selectedPeople.length > 1 && (
+        <MultiSelectPanel
+          treeId={treeId}
+          selectedPeople={selectedPeople}
+          positions={positions}
+        />
+      )}
+      <div className="min-h-0 flex-1">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          nodesDraggable
+          nodesConnectable
+          // Loose lets a link be drawn from either end — dragging up from a child's
+          // parent handle is the same link as dragging down from the parent's. The
+          // handles are typed source/target for the *rendered* edges' sake, which
+          // strict mode would otherwise read as a rule about which way a user may
+          // draw one.
+          connectionMode={ConnectionMode.Loose}
+          onConnect={handleConnect}
+          isValidConnection={isValidConnection}
+          // Selection is ours, not React Flow's: the node array is controlled and
+          // we deliberately don't feed node changes back into it, so React Flow's
+          // internal selection would never reach the nodes. Click handlers keep
+          // the canvas and the detail panel reading from one source of truth.
+          elementsSelectable={false}
+          // Shift or ⌘/Ctrl extends the selection; a plain click replaces it. This
+          // rather than React Flow's own box selection, which needs
+          // elementsSelectable and would put a second selection model alongside
+          // the store's — see the note on elementsSelectable above.
+          onNodeClick={(event, node) =>
+            event.shiftKey || event.metaKey || event.ctrlKey
+              ? toggleSelected(node.id)
+              : select(node.id)
+          }
+          onPaneClick={() => select(null)}
+          onNodeDragStop={handleNodeDragStop}
+          fitView
+          // Cards are designed at 184x60; letting fitView magnify a small tree
+          // past 1:1 blows them up out of all proportion.
+          fitViewOptions={{ maxZoom: 1 }}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={22}
+            size={1}
+            color="var(--canvas-dot)"
+          />
+          <TreeToolbar
+            treeId={treeId}
+            generationCount={generationCount}
+            people={people}
+          />
+          <Panel position="bottom-left">
+            <div className="flex gap-3 border border-border bg-card px-2.5 py-2">
+              {legend.map((item) => (
+                <div key={item.label} className="flex items-center gap-1.5">
+                  <span
+                    className="h-0.5 w-2"
+                    style={{ background: item.color }}
+                  />
+                  <span className="font-heading text-9-5 font-medium tracking-wider text-muted-foreground uppercase">
+                    {item.label}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </Panel>
-      <ZoomControls />
-      <CenterOnPendingNode nodes={nodes} />
-    </ReactFlow>
+          </Panel>
+          <ZoomControls />
+          <CenterOnPendingNode nodes={nodes} />
+        </ReactFlow>
+      </div>
+    </div>
   )
 }
 

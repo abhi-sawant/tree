@@ -37,3 +37,9 @@ export function gedcomZipFilename(date: Date = new Date()): string {
 export function anniversariesIcsFilename(date: Date = new Date()): string {
   return `family-tree-anniversaries-${date.toISOString().slice(0, 10)}.ics`
 }
+
+// The spreadsheet view of the pool. Same whole-pool scope as the others, and a
+// distinct stem so it can't be mistaken for the GEDCOM or the backup.
+export function peopleCsvFilename(date: Date = new Date()): string {
+  return `family-tree-people-${date.toISOString().slice(0, 10)}.csv`
+}

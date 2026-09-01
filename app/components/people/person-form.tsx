@@ -30,6 +30,11 @@ interface PersonFormProps {
   submitLabel?: string
   cancelLabel?: string
   section?: PersonFormSection
+  // Bumped to move the cursor into the first field. A signal rather than a
+  // plain autoFocus flag because the canvas's Enter shortcut has to be able to
+  // re-focus a form that is already mounted, and remounting it to do that would
+  // throw away whatever the user had half-typed.
+  focusSignal?: number
 }
 
 export function PersonForm({
@@ -39,6 +44,7 @@ export function PersonForm({
   submitLabel = "Save",
   cancelLabel = "Cancel",
   section = "all",
+  focusSignal = 0,
 }: PersonFormProps) {
   const showIdentity = section !== "notes"
   const showNotes = section !== "details"
@@ -55,6 +61,13 @@ export function PersonForm({
     initialValues?.customFields ?? []
   )
   const [error, setError] = useState<ZodError | undefined>(undefined)
+  const givenNameRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (focusSignal <= 0) return
+    givenNameRef.current?.focus()
+    givenNameRef.current?.select()
+  }, [focusSignal])
 
   const [photoAction, setPhotoAction] = useState<PhotoAction>({
     kind: "unchanged",
@@ -154,6 +167,7 @@ export function PersonForm({
             <Label htmlFor="givenName">Given name</Label>
             <Input
               id="givenName"
+              ref={givenNameRef}
               value={givenName}
               onChange={(e) => setGivenName(e.target.value)}
               required

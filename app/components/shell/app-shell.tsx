@@ -195,6 +195,7 @@ export function AppShell({
             exportingBackup={exportingBackup}
             exportToken={exportToken}
             tabId={tabs.tabId}
+            treeId={tree.id}
           />
         )}
       </div>

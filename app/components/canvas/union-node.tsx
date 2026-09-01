@@ -22,7 +22,7 @@ export function UnionNode({ id, data }: NodeProps<UnionNodeType>) {
     useAppearanceStore((s) => s.settings.layoutDirection)
   )
   const select = useCanvasUIStore((s) => s.select)
-  const selected = useCanvasUIStore((s) => s.selectedNodeId === id)
+  const selected = useCanvasUIStore((s) => s.selectedNodeIds.includes(id))
   const requestRecordMarriage = useCanvasUIStore((s) => s.requestRecordMarriage)
   const spouseColor = useAppearanceStore((s) =>
     resolveEdgeColor(s.settings.spouseColor, "--edge-spouse")
