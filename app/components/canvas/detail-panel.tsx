@@ -171,7 +171,7 @@ export function DetailPanel({
 
   if (!selection) {
     return (
-      <aside className="flex h-full w-78 shrink-0 flex-col overflow-y-auto border-l border-border">
+      <aside className="flex h-full w-90 shrink-0 flex-col overflow-y-auto border-l border-border">
         <div className="p-4">
           <p className="text-13 leading-relaxed text-muted-foreground">
             Select a person or a marriage dot on the canvas. Drag a card to pin
@@ -190,7 +190,7 @@ export function DetailPanel({
   return (
     <aside
       key={selectedNodeId}
-      className="flex h-full w-78 shrink-0 flex-col overflow-hidden border-l border-border"
+      className="flex h-full w-90 shrink-0 flex-col overflow-hidden border-l border-border"
     >
       {selection.kind === "person" ? (
         <PersonDetail
