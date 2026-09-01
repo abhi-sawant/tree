@@ -9,12 +9,14 @@ import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
 import { Toaster } from "~/components/ui/toast"
 import { HealthView } from "~/components/views/health-view"
+import { HelpView } from "~/components/views/help-view"
 import { InsightsView } from "~/components/views/insights-view"
 import { PhotoWallView } from "~/components/views/photo-wall-view"
 import { SettingsView } from "~/components/views/settings-view"
 import { TableView } from "~/components/views/table-view"
 import { TreeView } from "~/components/views/tree-view"
 import { useBackupNudge } from "~/lib/backup/use-backup-nudge"
+import { useHelpShortcut } from "~/lib/help/use-help-shortcut"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { useTreeMembers } from "~/lib/db/hooks"
 import { clearBackupNudgeDismissal, setLastExportDate } from "~/lib/db/app-meta"
@@ -52,6 +54,8 @@ export function AppShell({
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
   const setView = useAppShellStore((s) => s.setView)
   const treeMembers = useTreeMembers(tree.id)
+  // "?" opens the help from wherever the reader is, not only the canvas.
+  useHelpShortcut()
 
   // A node selected in a previously-open tree has no meaning in this one,
   // and neither does a generation hidden there. This lives here rather than
@@ -227,6 +231,7 @@ export function AppShell({
             memberIds={memberIds}
           />
         )}
+        {view === "help" && <HelpView />}
         {view === "settings" && (
           <SettingsView
             onExportBackup={() => void handleExportBackup()}
