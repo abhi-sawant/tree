@@ -20,6 +20,7 @@ afterEach(async () => {
     db.members.clear(),
     db.trees.clear(),
     db.photos.clear(),
+    db.attachments.clear(),
   ])
 })
 
@@ -349,6 +350,40 @@ describe("mergePeople — the surviving record", () => {
     expect(result.adoptedPhotos).toBe(1)
     // The shared row is one row: skipping it must not mean deleting it.
     expect(await db.photos.get("shared")).toBeTruthy()
+  })
+
+  // Left on the loser they would be deleted with them — the same unrecoverable
+  // loss the photo handling avoids, and a scan is the least replaceable thing
+  // in the database.
+  it("moves the loser's documents onto the winner", async () => {
+    const [winner, loser] = await pair()
+    await db.attachments.bulkAdd([
+      {
+        id: "a1",
+        personId: loser.id,
+        name: "will.pdf",
+        mime: "application/pdf",
+        blob: new Blob(["x"]),
+        size: 1,
+        addedAt: 1,
+      },
+      {
+        id: "a2",
+        personId: winner.id,
+        name: "deed.pdf",
+        mime: "application/pdf",
+        blob: new Blob(["y"]),
+        size: 1,
+        addedAt: 2,
+      },
+    ])
+
+    const result = await mergePeople({ winnerId: winner.id, loserId: loser.id })
+
+    expect(result.movedAttachments).toBe(1)
+    const owners = await db.attachments.toArray()
+    expect(owners.every((a) => a.personId === winner.id)).toBe(true)
+    expect(owners).toHaveLength(2)
   })
 
   it("adopts the loser's multiple-birth group when the winner has none", async () => {

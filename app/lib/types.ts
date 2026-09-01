@@ -92,6 +92,29 @@ export interface Photo {
   mime: string
 }
 
+// A scanned document belonging to one person — a birth certificate, a will, a
+// letter, a page of a parish register. Its own table rather than a variant of
+// Photo, because the two answer different questions and are treated differently
+// everywhere it matters: a photo is downscaled to 800px on upload and a
+// document must not be (the point of a scan is that the small print stays
+// readable), a photo is a face the app draws and a document is a file the app
+// only ever hands back, and a photo goes into the GEDCOM while a document has
+// no representation there.
+export interface Attachment {
+  id: string
+  personId: string
+  // What the file was called when it was added. Shown in the list and offered
+  // as the download name — a document is identified by its name in a way a
+  // portrait never is.
+  name: string
+  mime: string
+  blob: Blob
+  // Denormalised from blob.size so the storage panel can total a library
+  // without reading every blob into memory.
+  size: number
+  addedAt: number
+}
+
 export interface AppMetaRow {
   key: string
   value: string

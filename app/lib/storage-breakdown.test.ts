@@ -128,6 +128,9 @@ describe("buildStorageBreakdown", () => {
 
   it("handles an empty pool", () => {
     expect(buildStorageBreakdown([], [])).toEqual({
+      attachmentCount: 0,
+      attachmentBytes: 0,
+      largestAttachments: [],
       photoCount: 0,
       photoBytes: 0,
       orphanCount: 0,

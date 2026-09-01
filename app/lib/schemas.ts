@@ -96,6 +96,18 @@ const ArchivePathSchema = z
     { message: "Photo path must be a relative path inside the archive" }
   )
 
+// An attachment's bytes ride as a sibling entry in the .zip, exactly as a
+// photo's do; the row here is the metadata that points at one.
+export const BackupAttachmentSchema = z.object({
+  id: z.string(),
+  personId: z.string(),
+  name: z.string(),
+  mime: z.string(),
+  size: z.number().int().nonnegative(),
+  addedAt: z.number(),
+  file: ArchivePathSchema, // e.g. "attachments/<id>.pdf"
+})
+
 const backupTables = {
   people: z.array(PersonSchema),
   relationships: z.array(RelationshipSchema),
@@ -130,6 +142,12 @@ export const BackupEnvelopeV2Schema = z.object({
   exportedAt: z.iso.datetime().optional(),
   ...backupTables,
   photos: z.array(BackupPhotoV2Schema).default([]),
+  // Additive with a default, so every schema-2 backup written before documents
+  // existed still validates — no envelope bump, per the same rule that covers a
+  // new optional Person field. A build older than this one importing a newer
+  // backup drops the array (Zod strips it) and ignores the bytes in the
+  // archive, which is the acceptable half of that trade.
+  attachments: z.array(BackupAttachmentSchema).default([]),
 })
 
 export const AnyBackupEnvelopeSchema = z.discriminatedUnion("schema", [

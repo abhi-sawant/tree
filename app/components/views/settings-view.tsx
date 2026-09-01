@@ -185,7 +185,10 @@ export function SettingsView({
       // Reloading destroys any toast before it can render, so a partial
       // restore has to be reported in the dialog the user is already looking
       // at. The clean case keeps the original straight-to-reload behaviour.
-      if (imported.missingPhotoIds.length === 0) {
+      if (
+        imported.missingPhotoIds.length === 0 &&
+        imported.missingAttachmentIds.length === 0
+      ) {
         window.location.reload()
         return
       }
@@ -262,14 +265,17 @@ export function SettingsView({
       <section className="flex flex-col gap-2.5">
         <SectionHeading>Export</SectionHeading>
         <p className="text-12-5 leading-relaxed text-muted-foreground">
-          The backup is a .zip holding every person, relationship, tree and
-          photo — restore it here to move everything to another browser or
-          device. GEDCOM is for other genealogy software: the .zip carries
-          photos alongside the .ged, the plain .ged is text only. PNG and PDF
-          capture the open canvas — export those from the Tree view's Export
-          menu. The .ics file holds birthdays and wedding anniversaries as
-          yearly repeating all-day events, for any calendar app; it needs a full
-          date, so people recorded with only a year are left out.
+          The backup is a .zip holding every person, relationship, tree, photo
+          and document — restore it here to move everything to another browser
+          or device. GEDCOM is for other genealogy software: the .zip carries
+          photos alongside the .ged, the plain .ged is text only. Documents
+          aren't carried either way: GEDCOM 5.5.1's media formats don't include
+          PDF, and importers tend to drop an OBJE they can't classify rather
+          than keep it. PNG and PDF capture the open canvas — export those from
+          the Tree view's Export menu. The .ics file holds birthdays and wedding
+          anniversaries as yearly repeating all-day events, for any calendar
+          app; it needs a full date, so people recorded with only a year are
+          left out.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button disabled={exportingBackup} onClick={onExportBackup}>
@@ -327,8 +333,9 @@ export function SettingsView({
       <section className="flex flex-col gap-2.5">
         <SectionHeading>Import backup</SectionHeading>
         <p className="text-12-5 leading-relaxed text-muted-foreground">
-          Restoring replaces everything currently stored. This can't be undone.
-          Accepts a .zip backup, or a .json backup from an older version.
+          Restoring replaces everything currently stored — people, photos and
+          documents alike. This can't be undone. Accepts a .zip backup, or a
+          .json backup from an older version.
         </p>
         <Label className="max-w-sm flex-col items-start gap-2 text-sm font-normal normal-case">
           Choose backup file
@@ -349,14 +356,25 @@ export function SettingsView({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Restored, with some photos missing
+              Restored, with some files missing
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Restored {result?.counts.people} people and{" "}
-              {result?.counts.photos} photos. {result?.missingPhotoIds.length}{" "}
-              photos couldn't be read from this file and were skipped — those
-              people now show the default avatar. Everything else came through
-              intact.
+              Restored {result?.counts.people} people, {result?.counts.photos}{" "}
+              photos and {result?.counts.attachments} documents.{" "}
+              {(result?.missingPhotoIds.length ?? 0) > 0 && (
+                <>
+                  {result?.missingPhotoIds.length} photos couldn't be read from
+                  this file and were skipped — those people now show the default
+                  avatar.{" "}
+                </>
+              )}
+              {(result?.missingAttachmentIds.length ?? 0) > 0 && (
+                <>
+                  {result?.missingAttachmentIds.length} documents couldn't be
+                  read and were skipped.{" "}
+                </>
+              )}
+              Everything else came through intact.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -376,8 +394,8 @@ export function SettingsView({
             <AlertDialogTitle>Replace all current data?</AlertDialogTitle>
             <AlertDialogDescription>
               Importing "{pendingFile?.name}" wipes every person, relationship,
-              tree, and photo currently stored and replaces them with the
-              contents of this file. This can't be undone.
+              tree, photo and document currently stored and replaces them with
+              the contents of this file. This can't be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

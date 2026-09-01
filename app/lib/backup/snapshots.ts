@@ -78,8 +78,12 @@ export async function createSnapshot(
     db.members.toArray(),
   ])
 
+  // Documents are left out for exactly the reason photos are, only more so:
+  // they are stored at full size, so they are an even larger share of the bytes
+  // and an even smaller share of the risk. A snapshot guards against a wrong
+  // merge or a mistaken delete, not against a scan you never uploaded.
   const blob = await buildBackupZip(
-    { people, relationships, trees, members, photos: [] },
+    { people, relationships, trees, members, photos: [], attachments: [] },
     now
   )
 
@@ -145,6 +149,7 @@ export interface RestoreSnapshotResult {
   counts: Snapshot["counts"]
   // People whose photo is no longer in this browser — deleting a person deletes
   // their photo, so bringing them back cannot bring the image back with them.
+  // The same is true of their documents, which the snapshot also never held.
   clearedPhotoIds: string[]
 }
 
@@ -171,7 +176,10 @@ export async function restoreSnapshot(
 
   await createSnapshot("pre-restore", options)
 
-  const { missingPhotoIds } = await applyBackup(parsed, { photos: "keep" })
+  const { missingPhotoIds } = await applyBackup(parsed, {
+    photos: "keep",
+    attachments: "keep",
+  })
 
   return { counts: snapshot.counts, clearedPhotoIds: missingPhotoIds }
 }

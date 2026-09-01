@@ -21,6 +21,30 @@ export interface PhotoUsage {
   name?: string
 }
 
+// A document, sized. Kept apart from PhotoUsage rather than merged into one
+// "files" list: documents are stored at full size while photos are capped at
+// 800px, so the two lists answer different questions and a merged one would be
+// all documents. The owner is on the row itself, so there is no orphan case.
+export interface AttachmentUsage {
+  attachmentId: string
+  personId: string
+  name: string
+  mime: string
+  size: number
+  // Absent when the owner isn't in the pool the caller passed. deletePerson
+  // cascades, so this shouldn't happen — but it is reported rather than
+  // assumed away, the same as an orphaned photo.
+  ownerName?: string
+}
+
+export interface AttachmentSizeInput {
+  id: string
+  personId: string
+  name: string
+  mime: string
+  size: number
+}
+
 export interface StorageBreakdown {
   photoCount: number
   photoBytes: number
@@ -29,12 +53,16 @@ export interface StorageBreakdown {
   // Descending by size, capped. The point is "which photos are worth acting
   // on", and a full list of 300 thumbnails answers nothing.
   largest: PhotoUsage[]
+  attachmentCount: number
+  attachmentBytes: number
+  largestAttachments: AttachmentUsage[]
 }
 
 const DEFAULT_LIMIT = 10
 
 export interface BreakdownOptions {
   limit?: number
+  attachments?: AttachmentSizeInput[]
 }
 
 export function buildStorageBreakdown(
@@ -45,7 +73,7 @@ export function buildStorageBreakdown(
   >[],
   options: BreakdownOptions = {}
 ): StorageBreakdown {
-  const { limit = DEFAULT_LIMIT } = options
+  const { limit = DEFAULT_LIMIT, attachments = [] } = options
 
   // Keyed by photo, not by person: two people sharing one photoId is not
   // something the app creates, but a hand-edited or merged backup can, and
@@ -85,12 +113,35 @@ export function buildStorageBreakdown(
   // several photos happen to compress to the same size.
   usages.sort((a, b) => b.size - a.size || a.photoId.localeCompare(b.photoId))
 
+  const nameByPersonId = new Map(
+    people.map((person) => [person.id, personDisplayName(person)])
+  )
+  let attachmentBytes = 0
+  const attachmentUsages: AttachmentUsage[] = []
+  for (const attachment of attachments) {
+    attachmentBytes += attachment.size
+    attachmentUsages.push({
+      attachmentId: attachment.id,
+      personId: attachment.personId,
+      name: attachment.name,
+      mime: attachment.mime,
+      size: attachment.size,
+      ownerName: nameByPersonId.get(attachment.personId),
+    })
+  }
+  attachmentUsages.sort(
+    (a, b) => b.size - a.size || a.attachmentId.localeCompare(b.attachmentId)
+  )
+
   return {
     photoCount: photos.length,
     photoBytes,
     orphanCount,
     orphanBytes,
     largest: usages.slice(0, limit),
+    attachmentCount: attachments.length,
+    attachmentBytes,
+    largestAttachments: attachmentUsages.slice(0, limit),
   }
 }
 

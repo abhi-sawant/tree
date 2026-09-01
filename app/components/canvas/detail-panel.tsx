@@ -9,6 +9,7 @@ import { AddFamilyForm } from "~/components/canvas/add-family-form"
 import { RelativeForm } from "~/components/canvas/relative-form"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
+import { PersonAttachmentsPanel } from "~/components/people/person-attachments-panel"
 import { PersonPhotosPanel } from "~/components/people/person-photos-panel"
 import { PersonForm, type PhotoAction } from "~/components/people/person-form"
 import { NotesView } from "~/components/people/notes-view"
@@ -56,12 +57,15 @@ import { cn } from "~/lib/utils"
 import type { ParentChildSubtype, Person, Relationship } from "~/lib/types"
 import { coverPhotoId } from "~/lib/person-photos"
 
-type DetailTab = "details" | "family" | "photos" | "notes"
+type DetailTab = "details" | "family" | "media" | "notes"
 
+// Photos and documents share one tab rather than taking one each: a fifth tab
+// doesn't fit the panel's width, and the two are the same thing to the person
+// looking for them — everything about this relative that isn't words.
 const TABS: Array<{ id: DetailTab; label: string }> = [
   { id: "details", label: "Details" },
   { id: "family", label: "Family" },
-  { id: "photos", label: "Photos" },
+  { id: "media", label: "Media" },
   { id: "notes", label: "Notes" },
 ]
 
@@ -358,7 +362,17 @@ function PersonDetail({
           />
         )}
 
-        {tab === "photos" && <PersonPhotosPanel person={person} />}
+        {tab === "media" && (
+          <div className="flex flex-col gap-5">
+            <PersonPhotosPanel person={person} />
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <h3 className="font-heading text-10 font-semibold tracking-widest uppercase">
+                Documents
+              </h3>
+              <PersonAttachmentsPanel personId={person.id} />
+            </div>
+          </div>
+        )}
 
         {tab === "notes" &&
           (editingNotes ? (

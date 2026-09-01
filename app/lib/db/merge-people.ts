@@ -64,6 +64,8 @@ export interface MergeResult {
   // hold several, a merge never has to choose between two pictures of the same
   // face, so this counts what moved rather than reporting whether one did.
   adoptedPhotos: number
+  // Documents re-pointed from the loser to the winner.
+  movedAttachments: number
 }
 
 // A link's identity for dedupe purposes: same type, same other person, same
@@ -102,11 +104,14 @@ export async function mergePeople({
 
   return db.transaction(
     "rw",
-    db.people,
-    db.relationships,
-    db.members,
-    db.trees,
-    db.photos,
+    [
+      db.people,
+      db.relationships,
+      db.members,
+      db.trees,
+      db.photos,
+      db.attachments,
+    ],
     async () => {
       const [winner, loser] = await Promise.all([
         db.people.get(winnerId),
@@ -236,6 +241,15 @@ export async function mergePeople({
         patch.multipleBirthGroup = loser.multipleBirthGroup
       }
 
+      // Documents follow the person rather than the record. Left on the loser
+      // they would be deleted with them, which is the same unrecoverable loss
+      // the photo handling above exists to avoid — and a scan of a certificate
+      // is the least replaceable thing in the database.
+      const movedAttachments = await db.attachments
+        .where("personId")
+        .equals(loserId)
+        .modify({ personId: winnerId })
+
       const updated = await updatePerson(winnerId, patch)
 
       // No photo row is deleted here: every one of the loser's is now on the
@@ -250,6 +264,7 @@ export async function mergePeople({
         treesJoined,
         rootsReassigned: rootTrees.length,
         adoptedPhotos: adopted.length,
+        movedAttachments,
       }
     }
   )

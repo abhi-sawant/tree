@@ -2,10 +2,18 @@ import { strFromU8, strToU8, unzipSync, zipSync } from "fflate"
 
 import { AnyBackupEnvelopeSchema } from "~/lib/schemas"
 import { extensionForMime } from "~/lib/export/mime"
-import type { Person, Photo, Relationship, Tree, TreeMember } from "~/lib/types"
+import type {
+  Attachment,
+  Person,
+  Photo,
+  Relationship,
+  Tree,
+  TreeMember,
+} from "~/lib/types"
 
 export const BACKUP_MANIFEST = "backup.json"
 export const BACKUP_PHOTO_DIR = "photos"
+export const BACKUP_ATTACHMENT_DIR = "attachments"
 
 // DEFLATE for the manifest (JSON compresses ~10x); STORE for photos, which are
 // already-compressed JPEG — re-deflating them costs CPU for roughly nothing.
@@ -26,13 +34,21 @@ export interface BackupPayload {
   trees: Tree[]
   members: TreeMember[]
   photos: Photo[]
+  // Optional so a caller that predates documents — and createSnapshot, which
+  // deliberately leaves them out — needs no change.
+  attachments?: Attachment[]
 }
 
 export interface ParsedBackup extends BackupPayload {
   schema: 1 | 2
+  attachments: Attachment[]
   // Photos the manifest referenced but the archive didn't contain. Import
   // continues without them rather than failing the whole restore.
   missingPhotoIds: string[]
+  // The same, for documents. Reported separately because the two are separate
+  // losses: a missing photo leaves a default avatar, a missing document leaves
+  // a certificate the family no longer has a copy of.
+  missingAttachmentIds: string[]
 }
 
 export async function blobToBytes(
@@ -104,6 +120,28 @@ export async function buildBackupZip(
     manifestPhotos.push({ id: photo.id, mime: photo.mime, file })
   }
 
+  // STORE for the same reason photos use it where they are already compressed;
+  // DEFLATE where they aren't. A PDF is usually already compressed internally,
+  // an uncompressed TIFF scan very much isn't, and guessing wrong either way
+  // only costs a little CPU.
+  const manifestAttachments = []
+  for (const attachment of payload.attachments ?? []) {
+    const file = `${BACKUP_ATTACHMENT_DIR}/${safeStem(attachment.id)}.${extensionForMime(attachment.mime)}`
+    entries[file] = [
+      await blobToBytes(attachment.blob),
+      attachment.mime === "application/pdf" ? STORE : DEFLATE,
+    ]
+    manifestAttachments.push({
+      id: attachment.id,
+      personId: attachment.personId,
+      name: attachment.name,
+      mime: attachment.mime,
+      size: attachment.size,
+      addedAt: attachment.addedAt,
+      file,
+    })
+  }
+
   const manifest = {
     schema: 2 as const,
     exportedAt: now.toISOString(),
@@ -112,6 +150,7 @@ export async function buildBackupZip(
     trees: payload.trees,
     members: payload.members,
     photos: manifestPhotos,
+    attachments: manifestAttachments,
   }
   entries[BACKUP_MANIFEST] = [strToU8(JSON.stringify(manifest)), DEFLATE]
 
@@ -177,6 +216,7 @@ function parseZipBackup(bytes: Uint8Array): ParsedBackup {
 
   // A schema-1 manifest is self-contained (base64), so a zipped-up legacy
   // backup imports fine too.
+  // Schema 1 predates documents entirely, so there are never any to look for.
   if (envelope.schema === 1) return { ...decodeV1(envelope), schema: 1 }
 
   const photos: Photo[] = []
@@ -194,6 +234,30 @@ function parseZipBackup(bytes: Uint8Array): ParsedBackup {
     })
   }
 
+  const attachments: Attachment[] = []
+  const missingAttachmentIds: string[] = []
+  for (const attachment of envelope.attachments) {
+    const bytes = readEntry(entries, prefix + attachment.file)
+    if (!bytes) {
+      missingAttachmentIds.push(attachment.id)
+      continue
+    }
+    const blob = new Blob([bytes], { type: attachment.mime })
+    attachments.push({
+      id: attachment.id,
+      personId: attachment.personId,
+      name: attachment.name,
+      mime: attachment.mime,
+      // Measured from what actually came out of the archive rather than
+      // trusted from the manifest: the manifest is the thing that could be
+      // wrong, and the storage panel would then report a number that doesn't
+      // match the bytes on disk.
+      size: blob.size,
+      addedAt: attachment.addedAt,
+      blob,
+    })
+  }
+
   return {
     schema: 2,
     people: envelope.people,
@@ -201,7 +265,9 @@ function parseZipBackup(bytes: Uint8Array): ParsedBackup {
     trees: envelope.trees,
     members: envelope.members,
     photos,
+    attachments,
     missingPhotoIds,
+    missingAttachmentIds,
   }
 }
 
@@ -279,6 +345,8 @@ function decodeV1(envelope: {
       mime: photo.mime,
       blob: base64ToBlob(photo.data, photo.mime),
     })),
+    attachments: [],
     missingPhotoIds: [],
+    missingAttachmentIds: [],
   }
 }

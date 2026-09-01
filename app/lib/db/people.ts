@@ -138,11 +138,14 @@ export class PersonIsRootError extends Error {
 export async function deletePerson(id: string): Promise<void> {
   await db.transaction(
     "rw",
-    db.people,
-    db.relationships,
-    db.members,
-    db.photos,
-    db.trees,
+    [
+      db.people,
+      db.relationships,
+      db.members,
+      db.photos,
+      db.trees,
+      db.attachments,
+    ],
     async () => {
       const rootTrees = await db.trees
         .where("rootPersonId")
@@ -164,6 +167,10 @@ export async function deletePerson(id: string): Promise<void> {
       // would otherwise leave three blobs behind that nothing points at, which
       // the storage panel can only report as orphans and never attribute.
       await db.photos.bulkDelete(personPhotoIds(person))
+      // Their documents too. An attachment row names its owner, so one left
+      // behind is unreachable from anywhere in the UI — bytes nothing can open
+      // and nothing can delete.
+      await db.attachments.where("personId").equals(id).delete()
 
       await db.people.delete(id)
     }
