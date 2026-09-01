@@ -92,6 +92,8 @@ export function DetailPanel({
   const clearPendingAddRelative = useCanvasUIStore(
     (s) => s.clearPendingAddRelative
   )
+  const pendingEditNodeId = useCanvasUIStore((s) => s.pendingEditNodeId)
+  const clearPendingEdit = useCanvasUIStore((s) => s.clearPendingEdit)
 
   const peopleById = useMemo(
     () => new Map(people.map((p) => [p.id, p])),
@@ -104,12 +106,24 @@ export function DetailPanel({
 
   const [action, setAction] = useState<AddAction | undefined>(undefined)
   const [tab, setTab] = useState<DetailTab>("details")
+  const [focusSignal, setFocusSignal] = useState(0)
 
   // A new selection always starts on Details with no add-relative sub-form.
   useEffect(() => {
     setAction(undefined)
     setTab("details")
   }, [selectedNodeId])
+
+  // One-shot handoff from the canvas's Enter shortcut. "Edit" means putting the
+  // cursor in the panel that is already showing this person, rather than
+  // opening a second form on top of it.
+  useEffect(() => {
+    if (!pendingEditNodeId || pendingEditNodeId !== selectedNodeId) return
+    setAction(undefined)
+    setTab("details")
+    setFocusSignal((n) => n + 1)
+    clearPendingEdit()
+  }, [pendingEditNodeId, selectedNodeId, clearPendingEdit])
 
   // One-shot handoff from an implicit union's "Record marriage" context menu.
   useEffect(() => {
@@ -139,6 +153,11 @@ export function DetailPanel({
             Select a person or a marriage dot on the canvas. Drag a card to pin
             it in place; right-click for more actions.
           </p>
+          <p className="mt-3 text-13 leading-relaxed text-muted-foreground">
+            With a person selected, the arrow keys step through their family the
+            way the tree is drawn, <Key>Enter</Key> edits them, and <Key>P</Key>{" "}
+            <Key>S</Key> <Key>C</Key> start a new parent, spouse or child.
+          </p>
         </div>
       </aside>
     )
@@ -160,6 +179,7 @@ export function DetailPanel({
           setAction={setAction}
           tab={tab}
           setTab={setTab}
+          focusSignal={focusSignal}
         />
       ) : (
         <UnionDetail
@@ -172,6 +192,14 @@ export function DetailPanel({
         />
       )}
     </aside>
+  )
+}
+
+function Key({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="border border-border px-1 py-0.5 font-heading text-10 font-medium text-foreground">
+      {children}
+    </kbd>
   )
 }
 
@@ -203,6 +231,7 @@ interface PersonDetailProps {
   setAction: (action: AddAction | undefined) => void
   tab: DetailTab
   setTab: (tab: DetailTab) => void
+  focusSignal: number
 }
 
 function PersonDetail({
@@ -215,6 +244,7 @@ function PersonDetail({
   setAction,
   tab,
   setTab,
+  focusSignal,
 }: PersonDetailProps) {
   const select = useCanvasUIStore((s) => s.select)
   // Bumping this remounts PersonForm, which is how "Revert" throws away
@@ -271,7 +301,7 @@ function PersonDetail({
             type="button"
             onClick={() => setTab(id)}
             className={cn(
-              "h-9.5 flex-1 cursor-pointer border-b-2 font-heading text-10 font-semibold tracking-widest uppercase",
+              "h-9.5 flex-1 cursor-pointer border-b-2 font-heading text-xs font-semibold tracking-widest uppercase",
               tab === id
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -288,6 +318,7 @@ function PersonDetail({
             key={`${person.id}:${formKey}`}
             section="details"
             initialValues={person}
+            focusSignal={focusSignal}
             onSubmit={handleUpdatePerson}
             onCancel={() => setFormKey((k) => k + 1)}
             cancelLabel="Revert"

@@ -9,12 +9,13 @@ import {
   type OnNodeDrag,
 } from "@xyflow/react"
 import { Maximize2, Minus, Plus } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 
 import { PersonNode } from "~/components/canvas/person-node"
 import { TreeToolbar } from "~/components/canvas/tree-toolbar"
 import { UnionNode } from "~/components/canvas/union-node"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
+import { useCanvasKeyboard } from "~/lib/canvas/use-canvas-keyboard"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import {
   resolveEdgeColor,
@@ -22,7 +23,7 @@ import {
 } from "~/lib/canvas/appearance-resolve"
 import { setMemberPosition } from "~/lib/db/members"
 import { parseNodeId } from "~/lib/graph/node-ids"
-import type { Person } from "~/lib/types"
+import type { Person, Relationship } from "~/lib/types"
 
 const nodeTypes = { person: PersonNode, union: UnionNode }
 
@@ -30,6 +31,7 @@ interface TreeCanvasProps {
   treeId: string
   generationCount: number
   people: Person[]
+  relationships: Relationship[]
   nodes: Node[]
   edges: Edge[]
 }
@@ -38,10 +40,23 @@ export function TreeCanvas({
   treeId,
   generationCount,
   people,
+  relationships,
   nodes,
   edges,
 }: TreeCanvasProps) {
   const select = useCanvasUIStore((s) => s.select)
+  // Derived from the rendered node array rather than from membership, so focus
+  // scoping and hidden generations are already accounted for — the keyboard can
+  // only reach a card that is genuinely on screen.
+  const visiblePersonIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const node of nodes) {
+      const parsed = parseNodeId(node.id)
+      if (parsed?.kind === "person") ids.add(parsed.personId)
+    }
+    return ids
+  }, [nodes])
+  useCanvasKeyboard({ people, relationships, visiblePersonIds })
   const appearance = useAppearanceStore((s) => s.settings)
   const legend = [
     {

@@ -242,6 +242,7 @@ export function TreeView({
           treeId={tree.id}
           generationCount={generationCount}
           people={people}
+          relationships={relationships}
           nodes={visibleGraph.nodes}
           edges={visibleGraph.edges}
         />

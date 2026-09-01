@@ -31,6 +31,15 @@ interface CanvasUIState {
   requestAddRelative: (nodeId: string, kind: AddActionKind) => void
   clearPendingAddRelative: () => void
 
+  // Same one-shot pattern again, for the keyboard's Enter: it asks the detail
+  // panel to put the cursor in the selected person's first field, which is the
+  // whole of what "edit" means when the panel is already showing that person's
+  // form. Kept out of selectedNodeId because selecting a card must not steal
+  // focus from the canvas — only Enter does.
+  pendingEditNodeId: string | null
+  requestEdit: (nodeId: string) => void
+  clearPendingEdit: () => void
+
   // A node the canvas should scroll to once it exists on screen. Set from
   // the command palette and the table's "open in tree", both of which can
   // fire while the canvas is unmounted — the canvas consumes it on the first
@@ -73,6 +82,10 @@ export const useCanvasUIStore = create<CanvasUIState>((set) => ({
   requestAddRelative: (nodeId, kind) =>
     set({ selectedNodeId: nodeId, pendingAddRelative: { nodeId, kind } }),
   clearPendingAddRelative: () => set({ pendingAddRelative: null }),
+
+  pendingEditNodeId: null,
+  requestEdit: (nodeId) => set({ pendingEditNodeId: nodeId }),
+  clearPendingEdit: () => set({ pendingEditNodeId: null }),
 
   pendingCenterNodeId: null,
   requestCenter: (nodeId) =>
