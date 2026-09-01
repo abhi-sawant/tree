@@ -3,7 +3,7 @@
 **Purpose:** a self-contained handoff document. Anyone (or any new session) picking up this work
 should be able to read only this file plus `SPEC.md` and continue without re-deriving anything.
 
-**Status:** Phases 1–4 complete. Phase 5 (Fast entry) is next.
+**Status:** Phases 1–5 complete. Phase 6 (Media & output) is next.
 
 ---
 
@@ -131,7 +131,7 @@ These are load-bearing. Later phases should stay consistent with them.
 | 2 | Derived insight | 5 | ✅ Complete on `feat/v2-phase-2` |
 | 3 | Canvas navigation & readability | 7 | ✅ Complete on `feat/v2-phase-3` |
 | 4 | Durability | 5 | ✅ Complete on `feat/v2-phase-4` |
-| 5 | Fast entry | 7 | Not started |
+| 5 | Fast entry | 7 | ✅ Complete on `feat/v2-phase-5` |
 | 6 | Media & output | 5 | Not started |
 | 7 | Polish & reach | 3 | Not started |
 
@@ -446,23 +446,147 @@ date" banner; and a backdated export date produces "Your last backup was 60 days
 **Nothing.** All five features shipped. The one thing deliberately *not* built is an option to turn
 snapshots off — see the judgement call above.
 
-## Phase 5 — Fast entry
+## Phase 5 — Fast entry ✅
 
-**Why:** `SPEC.md §3.1` expects 30+ people added in one sitting; the current loop doesn't support
+On `feat/v2-phase-5`. 8 commits, 863 tests passing.
+
+**Why:** `SPEC.md §3.1` expects 30+ people added in one sitting; the previous loop didn't support
 that pace.
 
-| # | Feature |
-|---|---|
-| 5.1 | Keyboard-driven canvas: arrows step between relatives (up = parent, down = child, left/right = sibling/spouse), Enter to edit, P/S/C to add |
-| 5.2 | Drag-to-connect relationships from a node handle |
-| 5.3 | "Add whole family" form — spouse + N children in one submit |
-| 5.4 | Inline editing in the People table (currently a dialog per edit) |
-| 5.5 | Canvas multi-select → bulk add/remove from tree, align |
-| 5.6 | CSV import/export — families collect this data in spreadsheets; trivial to parse, no dependency |
-| 5.7 | Markdown notes with `[[Person Name]]` links resolving to nodes |
+| # | Feature | Commit |
+|---|---|---|
+| 5.1 | Keyboard-driven canvas | `ea6cf1f` |
+| 5.2 | Drag-to-connect from a node handle | `78252a9` |
+| 5.3 | "Add whole family" — spouse + N children in one submit | `73690dc` |
+| 5.5 | Canvas multi-select → bulk add/remove from tree, align | `ca930da` |
+| 5.4 | Inline editing in the People table | `f1a2957` |
+| 5.6 | CSV import/export | `b2084a3` |
+| 5.7 | Markdown notes with `[[Person Name]]` links | `f2fd884` |
+| *(chore: `autoPort` so a second session can run a dev server)* | | `3dbb426` |
 
-*5.3 is the natural place to also expose the parent-child `subtype` picker in the add-relative form
-for siblings, which Phase 1 deliberately left to parent/child adds only.*
+Built 5.5 before 5.4 so the selection model was settled before the table work; the rest in order.
+
+### New modules
+
+`app/lib/canvas/keyboard-navigation.ts` · `app/lib/canvas/use-canvas-keyboard.ts` ·
+`app/lib/canvas/connect-intent.ts` · `app/lib/canvas/align.ts` · `app/lib/db/add-family.ts` ·
+`app/lib/people/inline-edit.ts` · `app/lib/people/name-index.ts` · `app/lib/export/csv.ts` ·
+`app/lib/export/people-csv.ts` · `app/lib/db/import-people-csv.ts` · `app/lib/notes/markdown.ts` ·
+`app/components/canvas/add-family-form.tsx` · `app/components/canvas/multi-select-panel.tsx` ·
+`app/components/people/editable-cell.tsx` · `app/components/people/notes-view.tsx`
+
+### What changed in the shared layers
+
+- **`orderFamilyGraph` now exports its ordering rule** as `recordOrderComparator` / `sortSiblingIds`.
+  Keyboard navigation along a sibling row has to agree with the order the cards are drawn in, and a
+  second comparator would drift.
+- **`personDisplayName` now exports its parts** as `personNameSegments`. The People table lays given,
+  nickname and family out separately so the first and last can be edited in place; without this it
+  would have been a second place assembling a name, against the Phase 2 rule. A test asserts the
+  segments rejoin to exactly what `personDisplayName` produces.
+- **`createPerson` takes an optional `createdAt`.** `orderFamilyGraph` sorts a sibling row by
+  `createdAt` and breaks ties on the random UUID, so a batch created inside one millisecond would
+  lay out in an arbitrary order. `addFamily` stamps children one apart.
+- **`NameIndex` (`app/lib/people/name-index.ts`) is the one place a written name resolves to a
+  person**, shared by the CSV importer and by `[[wiki links]]`. Two implementations would drift into
+  disagreeing about nicknames or case — visible as a link that works in a spreadsheet and not in a
+  note.
+- **The canvas store holds `selectedNodeIds`, not `selectedNodeId`.** `selectedNodeIdOf` /
+  `useSelectedNodeId` answer only when exactly one node is selected; everything that describes or
+  acts on "the" selection goes through them.
+
+### Judgement calls to preserve
+
+- **Arrow keys follow the layout, not a fixed "up is parent".** `arrowKeyToStep` rotates the four
+  arrows with the layout direction, because in a left-to-right tree the parents genuinely are drawn
+  to the left. An arrow pointing somewhere other than where the card sits is worse than no binding.
+- **A cross-axis row is anchored on a canonical person, not on whoever is navigating.** Anchoring on
+  the navigator made ← and → stop being inverses — a childless couple ping-ponged, each seeing the
+  other as "my spouse, one to the right". Someone with recorded parents anchors their own row;
+  someone without is a married-in spouse and belongs in their partner's. No wraparound at the ends:
+  holding → must stop at the edge of a family rather than snapping back to the far side.
+- **`P`/`S`/`C` are bound; sibling deliberately is not.** `ensureParentsForSibling` invents a
+  placeholder parent when none is recorded, and a bare unmodified keystroke should not be able to
+  conjure a person nobody asked for. Every binding is guarded by `isTypingTarget`, or typing
+  "Pieter" into a field would fire add-parent on its first letter.
+- **Drag-to-connect splits its check in two.** `connectionShape` answers geometrically and is the
+  only half wired to `isValidConnection`, so a drag naming a real relationship always lands and is
+  then explained if it can't be recorded. Gating the drop on the data instead leaves a connector
+  that refuses to land with no reason given — indistinguishable from a broken canvas. It refuses a
+  pair already related (the app stores at most one link per pair, so a repeat drag is a mis-drop),
+  a third parent, a cycle, and a self-link. Union dots stay non-connectable: their child link is
+  already one click away, and a drag writing two parent rows at once is a bigger action than it
+  looks.
+- **`addFamily` doesn't re-marry a couple who are already married.** That is the commonest reason to
+  open the form — "these two had these children" — and there is no representation for a pair married
+  twice. The child rows carry fewer fields than the person form on purpose: a name, a year, sex and
+  how the link came about is what somebody reading a family off a document has to hand.
+- **Align has two modes, not a drawing tool's six**, and snaps to the topmost/leftmost rather than
+  the average, so the card defining the line doesn't move and the result is predictable before you
+  click. Aligning writes position overrides — a row the next layout could reshuffle wasn't aligned.
+  Bulk remove skips the tree's root and *says so*, or the count silently disagrees with the
+  selection.
+- **The multi-select bar is a strip above the canvas, not a floating panel.** The tree toolbar spans
+  nearly the full width at the top and the legend and zoom controls hold the bottom corners; every
+  floating position collided with something, and a reserved row can never cover a card.
+- **An inline date cell edits its year** and carries the month, day and approximate flag through —
+  editing "c. 3 May 1890" must not drop the day or make a circa date exact. Emptying it clears the
+  whole date: a `PartialDate` with no year renders empty and reads as unknown everywhere, so a
+  stranded month would be invisible until a later year brought it back.
+- **CSV is the spreadsheet view, not an interchange format.** It carries names, sex, dates, notes and
+  the parent/spouse structure by *name* — nobody types a UUID into a spreadsheet. It does not carry
+  photos, custom fields, marriage dates or link subtypes, which is safe only because import is
+  additive and never rewrites an existing link: the fields CSV can't see, it can't damage. Unlike
+  `importBackup`, which replaces everything, a spreadsheet is a fragment of a database rather than
+  the whole of one. A reference matching nobody and one matching several people get different
+  messages — one is a typo, the other a disambiguation only the reader can make — and every refusal
+  is reported beside the counts, because a count of successes alone is how a mistyped parent name
+  disappears unnoticed.
+- **The notes parser produces data, never an HTML string.** The renderer walks it and builds React
+  elements, so there is no `dangerouslySetInnerHTML` anywhere and `<script>alert(1)</script>` in a
+  note is text. The subset stops at headings, lists, bold, italic and code: every construct added is
+  one more thing that can surprise someone who only wanted to type an asterisk. Links resolve at
+  render time against the live pool, so a note doesn't go stale when someone is renamed or merged
+  away; an unresolvable one is drawn dotted and inert rather than hidden.
+- **The phase note's extra ask is done:** the parent-child `subtype` picker is now offered on sibling
+  adds, describing the new sibling's own link to the shared parents.
+
+### Bugs found and fixed along the way
+
+- **Deduping CSV links in both directions** made "B is A's parent" look like a duplicate of "A is B's
+  parent" and skipped it silently, when it is really a contradiction `addRelationship` refuses as a
+  cycle. Parent links now dedupe by direction; marriages, which have none, dedupe on the sorted pair.
+  Caught by its own test.
+- **The first inline-editor kept its input mounted**, so it had to reset the draft in an effect and
+  focus on the next animation frame — keystrokes landing in that gap went nowhere, and a typed name
+  was silently discarded. Caught in the browser, not by a test. The editor is now mounted only while
+  editing, seeding its draft once and taking focus synchronously.
+
+### Verified live
+
+Built a seven-person family in Chromium and exercised every feature, then cleared the profile.
+Confirmed: `S` opens the add-spouse form and typing "Arjun P" into a field does **not** fire the
+add-parent shortcut; ← and → walk between a couple and `Enter` puts the cursor in the name field
+with the text selected; dragging a child handle onto an unrelated person's parent handle records the
+link and takes the tree from one generation to two, and repeating it the other way round is refused
+with "Those two are already recorded as related"; "Add whole family" on an already-married couple
+reports "2 people added", writes no second marriage row and lays the children out in entry order;
+shift-clicking three cards shows the bar, Align tops snaps two of them to the third without moving
+it and survives a reload, and removing a selection containing the root leaves the root in place;
+inline editing saves a family name and a birth year (the row re-sorting by the new date), refuses
+"19th century" with a message while keeping the cell open, and abandons on Escape; exporting five
+people yields readable parent and spouse columns, and importing a four-row sheet adds three people
+and three links, puts a new couple and their child on the canvas as a third generation, and reports
+both the nameless row and the unresolvable parent; a note with a heading, bold, italic, a list and
+four links renders as prose, `[[Anil Sawant]]` selects him, `[[Nobody Real]]` is dotted and inert,
+and `<script>alert(1)</script>` appears as literal text.
+
+### Deferred from this phase
+
+- **`[[` autocomplete while typing a note.** The links work and unresolved ones say so, but you have
+  to know the name. A picker inside a textarea is its own piece of design work.
+- **Box-select on the canvas.** Shift-click covers the bulk cases; a drag-rectangle needs React
+  Flow's `elementsSelectable`, which would put a second selection model alongside the store's.
 
 ---
 
