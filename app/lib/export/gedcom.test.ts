@@ -656,6 +656,106 @@ describe("buildGedcomText with media", () => {
   })
 })
 
+describe("exportGedcom with redaction", () => {
+  afterEach(async () => {
+    await Promise.all([
+      db.people.clear(),
+      db.relationships.clear(),
+      db.photos.clear(),
+    ])
+  })
+
+  it("withholds a living person and leaves the dead untouched", async () => {
+    await db.people.bulkAdd([
+      person({
+        id: "living",
+        givenName: "Nia",
+        familyName: "Sawant",
+        birth: { year: 1990 },
+        notes: "Private",
+      }),
+      person({
+        id: "dead",
+        givenName: "Ada",
+        familyName: "Byron",
+        birth: { year: 1815 },
+        death: { year: 1852 },
+      }),
+    ])
+
+    const text = await (await exportGedcom({ redactLiving: true })).text()
+
+    expect(text).toContain("1 NAME Living /Sawant/")
+    expect(text).not.toContain("Nia")
+    expect(text).not.toContain("Private")
+    expect(text).not.toContain("1990")
+    // The dead are published in full — that is the point of the file.
+    expect(text).toContain("1 NAME Ada /Byron/")
+    expect(text).toContain("2 DATE 1815")
+  })
+
+  it("drops a marriage date when one spouse may be living", async () => {
+    await db.people.bulkAdd([
+      person({ id: "a", givenName: "Nia", birth: { year: 1990 } }),
+      person({
+        id: "b",
+        givenName: "Sam",
+        birth: { year: 1988 },
+      }),
+    ])
+    await db.relationships.add({
+      id: "m",
+      type: "spouse",
+      from: "a",
+      to: "b",
+      start: { year: 2015 },
+    })
+
+    const text = await (await exportGedcom({ redactLiving: true })).text()
+
+    // The marriage itself is still recorded — the structure is not the secret.
+    expect(text).toContain("1 MARR")
+    expect(text).not.toContain("2 DATE 2015")
+  })
+
+  it("leaves everything alone when redaction is off", async () => {
+    await db.people.add(
+      person({ id: "living", givenName: "Nia", birth: { year: 1990 } })
+    )
+
+    const text = await (await exportGedcom()).text()
+
+    expect(text).toContain("1 NAME Nia //")
+  })
+
+  // Not merely unreferenced by the .ged: the bytes must stay out of the file.
+  it("keeps a living person's photo out of the archive entirely", async () => {
+    await db.photos.add({
+      id: "photo-1",
+      blob: new Blob(["x"]),
+      mime: "image/jpeg",
+    })
+    await db.people.add(
+      person({
+        id: "living",
+        givenName: "Nia",
+        birth: { year: 1990 },
+        photoId: "photo-1",
+      })
+    )
+
+    const zip = await exportGedcomZip(new Date("2024-06-01"), {
+      redactLiving: true,
+    })
+    const { unzipSync } = await import("fflate")
+    const entries = unzipSync(new Uint8Array(await zip.arrayBuffer()))
+
+    expect(Object.keys(entries).some((path) => path.startsWith("media/"))).toBe(
+      false
+    )
+  })
+})
+
 describe("exportGedcomZip", () => {
   afterEach(async () => {
     await Promise.all([

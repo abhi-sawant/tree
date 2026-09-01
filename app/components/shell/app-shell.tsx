@@ -21,6 +21,7 @@ import { clearBackupNudgeDismissal, setLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
 import { backupFilename, familyBookFilename } from "~/lib/export/filenames"
 import { buildFamilyBookPdf } from "~/lib/export/family-book-export"
+import { usePrivacyStore } from "~/lib/ui/privacy-store"
 import { exportBackup } from "~/lib/export/json"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import type { TabPresenceState } from "~/lib/db/use-tab-presence"
@@ -71,6 +72,7 @@ export function AppShell({
   const [addPersonOpen, setAddPersonOpen] = useState(false)
   const [exportingBackup, setExportingBackup] = useState(false)
   const [exportingBook, setExportingBook] = useState(false)
+  const redactLiving = usePrivacyStore((s) => s.redactLiving)
   // Nudged after every backup so the sidebar and Settings re-read app-meta.
   const [exportToken, setExportToken] = useState(0)
 
@@ -142,6 +144,7 @@ export function AppShell({
         people: members,
         relationships,
         generations,
+        redactLiving,
       })
       triggerDownload(blob, familyBookFilename(tree.name))
       toast("Family book exported")

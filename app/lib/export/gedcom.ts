@@ -5,6 +5,7 @@ import { personPhotoIds } from "~/lib/person-photos"
 import { db } from "~/lib/db/db"
 import { blobToBytes, zipEntries, type ZipEntries } from "~/lib/export/archive"
 import { gedcomFilename } from "~/lib/export/filenames"
+import { redactPool, type RedactionOptions } from "~/lib/export/redaction"
 import { extensionForMime, gedcomFormForExtension } from "~/lib/export/mime"
 import type {
   ParentChildSubtype,
@@ -316,11 +317,41 @@ export function buildGedcomText(
   )
 }
 
-export async function exportGedcom(): Promise<Blob> {
-  const [people, relationships] = await Promise.all([
+export interface GedcomExportOptions {
+  // Withhold the details of anyone who may still be living. Off by default: a
+  // GEDCOM is most often a move between one's own tools, where redacting would
+  // silently destroy data. Turning it on is what you do before sending the file
+  // to somebody else.
+  redactLiving?: boolean
+  redaction?: RedactionOptions
+}
+
+// Applied here rather than inside buildGedcomText so the writer stays a pure
+// function of the records it is given, and so the same transform feeds the
+// plain .ged and the .zip without either being able to forget it.
+function scope(
+  people: Person[],
+  relationships: Relationship[],
+  options: GedcomExportOptions
+): {
+  people: Person[]
+  relationships: Relationship[]
+  redactedIds: Set<string>
+} {
+  if (!options.redactLiving) {
+    return { people, relationships, redactedIds: new Set() }
+  }
+  return redactPool(people, relationships, options.redaction)
+}
+
+export async function exportGedcom(
+  options: GedcomExportOptions = {}
+): Promise<Blob> {
+  const [allPeople, allRelationships] = await Promise.all([
     db.people.toArray(),
     db.relationships.toArray(),
   ])
+  const { people, relationships } = scope(allPeople, allRelationships, options)
 
   return new Blob([buildGedcomText(people, relationships)], {
     type: "text/plain;charset=utf-8",
@@ -376,12 +407,19 @@ export function planGedcomMedia(
 
 // The .ged sits at the archive root beside media/, because importers resolve a
 // relative FILE path against the directory holding the .ged.
-export async function exportGedcomZip(now: Date = new Date()): Promise<Blob> {
-  const [people, relationships, photos] = await Promise.all([
+export async function exportGedcomZip(
+  now: Date = new Date(),
+  options: GedcomExportOptions = {}
+): Promise<Blob> {
+  const [allPeople, allRelationships, photos] = await Promise.all([
     db.people.toArray(),
     db.relationships.toArray(),
     db.photos.toArray(),
   ])
+  // redactPerson clears the photo list, so a redacted person plans no media and
+  // their photo never reaches the archive — the bytes stay out of the file
+  // rather than merely going unreferenced by the .ged.
+  const { people, relationships } = scope(allPeople, allRelationships, options)
 
   const photosById = new Map(photos.map((photo) => [photo.id, photo]))
   const plan = planGedcomMedia(

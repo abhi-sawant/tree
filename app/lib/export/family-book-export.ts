@@ -2,6 +2,11 @@ import { listAttachments } from "~/lib/db/attachments"
 import { db } from "~/lib/db/db"
 import { buildFamilyBook } from "~/lib/export/family-book"
 import { renderFamilyBookPdf } from "~/lib/export/family-book-pdf"
+import {
+  redactionNote,
+  redactPool,
+  type RedactionOptions,
+} from "~/lib/export/redaction"
 import { coverPhotoId } from "~/lib/person-photos"
 import type { Person, Relationship, Tree } from "~/lib/types"
 
@@ -28,13 +33,26 @@ export interface FamilyBookExportInput {
   relationships: Relationship[]
   generations: ReadonlyMap<string, number>
   now?: Date
-  redactionNote?: string
+  // Withhold the details of anyone who may still be living. A book is the
+  // export most likely to be handed to somebody outside the family, so this
+  // matters here more than anywhere.
+  redactLiving?: boolean
+  redaction?: RedactionOptions
 }
 
 export async function buildFamilyBookPdf(
   input: FamilyBookExportInput
 ): Promise<Blob> {
-  const { tree, people, relationships, generations, now = new Date() } = input
+  const { tree, generations, now = new Date() } = input
+
+  // Redacted before anything else reads them, so the photo gathering and the
+  // document listing below both see the withheld version and neither has to
+  // remember to check.
+  const redacted = input.redactLiving
+    ? redactPool(input.people, input.relationships, input.redaction)
+    : undefined
+  const people = redacted?.people ?? input.people
+  const relationships = redacted?.relationships ?? input.relationships
 
   // Only the covers, and only one read each: a book shows one face per page, so
   // pulling every photo of every person would multiply the work by the size of
@@ -60,6 +78,10 @@ export async function buildFamilyBookPdf(
 
   const documentNames = new Map<string, string[]>()
   for (const person of people) {
+    // A document's filename is often the person's own name and a date — "Nia
+    // Sawant birth certificate 1991.pdf" — so listing one against a redacted
+    // page would undo the redaction in the most direct way possible.
+    if (redacted?.redactedIds.has(person.id)) continue
     const attachments = await listAttachments(person.id)
     if (attachments.length > 0) {
       documentNames.set(
@@ -81,6 +103,8 @@ export async function buildFamilyBookPdf(
     book,
     generatedDate: now,
     photoDataUrls,
-    redactionNote: input.redactionNote,
+    redactionNote: redacted?.redactedIds.size
+      ? redactionNote(redacted.redactedIds.size)
+      : undefined,
   })
 }

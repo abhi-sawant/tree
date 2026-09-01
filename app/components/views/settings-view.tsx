@@ -12,6 +12,7 @@ import {
 } from "~/components/ui/alert-dialog"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
+import { Checkbox } from "~/components/ui/checkbox"
 import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
 import { BackupFolderPanel } from "~/components/views/backup-folder-panel"
@@ -26,6 +27,7 @@ import {
   peopleCsvFilename,
 } from "~/lib/export/filenames"
 import { exportGedcom, exportGedcomZip } from "~/lib/export/gedcom"
+import { useRedaction } from "~/lib/export/use-redaction"
 import { buildCsvBlob } from "~/lib/export/csv"
 import { InvalidCsvError, peopleToCsvRows } from "~/lib/export/people-csv"
 import {
@@ -84,6 +86,8 @@ export function SettingsView({
     void getLastExportDate().then(setLastExport)
   }, [exportToken])
 
+  const { redactLiving, setRedactLiving, presumedLivingCount } = useRedaction()
+
   const [csvInputKey, setCsvInputKey] = useState(0)
   const [csvImporting, setCsvImporting] = useState(false)
   const [csvResult, setCsvResult] = useState<CsvImportSummary | undefined>(
@@ -130,7 +134,7 @@ export function SettingsView({
 
   async function handleExportGedcom() {
     try {
-      const blob = await exportGedcom()
+      const blob = await exportGedcom({ redactLiving })
       triggerDownload(blob, gedcomFilename())
       toast("GEDCOM exported")
     } catch {
@@ -140,7 +144,7 @@ export function SettingsView({
 
   async function handleExportGedcomZip() {
     try {
-      const blob = await exportGedcomZip()
+      const blob = await exportGedcomZip(new Date(), { redactLiving })
       triggerDownload(blob, gedcomZipFilename())
       toast("GEDCOM and photos exported")
     } catch {
@@ -277,6 +281,26 @@ export function SettingsView({
           app; it needs a full date, so people recorded with only a year are
           left out.
         </p>
+        <div className="flex flex-col gap-1.5 border border-border p-3">
+          <Label className="flex-row items-center gap-2 text-sm font-normal normal-case">
+            <Checkbox
+              checked={redactLiving}
+              onCheckedChange={(checked) => setRedactLiving(checked === true)}
+            />
+            Redact living people
+          </Label>
+          <p className="text-11 leading-relaxed text-muted-foreground">
+            Anyone with no recorded death — and no birth date old enough to
+            presume one — is written out as &ldquo;Living&rdquo; with their
+            surname, and without dates, notes or photos. Someone with no dates
+            at all is treated as living: the file is the thing that gets emailed
+            around, so an unanswerable case is withheld rather than published.
+            Right now that is {presumedLivingCount}{" "}
+            {presumedLivingCount === 1 ? "person" : "people"}. It applies to
+            GEDCOM, the family book and the canvas image — not to the backup,
+            which is your own complete copy.
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button disabled={exportingBackup} onClick={onExportBackup}>
             {exportingBackup ? "Exporting…" : "Backup (.zip)"}
