@@ -20,8 +20,7 @@ import {
 } from "~/lib/db/relationships"
 import { addPersonToTree } from "~/lib/db/trees"
 import { parsePeopleCsv, type ParsedPersonRow } from "~/lib/export/people-csv"
-import { personDisplayName } from "~/lib/person-name"
-import type { Person } from "~/lib/types"
+import { NameIndex } from "~/lib/people/name-index"
 
 export interface CsvImportSummary {
   created: number
@@ -31,47 +30,6 @@ export interface CsvImportSummary {
   // count of successes with no account of the rest would let a mistyped parent
   // name vanish silently, which is the failure this format is most prone to.
   problems: string[]
-}
-
-function normalizeName(name: string): string {
-  return name.trim().toLowerCase().replace(/\s+/g, " ")
-}
-
-// Both the name as displayed (which includes a quoted nickname, since that is
-// what the export writes) and the plain given+family form, because a person's
-// own spreadsheet will have the plain one.
-function nameKeysFor(person: Person): string[] {
-  const keys = [personDisplayName(person)]
-  const plain = [person.givenName, person.familyName].filter(Boolean).join(" ")
-  keys.push(plain)
-  return [...new Set(keys.map(normalizeName))].filter(Boolean)
-}
-
-class NameIndex {
-  private byName = new Map<string, string[]>()
-  private byId = new Map<string, Person>()
-
-  add(person: Person): void {
-    this.byId.set(person.id, person)
-    for (const key of nameKeysFor(person)) {
-      this.byName.set(key, [...(this.byName.get(key) ?? []), person.id])
-    }
-  }
-
-  // "not found" and "several people have that name" are different answers and
-  // the reader needs to know which: one is a typo, the other needs a
-  // disambiguation they have to make themselves.
-  resolve(
-    reference: string
-  ): { ok: true; id: string } | { ok: false; reason: "missing" | "ambiguous" } {
-    const trimmed = reference.trim()
-    if (this.byId.has(trimmed)) return { ok: true, id: trimmed }
-
-    const matches = this.byName.get(normalizeName(trimmed)) ?? []
-    if (matches.length === 1) return { ok: true, id: matches[0] }
-    if (matches.length === 0) return { ok: false, reason: "missing" }
-    return { ok: false, reason: "ambiguous" }
-  }
 }
 
 function personFieldsOf(row: ParsedPersonRow) {
@@ -107,8 +65,7 @@ export async function importPeopleCsv(
     db.members,
     db.trees,
     async () => {
-      const index = new NameIndex()
-      for (const existing of await db.people.toArray()) index.add(existing)
+      const index = new NameIndex(await db.people.toArray())
 
       let created = 0
       let updated = 0

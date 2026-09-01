@@ -10,6 +10,7 @@ import { RelativeForm } from "~/components/canvas/relative-form"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
 import { PersonForm, type PhotoAction } from "~/components/people/person-form"
+import { NotesView } from "~/components/people/notes-view"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { PartialDateFields } from "~/components/people/partial-date-fields"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
@@ -276,6 +277,10 @@ function PersonDetail({
   const [removeOpen, setRemoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [familyOpen, setFamilyOpen] = useState(false)
+  // Notes read as prose by default and edit on request. Leaving the textarea
+  // permanently open would mean the [[links]] were never clickable, which is
+  // the whole point of writing them.
+  const [editingNotes, setEditingNotes] = useState(false)
 
   const parentRels = relationships.filter(
     (r) => r.type === "parent-child" && r.to === person.id
@@ -350,15 +355,44 @@ function PersonDetail({
           />
         )}
 
-        {tab === "notes" && (
-          <PersonForm
-            key={`${person.id}:notes:${formKey}`}
-            section="notes"
-            initialValues={person}
-            onSubmit={handleUpdatePerson}
-            submitLabel="Save notes"
-          />
-        )}
+        {tab === "notes" &&
+          (editingNotes ? (
+            <div className="flex flex-col gap-2">
+              <PersonForm
+                key={`${person.id}:notes:${formKey}`}
+                section="notes"
+                initialValues={person}
+                onSubmit={async (values, photoAction) => {
+                  await handleUpdatePerson(values, photoAction)
+                  setEditingNotes(false)
+                }}
+                onCancel={() => setEditingNotes(false)}
+                submitLabel="Save notes"
+              />
+              <p className="text-11 leading-relaxed text-muted-foreground">
+                Write <code className="bg-muted px-1">[[Priya Iyer]]</code> to
+                link to someone. <code className="bg-muted px-1">**bold**</code>
+                , <code className="bg-muted px-1">*italic*</code>,{" "}
+                <code className="bg-muted px-1"># headings</code> and{" "}
+                <code className="bg-muted px-1">- lists</code> also work.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <NotesView
+                notes={person.notes ?? ""}
+                people={[...people.values()]}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={() => setEditingNotes(true)}
+              >
+                {person.notes ? "Edit notes" : "Add notes"}
+              </Button>
+            </div>
+          ))}
 
         {tab === "family" && (
           <>
