@@ -1,9 +1,11 @@
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { sharedParentLinkSubtype } from "~/lib/graph/parent-links"
 import { partialDateToGedcomDate } from "~/lib/partial-date"
+import { personPhotoIds } from "~/lib/person-photos"
 import { db } from "~/lib/db/db"
 import { blobToBytes, zipEntries, type ZipEntries } from "~/lib/export/archive"
 import { gedcomFilename } from "~/lib/export/filenames"
+import { redactPool, type RedactionOptions } from "~/lib/export/redaction"
 import { extensionForMime, gedcomFormForExtension } from "~/lib/export/mime"
 import type {
   ParentChildSubtype,
@@ -174,19 +176,20 @@ function noteLines(person: Person): string[] {
 }
 
 // The embedded MULTIMEDIA_LINK form, not a top-level OBJE record with a
-// pointer: a person has at most one photo (Person.photoId is a scalar) and
-// photos are never shared between individuals, so the pointer form's only
-// advantage doesn't apply here. Emitting both forms would make importers
-// create duplicate media items. Note TITL sits under OBJE at level 2 in this
+// pointer. The pointer form exists so several individuals can share one media
+// record, and this app never shares a photo between people — each belongs to
+// exactly the person it was uploaded for. Emitting both forms would make
+// importers create duplicate media items. 5.5.1 allows an INDI to carry any
+// number of OBJE structures, so a person with four photos gets four, in the
+// order the gallery shows them. Note TITL sits under OBJE at level 2 in this
 // form — it moves under FILE only in the top-level record form.
-function mediaLines(media?: GedcomMedia): string[] {
-  if (!media) return []
-  return [
+function mediaLines(media: readonly GedcomMedia[] = []): string[] {
+  return media.flatMap((item) => [
     "1 OBJE",
-    `2 FILE ${media.path}`,
-    `3 FORM ${media.form}`,
-    ...(media.title ? [`2 TITL ${media.title}`] : []),
-  ]
+    `2 FILE ${item.path}`,
+    `3 FORM ${item.form}`,
+    ...(item.title ? [`2 TITL ${item.title}`] : []),
+  ])
 }
 
 function emitIndividual(
@@ -196,7 +199,7 @@ function emitIndividual(
   famsXrefs: string[],
   famcGroup: FamilyGroup | undefined,
   relationships: Relationship[],
-  media?: GedcomMedia
+  media?: readonly GedcomMedia[]
 ): string[] {
   return [
     `0 ${xref} INDI`,
@@ -260,7 +263,7 @@ function emitFamily(
 export function buildGedcomText(
   people: Person[],
   relationships: Relationship[],
-  media?: ReadonlyMap<string, GedcomMedia>
+  media?: ReadonlyMap<string, readonly GedcomMedia[]>
 ): string {
   const personXrefs = assignXrefs(
     people.map((person) => person.id),
@@ -314,11 +317,41 @@ export function buildGedcomText(
   )
 }
 
-export async function exportGedcom(): Promise<Blob> {
-  const [people, relationships] = await Promise.all([
+export interface GedcomExportOptions {
+  // Withhold the details of anyone who may still be living. Off by default: a
+  // GEDCOM is most often a move between one's own tools, where redacting would
+  // silently destroy data. Turning it on is what you do before sending the file
+  // to somebody else.
+  redactLiving?: boolean
+  redaction?: RedactionOptions
+}
+
+// Applied here rather than inside buildGedcomText so the writer stays a pure
+// function of the records it is given, and so the same transform feeds the
+// plain .ged and the .zip without either being able to forget it.
+function scope(
+  people: Person[],
+  relationships: Relationship[],
+  options: GedcomExportOptions
+): {
+  people: Person[]
+  relationships: Relationship[]
+  redactedIds: Set<string>
+} {
+  if (!options.redactLiving) {
+    return { people, relationships, redactedIds: new Set() }
+  }
+  return redactPool(people, relationships, options.redaction)
+}
+
+export async function exportGedcom(
+  options: GedcomExportOptions = {}
+): Promise<Blob> {
+  const [allPeople, allRelationships] = await Promise.all([
     db.people.toArray(),
     db.relationships.toArray(),
   ])
+  const { people, relationships } = scope(allPeople, allRelationships, options)
 
   return new Blob([buildGedcomText(people, relationships)], {
     type: "text/plain;charset=utf-8",
@@ -333,7 +366,9 @@ function displayName(person: Person): string {
 // sort ids ascending), so a media path's stem always names the INDI it hangs
 // off. The stem is the xref rather than the photo's UUID: it keeps the FILE
 // value inside 5.5.1's nominal 30-character limit, and doesn't leak internal
-// ids into a file the user hands to third parties.
+// ids into a file the user hands to third parties. A person's second and later
+// photos suffix the stem with their position, so files stay readable and stay
+// grouped by the person they belong to.
 export function planGedcomMedia(
   people: Person[],
   photoMimes: ReadonlyMap<string, string>
@@ -345,29 +380,46 @@ export function planGedcomMedia(
 
   const media: GedcomMedia[] = []
   for (const person of [...people].sort((a, b) => a.id.localeCompare(b.id))) {
-    const mime = person.photoId && photoMimes.get(person.photoId)
-    if (!person.photoId || !mime) continue
-    const stem = personXrefs.get(person.id)!.replaceAll("@", "")
-    const extension = extensionForMime(mime)
-    media.push({
-      personId: person.id,
-      photoId: person.photoId,
-      path: `${GEDCOM_MEDIA_DIR}/${stem}.${extension}`,
-      form: gedcomFormForExtension(extension),
-      title: displayName(person),
-    })
+    const xrefStem = personXrefs.get(person.id)!.replaceAll("@", "")
+    // Counted over the photos that actually resolve, not over the person's
+    // whole list, so a photo whose blob is missing doesn't leave a gap in the
+    // numbering and make two exports disagree about what a file is called.
+    let index = 0
+    for (const photoId of personPhotoIds(person)) {
+      const mime = photoMimes.get(photoId)
+      if (!mime) continue
+      const extension = extensionForMime(mime)
+      // The first photo keeps the bare xref stem it has always had, so a tree
+      // with one photo per person exports exactly as it did before.
+      const stem = index === 0 ? xrefStem : `${xrefStem}-${index + 1}`
+      media.push({
+        personId: person.id,
+        photoId,
+        path: `${GEDCOM_MEDIA_DIR}/${stem}.${extension}`,
+        form: gedcomFormForExtension(extension),
+        title: displayName(person),
+      })
+      index += 1
+    }
   }
   return media
 }
 
 // The .ged sits at the archive root beside media/, because importers resolve a
 // relative FILE path against the directory holding the .ged.
-export async function exportGedcomZip(now: Date = new Date()): Promise<Blob> {
-  const [people, relationships, photos] = await Promise.all([
+export async function exportGedcomZip(
+  now: Date = new Date(),
+  options: GedcomExportOptions = {}
+): Promise<Blob> {
+  const [allPeople, allRelationships, photos] = await Promise.all([
     db.people.toArray(),
     db.relationships.toArray(),
     db.photos.toArray(),
   ])
+  // redactPerson clears the photo list, so a redacted person plans no media and
+  // their photo never reaches the archive — the bytes stay out of the file
+  // rather than merely going unreferenced by the .ged.
+  const { people, relationships } = scope(allPeople, allRelationships, options)
 
   const photosById = new Map(photos.map((photo) => [photo.id, photo]))
   const plan = planGedcomMedia(
@@ -381,11 +433,14 @@ export async function exportGedcomZip(now: Date = new Date()): Promise<Blob> {
     entries[media.path] = [await blobToBytes(photo.blob), 0]
   }
 
-  const text = buildGedcomText(
-    people,
-    relationships,
-    new Map(plan.map((media) => [media.personId, media]))
-  )
+  const byPerson = new Map<string, GedcomMedia[]>()
+  for (const media of plan) {
+    const list = byPerson.get(media.personId) ?? []
+    list.push(media)
+    byPerson.set(media.personId, list)
+  }
+
+  const text = buildGedcomText(people, relationships, byPerson)
   entries[gedcomFilename(now)] = [new TextEncoder().encode(text), 6]
 
   return zipEntries(entries, now)

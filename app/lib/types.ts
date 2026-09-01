@@ -39,6 +39,15 @@ export interface Person {
   sex?: Sex
   birth?: PartialDate
   death?: PartialDate
+  // Every photo of this person, in display order; the first is the cover that
+  // single-avatar surfaces draw. Written only through lib/photos.ts, and only
+  // ever alongside photoId — see lib/person-photos.ts, which owns the rule.
+  photoIds?: string[]
+  // The cover photo as the model recorded it before a person could have more
+  // than one. Kept because data already in a browser, and backups already in
+  // people's hands, carry only this — and because a build older than this one
+  // importing a new backup would otherwise show every face as the default
+  // avatar. Never read directly: go through personPhotoIds/coverPhotoId.
   photoId?: string
   notes?: string
   customFields?: CustomField[]
@@ -81,6 +90,29 @@ export interface Photo {
   id: string
   blob: Blob
   mime: string
+}
+
+// A scanned document belonging to one person — a birth certificate, a will, a
+// letter, a page of a parish register. Its own table rather than a variant of
+// Photo, because the two answer different questions and are treated differently
+// everywhere it matters: a photo is downscaled to 800px on upload and a
+// document must not be (the point of a scan is that the small print stays
+// readable), a photo is a face the app draws and a document is a file the app
+// only ever hands back, and a photo goes into the GEDCOM while a document has
+// no representation there.
+export interface Attachment {
+  id: string
+  personId: string
+  // What the file was called when it was added. Shown in the list and offered
+  // as the download name — a document is identified by its name in a way a
+  // portrait never is.
+  name: string
+  mime: string
+  blob: Blob
+  // Denormalised from blob.size so the storage panel can total a library
+  // without reading every blob into memory.
+  size: number
+  addedAt: number
 }
 
 export interface AppMetaRow {

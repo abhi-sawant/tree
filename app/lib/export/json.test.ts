@@ -143,6 +143,7 @@ describe("importBackup", () => {
     expect(result.schema).toBe(2)
     expect(result.missingPhotoIds).toEqual([])
     expect(result.counts).toEqual({
+      attachments: 0,
       people: 2,
       relationships: 1,
       trees: 1,
@@ -192,6 +193,174 @@ describe("importBackup", () => {
     // The person is still restored — just without the photo reference.
     expect(await db.people.get(person.id)).toMatchObject({ id: person.id })
     expect((await db.people.get(person.id))?.photoId).toBeUndefined()
+  })
+
+  // Losing one photo out of three must not cost the other two — the repair
+  // drops only what is actually missing.
+  it("keeps the photos that survived when only some of a gallery is missing", async () => {
+    const kept = crypto.randomUUID()
+    const gone = crypto.randomUUID()
+    const person = makePerson({ photoIds: [gone, kept], photoId: gone })
+    const manifest = {
+      schema: 2,
+      people: [person],
+      relationships: [],
+      trees: [],
+      members: [],
+      photos: [
+        { id: gone, mime: "image/jpeg", file: "photos/gone.jpg" },
+        { id: kept, mime: "image/jpeg", file: "photos/kept.jpg" },
+      ],
+    }
+    const { zipSync, strToU8 } = await import("fflate")
+    const zip = new Blob([
+      zipSync(
+        {
+          "backup.json": strToU8(JSON.stringify(manifest)),
+          "photos/kept.jpg": PHOTO_BYTES,
+        },
+        { mtime: EXPORTED_AT }
+      ),
+    ])
+
+    const result = await importBackup(zip)
+
+    expect(result.missingPhotoIds).toEqual([gone])
+    const restored = await db.people.get(person.id)
+    expect(restored?.photoIds).toEqual([kept])
+    // The mirror is repaired too: it pointed at the photo that vanished.
+    expect(restored?.photoId).toBe(kept)
+  })
+
+  it("round-trips a document with its bytes, name and owner intact", async () => {
+    const { root } = await seedFixture()
+    const bytes = new Uint8Array([37, 80, 68, 70]) // "%PDF"
+    await db.attachments.add({
+      id: "att-1",
+      personId: root.id,
+      name: "Birth certificate.pdf",
+      mime: "application/pdf",
+      blob: new Blob([bytes], { type: "application/pdf" }),
+      size: bytes.length,
+      addedAt: 1234,
+    })
+
+    const blob = await exportBackup(EXPORTED_AT)
+    await db.attachments.clear()
+    const result = await importBackup(blob)
+
+    expect(result.counts.attachments).toBe(1)
+    expect(result.missingAttachmentIds).toEqual([])
+    const restored = await db.attachments.get("att-1")
+    expect(restored).toMatchObject({
+      personId: root.id,
+      name: "Birth certificate.pdf",
+      mime: "application/pdf",
+      size: 4,
+      addedAt: 1234,
+    })
+    expect(new Uint8Array(await restored!.blob.arrayBuffer())).toEqual(bytes)
+  })
+
+  // Reported separately from a missing photo: one costs a face, the other
+  // costs a record the family may no longer have a copy of.
+  it("reports a document the archive didn't contain and restores the rest", async () => {
+    const person = makePerson({ givenName: "Ada" })
+    const manifest = {
+      schema: 2,
+      people: [person],
+      relationships: [],
+      trees: [],
+      members: [],
+      photos: [],
+      attachments: [
+        {
+          id: "gone",
+          personId: person.id,
+          name: "will.pdf",
+          mime: "application/pdf",
+          size: 10,
+          addedAt: 1,
+          file: "attachments/gone.pdf",
+        },
+      ],
+    }
+    const { zipSync, strToU8 } = await import("fflate")
+    const zip = new Blob([
+      zipSync(
+        { "backup.json": strToU8(JSON.stringify(manifest)) },
+        { mtime: EXPORTED_AT }
+      ),
+    ])
+
+    const result = await importBackup(zip)
+
+    expect(result.missingAttachmentIds).toEqual(["gone"])
+    expect(await db.people.get(person.id)).toBeTruthy()
+    expect(await db.attachments.count()).toBe(0)
+  })
+
+  // A document in nobody's drawer is unreachable in the UI and countable only
+  // as unattributed bytes.
+  it("drops a document whose owner the backup doesn't contain", async () => {
+    const manifest = {
+      schema: 2,
+      people: [],
+      relationships: [],
+      trees: [],
+      members: [],
+      photos: [],
+      attachments: [
+        {
+          id: "orphan",
+          personId: "nobody",
+          name: "will.pdf",
+          mime: "application/pdf",
+          size: 4,
+          addedAt: 1,
+          file: "attachments/orphan.pdf",
+        },
+      ],
+    }
+    const { zipSync, strToU8 } = await import("fflate")
+    const zip = new Blob([
+      zipSync(
+        {
+          "backup.json": strToU8(JSON.stringify(manifest)),
+          "attachments/orphan.pdf": new Uint8Array([1, 2, 3, 4]),
+        },
+        { mtime: EXPORTED_AT }
+      ),
+    ])
+
+    await importBackup(zip)
+
+    expect(await db.attachments.count()).toBe(0)
+  })
+
+  // A backup written before documents existed carries no `attachments` key at
+  // all. The default keeps it valid rather than making every old file fail.
+  it("accepts a schema-2 backup with no attachments key", async () => {
+    const manifest = {
+      schema: 2,
+      people: [makePerson({ givenName: "Ada" })],
+      relationships: [],
+      trees: [],
+      members: [],
+      photos: [],
+    }
+    const { zipSync, strToU8 } = await import("fflate")
+    const zip = new Blob([
+      zipSync(
+        { "backup.json": strToU8(JSON.stringify(manifest)) },
+        { mtime: EXPORTED_AT }
+      ),
+    ])
+
+    const result = await importBackup(zip)
+
+    expect(result.counts.attachments).toBe(0)
+    expect(result.counts.people).toBe(1)
   })
 
   it("replaces existing data rather than merging it", async () => {

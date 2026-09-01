@@ -1,5 +1,11 @@
 import { db } from "~/lib/db/db"
 import { updatePerson } from "~/lib/db/people"
+import {
+  personPhotoIds,
+  photoFieldsFor,
+  withCoverPhotoId,
+  withoutPhotoId,
+} from "~/lib/person-photos"
 import type { Photo } from "~/lib/types"
 
 export interface Dimensions {
@@ -55,6 +61,37 @@ export async function resizeAndCompressImage(
   })
 }
 
+// Every mutation here writes the person's photo list through photoFieldsFor,
+// so the legacy scalar can never drift from the array. They all run in one
+// transaction with the blob write, because a list entry pointing at a photo row
+// that failed to land is a broken avatar the user can't clear.
+
+// Appends. The cover is unchanged unless this is the person's first photo.
+export async function addPersonPhoto(
+  personId: string,
+  blob: Blob,
+  mime: string,
+): Promise<string> {
+  const newPhotoId = crypto.randomUUID()
+
+  await db.transaction("rw", db.people, db.photos, async () => {
+    const existing = await db.people.get(personId)
+    if (!existing) throw new Error(`Person not found: ${personId}`)
+    const photo: Photo = { id: newPhotoId, blob, mime }
+    await db.photos.add(photo)
+    await updatePerson(
+      personId,
+      photoFieldsFor([...personPhotoIds(existing), newPhotoId]),
+    )
+  })
+
+  return newPhotoId
+}
+
+// Replaces the cover, leaving any other photos where they are. This is what the
+// person form's "Change photo" means: the form shows one avatar, so it can only
+// speak for one photo, and silently discarding the others would be a data loss
+// nothing on screen warned about.
 export async function setPersonPhoto(
   personId: string,
   blob: Blob,
@@ -64,23 +101,75 @@ export async function setPersonPhoto(
 
   await db.transaction("rw", db.people, db.photos, async () => {
     const existing = await db.people.get(personId)
+    const currentIds = personPhotoIds(existing)
+    const previousCover = currentIds[0]
+
     const photo: Photo = { id: newPhotoId, blob, mime }
     await db.photos.add(photo)
-    await updatePerson(personId, { photoId: newPhotoId })
-    if (existing?.photoId && existing.photoId !== newPhotoId) {
-      await db.photos.delete(existing.photoId)
+    await updatePerson(
+      personId,
+      photoFieldsFor([newPhotoId, ...currentIds.slice(1)]),
+    )
+    if (previousCover && previousCover !== newPhotoId) {
+      await db.photos.delete(previousCover)
     }
   })
 
   return newPhotoId
 }
 
-export async function removePersonPhoto(personId: string): Promise<void> {
+export async function removePersonPhotoById(
+  personId: string,
+  photoId: string,
+): Promise<void> {
   await db.transaction("rw", db.people, db.photos, async () => {
     const existing = await db.people.get(personId)
-    if (!existing?.photoId) return
-    await updatePerson(personId, { photoId: undefined })
-    await db.photos.delete(existing.photoId)
+    const currentIds = personPhotoIds(existing)
+    if (!currentIds.includes(photoId)) return
+    await updatePerson(personId, photoFieldsFor(withoutPhotoId(currentIds, photoId)))
+    await db.photos.delete(photoId)
+  })
+}
+
+// Removes the cover only, promoting the next photo in line. The form's "Remove
+// photo" counterpart to setPersonPhoto above.
+export async function removePersonPhoto(personId: string): Promise<void> {
+  const existing = await db.people.get(personId)
+  const cover = personPhotoIds(existing)[0]
+  if (!cover) return
+  await removePersonPhotoById(personId, cover)
+}
+
+export async function setPersonCoverPhoto(
+  personId: string,
+  photoId: string,
+): Promise<void> {
+  await db.transaction("rw", db.people, async () => {
+    const existing = await db.people.get(personId)
+    const currentIds = personPhotoIds(existing)
+    const next = withCoverPhotoId(currentIds, photoId)
+    if (next === currentIds) return
+    await updatePerson(personId, photoFieldsFor(next))
+  })
+}
+
+// Takes the whole order rather than a from/to pair so a caller that recomputed
+// the list can write it in one go. Refuses an order that isn't a permutation of
+// what the person actually has: a stale list would otherwise drop photos, or
+// point at blobs belonging to someone else.
+export async function setPersonPhotoOrder(
+  personId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await db.transaction("rw", db.people, async () => {
+    const existing = await db.people.get(personId)
+    const currentIds = personPhotoIds(existing)
+    const sameSet =
+      orderedIds.length === currentIds.length &&
+      new Set(orderedIds).size === orderedIds.length &&
+      orderedIds.every((id) => currentIds.includes(id))
+    if (!sameSet) return
+    await updatePerson(personId, photoFieldsFor(orderedIds))
   })
 }
 

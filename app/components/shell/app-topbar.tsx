@@ -10,6 +10,7 @@ import { RenameTreeDialog } from "~/components/trees/rename-tree-dialog"
 import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -22,6 +23,7 @@ import {
   gedcomZipFilename,
 } from "~/lib/export/filenames"
 import { exportGedcom, exportGedcomZip } from "~/lib/export/gedcom"
+import { useRedaction } from "~/lib/export/use-redaction"
 import { exportAnniversariesIcs } from "~/lib/export/ics"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import { toast } from "~/lib/ui/toast-store"
@@ -40,6 +42,8 @@ interface AppTopbarProps {
   onCreateTree: () => void
   onExportBackup: () => void
   exportingBackup?: boolean
+  onExportFamilyBook: () => void
+  exportingFamilyBook?: boolean
 }
 
 export function AppTopbar({
@@ -51,11 +55,14 @@ export function AppTopbar({
   onCreateTree,
   onExportBackup,
   exportingBackup,
+  onExportFamilyBook,
+  exportingFamilyBook,
 }: AppTopbarProps) {
   const view = useAppShellStore((s) => s.view)
   const setView = useAppShellStore((s) => s.setView)
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
   const { exportPng, exportPdf } = useTreeExport(tree.name)
+  const { redactLiving, setRedactLiving, presumedLivingCount } = useRedaction()
 
   const [dialog, setDialog] = useState<TreeDialog>(undefined)
   const [addPersonOpen, setAddPersonOpen] = useState(false)
@@ -66,7 +73,7 @@ export function AppTopbar({
 
   async function handleExportGedcom() {
     try {
-      const blob = await exportGedcom()
+      const blob = await exportGedcom({ redactLiving })
       triggerDownload(blob, gedcomFilename())
       toast("GEDCOM exported")
     } catch {
@@ -76,7 +83,7 @@ export function AppTopbar({
 
   async function handleExportGedcomZip() {
     try {
-      const blob = await exportGedcomZip()
+      const blob = await exportGedcomZip(new Date(), { redactLiving })
       triggerDownload(blob, gedcomZipFilename())
       toast("GEDCOM and photos exported")
     } catch {
@@ -95,7 +102,10 @@ export function AppTopbar({
   }
 
   return (
-    <header className="relative z-30 flex h-15 flex-none items-center justify-between gap-4 border-b border-border px-4">
+    <header
+      data-print="hide"
+      className="relative z-30 flex h-15 flex-none items-center justify-between gap-4 border-b border-border px-4"
+    >
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -170,7 +180,20 @@ export function AppTopbar({
               </Button>
             }
           />
-          <DropdownMenuContent align="end" className="w-60">
+          <DropdownMenuContent align="end" className="w-72">
+            <DropdownMenuCheckboxItem
+              checked={redactLiving}
+              closeOnClick={false}
+              onCheckedChange={setRedactLiving}
+            >
+              Redact living people
+            </DropdownMenuCheckboxItem>
+            <div className="px-2 pb-1.5 text-11 leading-snug text-muted-foreground">
+              {presumedLivingCount === 0
+                ? "Everyone recorded has a death date or was born long enough ago to presume one."
+                : `Withholds the name, dates, notes and photos of ${presumedLivingCount} ${presumedLivingCount === 1 ? "person" : "people"} with no recorded death. The canvas shows exactly what will be exported.`}
+            </div>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               disabled={!canvasExportsAvailable}
               onClick={() => void exportPng()}
@@ -183,6 +206,15 @@ export function AppTopbar({
             >
               PDF
             </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={exportingFamilyBook}
+              onClick={onExportFamilyBook}
+            >
+              {exportingFamilyBook
+                ? "Building…"
+                : "Family book (PDF, a page each)"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               disabled={exportingBackup}
               onClick={onExportBackup}

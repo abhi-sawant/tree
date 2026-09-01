@@ -29,6 +29,7 @@ import { cn } from "~/lib/utils"
 import type { PersonNodeData } from "~/lib/layout/to-react-flow-graph"
 import { personDisplayName } from "~/lib/person-name"
 import { HANDLE, directionGeometry } from "~/lib/canvas/layout-direction"
+import { coverPhotoId } from "~/lib/person-photos"
 
 export type PersonNodeType = Node<PersonNodeData, "person">
 
@@ -106,7 +107,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
       />
       {showPhoto && (
         <PersonAvatar
-          photoId={person.photoId}
+          photoId={coverPhotoId(person)}
           size="card"
           sizePx={avatarSize}
         />

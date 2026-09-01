@@ -29,6 +29,8 @@ import {
   type ReactFlowGraph,
 } from "~/lib/layout/to-react-flow-graph"
 import { useElkLayout } from "~/lib/layout/use-elk-layout"
+import { redactPool } from "~/lib/export/redaction"
+import { usePrivacyStore } from "~/lib/ui/privacy-store"
 import type { Person, Relationship, Tree } from "~/lib/types"
 
 interface TreeViewProps {
@@ -59,7 +61,19 @@ export function TreeView({
   const selectedNodeId = useSelectedNodeId()
   const showBloodline = useCanvasUIStore((s) => s.showBloodline)
   const appearance = useAppearanceStore((s) => s.settings)
+  const redactLiving = usePrivacyStore((s) => s.redactLiving)
   const treeMembers = useTreeMembers(tree.id)
+
+  // The canvas image exports capture the live viewport, so redaction has to
+  // happen in what is drawn rather than at export time. That is the better
+  // arrangement anyway: the user sees exactly what will leave the machine and
+  // can check it before pressing Export, instead of trusting a hidden
+  // transform. The detail panel below deliberately keeps the real records —
+  // this is the user's own data, and they are editing it.
+  const canvasPeople = useMemo(
+    () => (redactLiving ? redactPool(people, relationships).people : people),
+    [redactLiving, people, relationships]
+  )
 
   // A node selected in a previously-open tree has no meaning in this one,
   // and neither does a generation hidden there.
@@ -85,7 +99,7 @@ export function TreeView({
   const graph = useMemo(() => {
     if (!scopedMembers || scopedMembers.length === 0) return undefined
     return toElkGraph({
-      people,
+      people: canvasPeople,
       relationships,
       treeMembers: scopedMembers,
       personWidth: appearance.personWidth,
@@ -95,7 +109,7 @@ export function TreeView({
     })
   }, [
     scopedMembers,
-    people,
+    canvasPeople,
     relationships,
     appearance.personWidth,
     appearance.personHeight,
@@ -166,7 +180,7 @@ export function TreeView({
     return toReactFlowGraph({
       graph,
       positions: mergedPositions,
-      people,
+      people: canvasPeople,
       relationships,
       unions,
       treeId: tree.id,
@@ -187,7 +201,7 @@ export function TreeView({
   }, [
     graph,
     mergedPositions,
-    people,
+    canvasPeople,
     relationships,
     unions,
     tree.id,

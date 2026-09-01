@@ -50,6 +50,26 @@ describe("buildStorageBreakdown", () => {
     })
   })
 
+  // Every photo in a gallery is attributed, not just the cover — otherwise a
+  // person with four photos would show three of them as unattributable orphans.
+  it("attributes every photo in a person's gallery to them", () => {
+    const breakdown = buildStorageBreakdown(
+      [photo("p1", 100), photo("p2", 200), photo("p3", 300)],
+      [
+        person("a", {
+          givenName: "Ada",
+          familyName: "Byron",
+          photoIds: ["p1", "p2", "p3"],
+          photoId: "p1",
+        }),
+      ]
+    )
+
+    expect(breakdown.orphanCount).toBe(0)
+    expect(breakdown.largest.map((u) => u.personId)).toEqual(["a", "a", "a"])
+    expect(breakdown.largest.every((u) => u.name === "Ada Byron")).toBe(true)
+  })
+
   it("counts a photo no person points at as orphaned", () => {
     const breakdown = buildStorageBreakdown(
       [photo("p1", 100), photo("orphan", 400)],
@@ -108,6 +128,9 @@ describe("buildStorageBreakdown", () => {
 
   it("handles an empty pool", () => {
     expect(buildStorageBreakdown([], [])).toEqual({
+      attachmentCount: 0,
+      attachmentBytes: 0,
+      largestAttachments: [],
       photoCount: 0,
       photoBytes: 0,
       orphanCount: 0,

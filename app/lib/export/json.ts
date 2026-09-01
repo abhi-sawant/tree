@@ -1,4 +1,5 @@
 import { db } from "~/lib/db/db"
+import { personPhotoIds, photoFieldsFor } from "~/lib/person-photos"
 import {
   buildBackupZip,
   parseBackupFile,
@@ -16,24 +17,33 @@ export interface ImportBackupResult {
     trees: number
     members: number
     photos: number
+    attachments: number
   }
   // Referenced by the backup but absent from it. Those people keep their data
   // and fall back to the default avatar.
   missingPhotoIds: string[]
+  // The same for documents, counted separately: a missing photo costs a face,
+  // a missing document costs a record.
+  missingAttachmentIds: string[]
 }
 
 // appMeta is deliberately excluded: lastExportDate records when *this* browser
 // last exported, which an imported file has no business overwriting.
 export async function exportBackup(now: Date = new Date()): Promise<Blob> {
-  const [people, relationships, trees, members, photos] = await Promise.all([
-    db.people.toArray(),
-    db.relationships.toArray(),
-    db.trees.toArray(),
-    db.members.toArray(),
-    db.photos.toArray(),
-  ])
+  const [people, relationships, trees, members, photos, attachments] =
+    await Promise.all([
+      db.people.toArray(),
+      db.relationships.toArray(),
+      db.trees.toArray(),
+      db.members.toArray(),
+      db.photos.toArray(),
+      db.attachments.toArray(),
+    ])
 
-  return buildBackupZip({ people, relationships, trees, members, photos }, now)
+  return buildBackupZip(
+    { people, relationships, trees, members, photos, attachments },
+    now
+  )
 }
 
 export interface ApplyBackupOptions {
@@ -43,6 +53,11 @@ export interface ApplyBackupOptions {
   // restored person pointing at a photo this browser no longer holds has the
   // reference cleared rather than left dangling.
   photos?: "replace" | "keep"
+  // The same choice for documents, and taken separately: a snapshot excludes
+  // both, but the two are different kinds of thing and a future caller may well
+  // want one without the other. Defaults to following `photos`, so no existing
+  // caller has to say anything.
+  attachments?: "replace" | "keep"
 }
 
 // Shared by the file-import path and the snapshot-restore path so the two cannot
@@ -52,38 +67,53 @@ export async function applyBackup(
   backup: ParsedBackup,
   options: ApplyBackupOptions = {}
 ): Promise<{ people: Person[]; missingPhotoIds: string[] }> {
-  const { photos: photoMode = "replace" } = options
+  const {
+    photos: photoMode = "replace",
+    attachments: attachmentMode = photoMode,
+  } = options
 
   const knownPhotoIds =
     photoMode === "replace"
       ? new Set(backup.photos.map((photo) => photo.id))
       : new Set((await db.photos.toCollection().primaryKeys()) as string[])
 
-  // Leaving a photoId pointing at a photo that isn't there would render fine
-  // (PersonAvatar falls back), but the restored database would be permanently
-  // inconsistent. Only rebuild the array when it actually matters.
-  const dangling = backup.people.filter(
-    (person) => person.photoId && !knownPhotoIds.has(person.photoId)
-  )
-  const missing = new Set(dangling.map((person) => person.photoId!))
+  // Leaving a photo reference pointing at a photo that isn't there would render
+  // fine (PersonAvatar falls back), but the restored database would be
+  // permanently inconsistent. A person can hold several photos, so this drops
+  // the missing ones and keeps the rest — losing one photo out of four must not
+  // cost the other three. Only rebuild the array when it actually matters.
+  const missing = new Set<string>()
+  for (const person of backup.people) {
+    for (const photoId of personPhotoIds(person)) {
+      if (!knownPhotoIds.has(photoId)) missing.add(photoId)
+    }
+  }
   const people: Person[] = missing.size
-    ? backup.people.map((person) =>
-        person.photoId && missing.has(person.photoId)
-          ? { ...person, photoId: undefined }
-          : person
-      )
+    ? backup.people.map((person) => {
+        const kept = personPhotoIds(person).filter((id) => !missing.has(id))
+        return kept.length === personPhotoIds(person).length
+          ? person
+          : { ...person, ...photoFieldsFor(kept) }
+      })
     : backup.people
+
+  const keptPeople = new Set(people.map((person) => person.id))
 
   // Every clear and add stays inside one transaction so a failure part-way
   // through — a QuotaExceededError on a large photo set, say — rolls the whole
   // restore back and leaves the existing data untouched.
+  // The array form rather than positional tables: Dexie's typings only spell
+  // out so many, and this is now past that count.
   await db.transaction(
     "rw",
-    db.people,
-    db.relationships,
-    db.trees,
-    db.members,
-    db.photos,
+    [
+      db.people,
+      db.relationships,
+      db.trees,
+      db.members,
+      db.photos,
+      db.attachments,
+    ],
     async () => {
       await Promise.all([
         db.people.clear(),
@@ -91,6 +121,7 @@ export async function applyBackup(
         db.trees.clear(),
         db.members.clear(),
         ...(photoMode === "replace" ? [db.photos.clear()] : []),
+        ...(attachmentMode === "replace" ? [db.attachments.clear()] : []),
       ])
 
       await Promise.all([
@@ -99,6 +130,16 @@ export async function applyBackup(
         db.trees.bulkAdd(backup.trees),
         db.members.bulkAdd(backup.members),
         ...(photoMode === "replace" ? [db.photos.bulkAdd(backup.photos)] : []),
+        ...(attachmentMode === "replace"
+          ? // An attachment naming a person the backup doesn't contain would be
+            // a file in nobody's drawer: unreachable in the UI and countable
+            // only as unattributed bytes. Dropped rather than restored.
+            [
+              db.attachments.bulkAdd(
+                backup.attachments.filter((a) => keptPeople.has(a.personId))
+              ),
+            ]
+          : []),
       ])
     }
   )
@@ -118,7 +159,9 @@ export async function importBackup(file: Blob): Promise<ImportBackupResult> {
       trees: backup.trees.length,
       members: backup.members.length,
       photos: backup.photos.length,
+      attachments: backup.attachments.length,
     },
     missingPhotoIds,
+    missingAttachmentIds: backup.missingAttachmentIds,
   }
 }

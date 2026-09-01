@@ -9,6 +9,10 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   "image/avif": "avif",
   "image/heic": "heic",
   "image/svg+xml": "svg",
+  // Not a photo format. Document attachments share this table because they
+  // share the archive-naming problem, and a second near-identical map is how
+  // two places start disagreeing about what a .pdf is called.
+  "application/pdf": "pdf",
 }
 
 // resizeAndCompressImage always re-encodes to JPEG, so today this always

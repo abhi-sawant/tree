@@ -9,6 +9,8 @@ import { AddFamilyForm } from "~/components/canvas/add-family-form"
 import { RelativeForm } from "~/components/canvas/relative-form"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
+import { PersonAttachmentsPanel } from "~/components/people/person-attachments-panel"
+import { PersonPhotosPanel } from "~/components/people/person-photos-panel"
 import { PersonForm, type PhotoAction } from "~/components/people/person-form"
 import { NotesView } from "~/components/people/notes-view"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
@@ -53,12 +55,17 @@ import type { PersonFormValues } from "~/lib/schemas"
 import { toast } from "~/lib/ui/toast-store"
 import { cn } from "~/lib/utils"
 import type { ParentChildSubtype, Person, Relationship } from "~/lib/types"
+import { coverPhotoId } from "~/lib/person-photos"
 
-type DetailTab = "details" | "family" | "notes"
+type DetailTab = "details" | "family" | "media" | "notes"
 
+// Photos and documents share one tab rather than taking one each: a fifth tab
+// doesn't fit the panel's width, and the two are the same thing to the person
+// looking for them — everything about this relative that isn't words.
 const TABS: Array<{ id: DetailTab; label: string }> = [
   { id: "details", label: "Details" },
   { id: "family", label: "Family" },
+  { id: "media", label: "Media" },
   { id: "notes", label: "Notes" },
 ]
 
@@ -157,7 +164,10 @@ export function DetailPanel({
   // what is selected and how to get back to one person.
   if (selectedCount > 1) {
     return (
-      <aside className="flex h-full w-78 shrink-0 flex-col overflow-y-auto border-l border-border">
+      <aside
+        data-print="hide"
+        className="flex h-full w-78 shrink-0 flex-col overflow-y-auto border-l border-border"
+      >
         <div className="p-4">
           <p className="text-13 leading-relaxed text-muted-foreground">
             {selectedCount} cards selected. Use the bar at the top of the canvas
@@ -171,7 +181,10 @@ export function DetailPanel({
 
   if (!selection) {
     return (
-      <aside className="flex h-full w-90 shrink-0 flex-col overflow-y-auto border-l border-border">
+      <aside
+        data-print="hide"
+        className="flex h-full w-90 shrink-0 flex-col overflow-y-auto border-l border-border"
+      >
         <div className="p-4">
           <p className="text-13 leading-relaxed text-muted-foreground">
             Select a person or a marriage dot on the canvas. Drag a card to pin
@@ -189,6 +202,7 @@ export function DetailPanel({
 
   return (
     <aside
+      data-print="hide"
       key={selectedNodeId}
       className="flex h-full w-90 shrink-0 flex-col overflow-hidden border-l border-border"
     >
@@ -308,7 +322,7 @@ function PersonDetail({
   return (
     <>
       <div className="flex flex-none items-center gap-3 border-b border-border p-4">
-        <PersonAvatar photoId={person.photoId} size="panel" />
+        <PersonAvatar photoId={coverPhotoId(person)} size="panel" />
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-2">
             <h2 className="truncate font-heading text-sm font-semibold tracking-wide uppercase">
@@ -353,6 +367,18 @@ function PersonDetail({
             cancelLabel="Revert"
             submitLabel="Save"
           />
+        )}
+
+        {tab === "media" && (
+          <div className="flex flex-col gap-5">
+            <PersonPhotosPanel person={person} />
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <h3 className="font-heading text-10 font-semibold tracking-widest uppercase">
+                Documents
+              </h3>
+              <PersonAttachmentsPanel personId={person.id} />
+            </div>
+          </div>
         )}
 
         {tab === "notes" &&
@@ -806,7 +832,7 @@ function UnionChildren({
           key={childId}
           className="flex items-center gap-2 border border-border/60 px-2 py-1.5"
         >
-          <PersonAvatar photoId={people.get(childId)?.photoId} size="xs" />
+          <PersonAvatar photoId={coverPhotoId(people.get(childId))} size="xs" />
           <button
             type="button"
             className="cursor-pointer text-xs hover:underline"
@@ -909,7 +935,7 @@ function RelationshipList({
             className="flex flex-col gap-2 border border-border/60 p-2"
           >
             <div className="flex items-center gap-2">
-              <PersonAvatar photoId={other?.photoId} size="xs" />
+              <PersonAvatar photoId={coverPhotoId(other)} size="xs" />
               <div className="flex min-w-0 flex-col">
                 <button
                   type="button"

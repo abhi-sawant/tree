@@ -3,6 +3,7 @@ import Dexie, { type Table } from "dexie"
 import { dataChangeMiddleware } from "~/lib/db/change-signal"
 import type {
   AppMetaRow,
+  Attachment,
   BackupTarget,
   Person,
   Photo,
@@ -18,6 +19,7 @@ export class FamilyTreeDB extends Dexie {
   trees!: Table<Tree, string>
   members!: Table<TreeMember, [string, string]>
   photos!: Table<Photo, string>
+  attachments!: Table<Attachment, string>
   appMeta!: Table<AppMetaRow, string>
   snapshots!: Table<Snapshot, string>
   backupTargets!: Table<BackupTarget, string>
@@ -51,6 +53,12 @@ export class FamilyTreeDB extends Dexie {
     // which appMeta's string `value` cannot hold.
     this.version(5).stores({
       backupTargets: "id",
+    })
+    // A new store again, so another bump. `personId` is indexed because every
+    // read of this table is "what did this person's file drawer hold" — the
+    // detail panel, the delete cascade and a merge all ask exactly that.
+    this.version(6).stores({
+      attachments: "id, personId",
     })
 
     // Installed here rather than at the app root so that anything importing

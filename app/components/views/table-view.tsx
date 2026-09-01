@@ -102,7 +102,7 @@ export function TableView({
 
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
-      <div className="flex items-center gap-4">
+      <div data-print="hide" className="flex items-center gap-4">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}

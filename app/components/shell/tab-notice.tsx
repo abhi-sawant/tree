@@ -13,7 +13,10 @@ interface TabNoticeProps {
 export function TabNotice({ peerCount, dataReplaced }: TabNoticeProps) {
   if (dataReplaced) {
     return (
-      <div className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-destructive/40 bg-destructive/10 px-4 py-2">
+      <div
+        data-print="hide"
+        className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-destructive/40 bg-destructive/10 px-4 py-2"
+      >
         <span className="text-12-5 leading-snug text-destructive">
           Another tab restored a backup, so everything here is out of date.
           Reload before making any change — editing now would write these old
@@ -33,7 +36,10 @@ export function TabNotice({ peerCount, dataReplaced }: TabNoticeProps) {
   if (peerCount === 0) return null
 
   return (
-    <div className="flex flex-none items-center border-b border-border bg-muted/40 px-4 py-1.5">
+    <div
+      data-print="hide"
+      className="flex flex-none items-center border-b border-border bg-muted/40 px-4 py-1.5"
+    >
       <span className="text-11 leading-snug text-muted-foreground">
         Also open in{" "}
         {peerCount === 1 ? "another tab" : `${peerCount} other tabs`}. Edits

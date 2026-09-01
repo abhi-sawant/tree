@@ -12,6 +12,7 @@ import { Textarea } from "~/components/ui/textarea"
 import { resizeAndCompressImage } from "~/lib/photos"
 import { PersonFormSchema, type PersonFormValues } from "~/lib/schemas"
 import type { CustomField, Sex } from "~/lib/types"
+import { coverPhotoId, personPhotoCount } from "~/lib/person-photos"
 
 export type PhotoAction =
   | { kind: "unchanged" }
@@ -116,9 +117,14 @@ export function PersonForm({
     setPhotoAction({ kind: "removed" })
   }
 
+  // The form shows one avatar, so it can only ever speak for the cover photo.
+  // The rest of a person's gallery is managed in the detail panel's Photos tab,
+  // and "Change"/"Remove" here deliberately leave those alone.
+  const initialCoverId = coverPhotoId(initialValues)
+  const otherPhotoCount = Math.max(0, personPhotoCount(initialValues) - 1)
   const hasPhoto =
     photoAction.kind === "staged" ||
-    (photoAction.kind === "unchanged" && !!initialValues?.photoId)
+    (photoAction.kind === "unchanged" && !!initialCoverId)
 
   const cleanedCustomFields = customFields
     .map(({ label, value }) => ({ label: label.trim(), value: value.trim() }))
@@ -298,7 +304,7 @@ export function PersonForm({
 
       {showIdentity && (
         <div className="flex flex-col gap-1">
-          <Label>Photo</Label>
+          <Label>{otherPhotoCount > 0 ? "Cover photo" : "Photo"}</Label>
           <div className="flex items-center gap-3">
             {stagedPreviewUrl ? (
               <img
@@ -309,9 +315,7 @@ export function PersonForm({
             ) : (
               <PersonAvatar
                 photoId={
-                  photoAction.kind === "unchanged"
-                    ? initialValues?.photoId
-                    : undefined
+                  photoAction.kind === "unchanged" ? initialCoverId : undefined
                 }
                 size="lg"
               />
@@ -342,6 +346,13 @@ export function PersonForm({
                   </Button>
                 )}
               </div>
+              {otherPhotoCount > 0 && (
+                <p className="text-11 leading-snug text-muted-foreground">
+                  {otherPhotoCount === 1
+                    ? "1 more photo in the Photos tab — untouched by this."
+                    : `${otherPhotoCount} more photos in the Photos tab — untouched by this.`}
+                </p>
+              )}
               {photoError && (
                 <p className="text-sm text-destructive">{photoError}</p>
               )}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import { Button } from "~/components/ui/button"
 import { usePeople } from "~/lib/db/hooks"
+import { readAttachmentSizes } from "~/lib/db/attachments"
 import { readPhotoSizes } from "~/lib/db/photo-sizes"
 import { recompressAllPhotos } from "~/lib/photos"
 import {
@@ -23,6 +24,9 @@ export function StoragePanel() {
   const [photoSizes, setPhotoSizes] = useState<
     Awaited<ReturnType<typeof readPhotoSizes>> | undefined
   >(undefined)
+  const [attachmentSizes, setAttachmentSizes] = useState<
+    Awaited<ReturnType<typeof readAttachmentSizes>> | undefined
+  >(undefined)
   const [breakdown, setBreakdown] = useState<StorageBreakdown | undefined>(
     undefined
   )
@@ -31,12 +35,14 @@ export function StoragePanel() {
   )
 
   const measure = useCallback(async () => {
-    const [estimate, sizes] = await Promise.all([
+    const [estimate, sizes, attachments] = await Promise.all([
       estimateStorage(),
       readPhotoSizes(),
+      readAttachmentSizes(),
     ])
     setUsage(estimate)
     setPhotoSizes(sizes)
+    setAttachmentSizes(attachments)
   }, [])
 
   useEffect(() => {
@@ -46,9 +52,13 @@ export function StoragePanel() {
   // The join with people is cheap and reactive; the blob measurement above is
   // not, so only the former re-runs when somebody is renamed.
   useEffect(() => {
-    if (!photoSizes || !people) return
-    setBreakdown(buildStorageBreakdown(photoSizes, people))
-  }, [photoSizes, people])
+    if (!photoSizes || !attachmentSizes || !people) return
+    setBreakdown(
+      buildStorageBreakdown(photoSizes, people, {
+        attachments: attachmentSizes,
+      })
+    )
+  }, [photoSizes, attachmentSizes, people])
 
   async function handleRecompress() {
     if (recompressing) return
@@ -143,6 +153,39 @@ export function StoragePanel() {
         </div>
       )}
 
+      {breakdown && breakdown.attachmentCount > 0 && (
+        <div className="flex flex-col gap-1.5 border border-border p-3">
+          <div className="flex items-baseline gap-2">
+            <span className="font-heading text-10 font-semibold tracking-widest uppercase">
+              Documents
+            </span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {breakdown.attachmentCount}{" "}
+              {breakdown.attachmentCount === 1 ? "file" : "files"},{" "}
+              {formatBytes(breakdown.attachmentBytes)}
+            </span>
+          </div>
+          <ul className="mt-1 flex flex-col">
+            {breakdown.largestAttachments.map((attachment) => (
+              <li
+                key={attachment.attachmentId}
+                className="flex items-baseline gap-2 border-t border-border py-1 text-12-5 first:border-t-0"
+              >
+                <span className="truncate">{attachment.name}</span>
+                {attachment.ownerName && (
+                  <span className="shrink-0 text-11 text-muted-foreground">
+                    {attachment.ownerName}
+                  </span>
+                )}
+                <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">
+                  {formatBytes(attachment.size)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <p className="text-12-5 leading-relaxed text-muted-foreground">
         Everything lives in this browser. Nothing is uploaded — export a backup
         regularly. The quota above is the browser&apos;s own estimate for this
@@ -150,7 +193,9 @@ export function StoragePanel() {
         the photo total is measured here exactly. Uploads are already capped at
         800px, so re-compressing only helps photos that came from an older
         backup — anything that wouldn&apos;t get meaningfully smaller is left
-        untouched rather than re-encoded for nothing.
+        untouched rather than re-encoded for nothing. Documents are stored
+        exactly as they were added, since shrinking a scan would destroy the
+        detail it was kept for, so they are usually the largest thing here.
       </p>
 
       {breakdown && breakdown.photoCount > 0 && (

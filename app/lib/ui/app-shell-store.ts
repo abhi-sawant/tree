@@ -2,7 +2,8 @@ import { create } from "zustand"
 
 import { setLastTreeId } from "~/lib/last-tree"
 
-export type ShellView = "tree" | "table" | "insights" | "health" | "settings"
+export type ShellView =
+  "tree" | "table" | "photos" | "insights" | "health" | "settings"
 
 interface AppShellState {
   // Which tree the whole shell is scoped to. Null until the first render
