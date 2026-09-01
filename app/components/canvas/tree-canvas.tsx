@@ -1,11 +1,14 @@
 import {
   Background,
   BackgroundVariant,
+  ConnectionMode,
   Panel,
   ReactFlow,
   useReactFlow,
   type Edge,
+  type IsValidConnection,
   type Node,
+  type OnConnect,
   type OnNodeDrag,
 } from "@xyflow/react"
 import { Maximize2, Minus, Plus } from "lucide-react"
@@ -14,6 +17,11 @@ import { useEffect, useMemo } from "react"
 import { PersonNode } from "~/components/canvas/person-node"
 import { TreeToolbar } from "~/components/canvas/tree-toolbar"
 import { UnionNode } from "~/components/canvas/union-node"
+import {
+  connectRefusalMessage,
+  connectionShape,
+  resolveConnection,
+} from "~/lib/canvas/connect-intent"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { useCanvasKeyboard } from "~/lib/canvas/use-canvas-keyboard"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
@@ -22,6 +30,8 @@ import {
   resolveGenerationColor,
 } from "~/lib/canvas/appearance-resolve"
 import { setMemberPosition } from "~/lib/db/members"
+import { addRelationship } from "~/lib/db/relationships"
+import { toast } from "~/lib/ui/toast-store"
 import { parseNodeId } from "~/lib/graph/node-ids"
 import type { Person, Relationship } from "~/lib/types"
 
@@ -76,6 +86,51 @@ export function TreeCanvas({
     },
   ]
 
+  // Only the geometric half of the check gates the drag itself, so a drag that
+  // names a real relationship always lands and is explained afterwards if it
+  // cannot be recorded. A connector that silently refuses to drop tells the
+  // user nothing except that the canvas seems broken.
+  const isValidConnection: IsValidConnection = (connection) =>
+    connectionShape(connection) !== undefined
+
+  const handleConnect: OnConnect = (connection) => {
+    const resolution = resolveConnection(connection, relationships)
+    if (!resolution) return
+    if (!resolution.ok) {
+      toast(connectRefusalMessage(resolution.reason))
+      return
+    }
+
+    const { intent } = resolution
+    // Both people already have a card on this canvas, so they are already
+    // members — this is the relationship write and nothing else.
+    const input =
+      intent.kind === "spouse"
+        ? {
+            type: "spouse" as const,
+            from: intent.personIds[0],
+            to: intent.personIds[1],
+          }
+        : {
+            type: "parent-child" as const,
+            from: intent.parentId,
+            to: intent.childId,
+          }
+
+    void addRelationship(input).then(
+      () =>
+        toast(
+          intent.kind === "spouse"
+            ? "Marriage recorded"
+            : "Parent-child link added"
+        ),
+      // resolveConnection has already ruled out everything addRelationship
+      // rejects, so reaching here means the data changed under the drag —
+      // in another tab, or in the moment between the drop and the write.
+      () => toast("Couldn't record that link — please try again.")
+    )
+  }
+
   const handleNodeDragStop: OnNodeDrag = (_event, node) => {
     const parsed = parseNodeId(node.id)
     if (parsed?.kind !== "person") return
@@ -93,7 +148,15 @@ export function TreeCanvas({
       edges={edges}
       nodeTypes={nodeTypes}
       nodesDraggable
-      nodesConnectable={false}
+      nodesConnectable
+      // Loose lets a link be drawn from either end — dragging up from a child's
+      // parent handle is the same link as dragging down from the parent's. The
+      // handles are typed source/target for the *rendered* edges' sake, which
+      // strict mode would otherwise read as a rule about which way a user may
+      // draw one.
+      connectionMode={ConnectionMode.Loose}
+      onConnect={handleConnect}
+      isValidConnection={isValidConnection}
       // Selection is ours, not React Flow's: the node array is controlled and
       // we deliberately don't feed node changes back into it, so React Flow's
       // internal selection would never reach the nodes. Click handlers keep

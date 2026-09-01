@@ -77,23 +77,26 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
       )}
       style={{ borderLeftWidth: 3, borderLeftColor: levelColor }}
     >
+      {/* Connectable since Phase 5: dragging between handles records a
+          relationship. The side pair means a marriage, the in/children pair a
+          parent-child link — see lib/canvas/connect-intent.ts. */}
       <Handle
         type="target"
         position={geometry.inPosition}
         id={HANDLE.in}
-        isConnectable={false}
+        className="size-2!"
       />
       <Handle
         type="source"
         position={geometry.crossStartPosition}
         id={HANDLE.crossStart}
-        isConnectable={false}
+        className="size-2!"
       />
       <Handle
         type="source"
         position={geometry.crossEndPosition}
         id={HANDLE.crossEnd}
-        isConnectable={false}
+        className="size-2!"
       />
       {showPhoto && (
         <PersonAvatar
@@ -126,7 +129,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
         type="source"
         position={geometry.childrenPosition}
         id={HANDLE.children}
-        isConnectable={false}
+        className="size-2!"
       />
     </div>
   )
