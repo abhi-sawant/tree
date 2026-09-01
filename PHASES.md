@@ -3,7 +3,7 @@
 **Purpose:** a self-contained handoff document. Anyone (or any new session) picking up this work
 should be able to read only this file plus `SPEC.md` and continue without re-deriving anything.
 
-**Status:** Phases 1–5 complete. Phase 6 (Media & output) is next.
+**Status:** Phases 1–6 complete. Phase 7 (Polish & reach) is next.
 
 ---
 
@@ -132,7 +132,7 @@ These are load-bearing. Later phases should stay consistent with them.
 | 3 | Canvas navigation & readability | 7 | ✅ Complete on `feat/v2-phase-3` |
 | 4 | Durability | 5 | ✅ Complete on `feat/v2-phase-4` |
 | 5 | Fast entry | 7 | ✅ Complete on `feat/v2-phase-5` |
-| 6 | Media & output | 5 | Not started |
+| 6 | Media & output | 5 | ✅ Complete on `feat/v2-phase-6` |
 | 7 | Polish & reach | 3 | Not started |
 
 ---
@@ -590,15 +590,168 @@ and `<script>alert(1)</script>` appears as literal text.
 
 ---
 
-## Phase 6 — Media & output
+## Phase 6 — Media & output ✅
 
-| # | Feature | Notes |
+On `feat/v2-phase-6`. 6 commits, 993 tests passing.
+
+| # | Feature | Commit |
 |---|---|---|
-| 6.1 | Multiple photos per person | `Photo` is already its own table; `Person.photoId` → an ordered `photoIds` array is a contained change |
-| 6.2 | Document / scan attachments | PDF and image blobs, stored like photos |
-| 6.3 | Photo wall view | A grid of everyone with a photo — third view alongside canvas and table |
-| 6.4 | Family-book PDF + print stylesheet | One page **per person** with photo, dates, notes, parent/child lists. Deliberately sidesteps `FUTURE-SCOPE §7`'s canvas-tiling problem, and is what people actually hand to relatives |
-| 6.5 | Living-person privacy redaction on export | Redact details for anyone without a death date in PNG/PDF/GEDCOM. Standard in genealogy tools, and matters because these files get emailed around |
+| 6.1 | Multiple photos per person | `0502197` |
+| 6.2 | Document / scan attachments | `0c04c91` |
+| 6.3 | Photo wall view | `7496c06` |
+| 6.4 | Family-book PDF + print stylesheet | `e0556bb` |
+| 6.5 | Living-person privacy redaction on export | `278c75c` |
+| *(fix: four things the browser found that the tests didn't)* | | `a62c859` |
+
+Built in numbered order: 6.1 changes the photo model everything else reads, 6.2 adds the parallel
+table, and 6.3–6.5 consume both.
+
+### New modules
+
+`app/lib/person-photos.ts` · `app/lib/attachments.ts` · `app/lib/db/attachments.ts` ·
+`app/lib/people/photo-wall.ts` · `app/lib/export/family-book.ts` ·
+`app/lib/export/family-book-pdf.ts` · `app/lib/export/family-book-export.ts` ·
+`app/lib/export/redaction.ts` · `app/lib/export/use-redaction.ts` · `app/lib/ui/privacy-store.ts` ·
+`app/components/people/person-photos-panel.tsx` ·
+`app/components/people/person-attachments-panel.tsx` · `app/components/views/photo-wall-view.tsx`
+
+### What changed in the shared layers
+
+- **`Person.photoIds` is the ordered list and the source of truth; `photoId` is a mirror of
+  `photoIds[0]`.** Keeping the scalar is deliberate: data already in a browser, and backups already
+  in people's hands, carry only that field, and an older build importing a new backup would
+  otherwise show every face as the default avatar. `app/lib/person-photos.ts` owns the rule, and
+  `photoFieldsFor` is the single place both fields are written, so the mirror cannot drift.
+- **Dexie is at `version(6)`** — `attachments` is a new *store*, so unlike `photoIds` it needed a
+  bump. Indexed on `personId`, the only question anything asks of it.
+- **`applyBackup` takes `attachments` separately from `photos`,** defaulting to whatever `photos`
+  says, so no existing caller changed.
+- **`buildStorageBreakdown` reports documents as their own total and own list.** Merging them with
+  photos would produce a "largest files" list that is all documents — they are uncapped where photos
+  are capped at 800px.
+- **`notesToPlainText` was added beside `parseNotes`,** so the flattener the book uses and the
+  renderer the screen uses cannot disagree about what a note says.
+- **`mergePeople` returns `adoptedPhotos: number` (was `adoptedPhoto: boolean`) and
+  `movedAttachments: number`.** It no longer deletes anything.
+
+### Judgement calls to preserve
+
+- **An empty `photoIds` array is an answer, not an absence.** `personPhotoIds` returns `[]` rather
+  than falling through to the legacy scalar; getting this wrong makes removing a person's last photo
+  silently undo itself on the next read. Clearing writes `undefined` to both fields, so a person with
+  no photos looks on disk exactly as they always have.
+- **The person form speaks for the cover; the gallery lives in the detail panel.** The form shows one
+  avatar, so "Change photo" can only honestly mean the cover — it replaces just that and says how
+  many others it isn't touching. The gallery writes immediately rather than staging against a Save:
+  the person already exists, and a reorder that only landed on submit is a surprising way to lose one.
+- **A merge no longer destroys a photo.** Both records describe the same person, so both sets of
+  pictures are of them; the loser's are appended after the winner's. Previously the loser's was
+  deleted outright — an unrecoverable loss on a path the user thought was a tidy-up. A photo both
+  records shared is skipped without being deleted: it is one row, not two.
+- **GEDCOM emits one OBJE per photo.** A person's first photo keeps the bare `media/I1.jpg` path it
+  has always had, so a tree with one photo each exports exactly as before. The numbering counts
+  photos that actually resolved, not list positions, or a missing blob would make two exports of the
+  same tree disagree about a filename.
+- **Documents are their own table, not a `Photo` variant.** A photo is downscaled to 800px on upload
+  and a document must not be — the point of a scan is that the small print stays readable. A photo is
+  a face the app draws; a document is a file it only ever hands back, byte-identical.
+- **The attachment type list is closed and there is a size cap, both stated.** PDFs and images only,
+  25 MB a file, because everything here is stored verbatim in the quota `§5.1` calls the app's
+  biggest risk. `attachmentProblem` returns a sentence, not a code — every caller shows it verbatim —
+  and names the file and its actual size. Dropping five files reports all five refusals.
+- **A blank reported MIME type is guessed from the extension, not refused,** and the *resolved* type
+  is what gets stored: a file the browser typed `""` would otherwise come back out of a backup as an
+  unopenable blob.
+- **Nothing goes into the GEDCOM from the documents table.** 5.5.1's MULTIMEDIA_FORMAT enumeration
+  has no PDF, and importers drop an OBJE they can't classify — so a document exported there would
+  usually vanish while appearing to have been included. Settings says so.
+- **Snapshots exclude documents for the photo reason, only more so.** Stored at full size, they are
+  an even larger share of the bytes and an even smaller share of the risk.
+- **The photo wall shows only people with a face, and says how many it left out.** "34 of 112 people
+  have a photo" is the number that shows where the gaps are; a wall of identical default avatars says
+  nothing about who is missing and buries the 34 that matter. One face per person, with a "+3"
+  corner, or one well-photographed grandmother crowds out three other people. Chronological by
+  default so the wall reads as generations — `comparePartialDate` is right here *because* this is a
+  sort and not a claim about who was born first.
+- **The wall's scope is the user's choice**, unlike a validator finding or a statistic. Both readings
+  of "the family" are reasonable for browsing.
+- **The family-book renderer owns page numbers, not the content model.** A page can spill onto a
+  second sheet — a long note, thirty children — which shifts everything after it. Person pages are
+  laid out first, the title and contents are inserted in front once the real numbers are known, and
+  footers are written in one pass over what was produced. Nobody is truncated at the bottom margin.
+- **The book is scoped to the open tree, unlike every other file export.** `D14` scopes exports
+  pool-wide because they are *copies of the data*; this is a document about one family, so the
+  argument that scopes statistics to the open tree applies instead.
+- **A relative with no page in the book is still named** ("Not in this book"), or a page would claim
+  someone had one parent when the record says two. Pages carrying only a name are counted on the
+  title page.
+- **Redaction inverts the Phase 1 validator rule.** A finding must never fire on an undecidable
+  comparison; here everything undecidable resolves to *redact*, including someone with no dates at
+  all. Wrongly hiding a dead person's dates costs a reader one lookup; wrongly publishing a living
+  person's costs them something they cannot take back. The count is stated beside the switch and on
+  the book's title page so the aggressiveness is visible rather than surprising.
+- **A death needs a year to count as one**, since a `PartialDate` with no year reads as unknown
+  everywhere else — otherwise a stray keystroke could unredact somebody. The century cut-off uses
+  `definitelyBefore`, so "c. 1923" stays withheld while "1920" does not.
+- **The surname survives redaction; the given name becomes "Living".** Hiding it would leave a chart
+  of twenty identical cards nobody can read, and protects almost nothing in a document that is a
+  family tree. Sex survives because it orders HUSB/WIFE in a FAM, and a redacted export that
+  reshuffled spouses would be *wrong* rather than merely quiet. Relationship dates go whenever either
+  end is redacted — a hidden birth date beside a visible wedding date is the same information
+  arriving a different way.
+- **The canvas redacts what it draws, not what it exports.** PNG and PDF capture the live viewport,
+  so this is where it has to happen — and the user then sees exactly what will leave rather than
+  trusting a hidden transform. The detail panel keeps the real records; that is the user's own data.
+- **The backup is exempt from redaction, and says so.** It is the user's own complete copy and the
+  thing `§5.1` exists to encourage; redacting it would turn the safety net into a data-loss mechanism.
+- **The privacy setting persists,** and lives in its own store rather than beside card widths. The
+  risk is asymmetric: someone who turned it on and found it off next session would publish what they
+  meant to withhold.
+- **The print stylesheet opts chrome out by `data-print="hide"`,** not a Tailwind variant per
+  element, so the whole rule set is legible in one place — and so the rules with no variant (page
+  margins, unwinding the full-height flex shell and its scrollers, forcing the light palette for the
+  reason `EXPORT_BACKGROUND_COLOR` exists) sit beside the ones that have one. Popups are matched by
+  ARIA role because they are portalled outside that tree.
+
+### Bugs found and fixed along the way
+
+All four were found in the browser, not by a test — see `a62c859`.
+
+- **jsPDF drops characters its WinAnsi fonts can't encode, silently.** "1915–1990" reached the page
+  as "19151990", one meaningless number, and bulleted notes lost their bullets. `toPdfText` maps them
+  at the single point where text reaches the page. It belongs in the renderer, not the content model:
+  an en dash is the correct thing for a lifespan to *contain*.
+- **An open dropdown printed as a grey slab over the content**, because popups portal to the end of
+  `<body>` where no `data-print` attribute can reach them.
+- **A document filename truncated to about eight characters** in the 340px panel — "Birth ce…"
+  identifies nothing, which is the one job the name has.
+- **`Select` wraps itself in a `w-full` container**, so a width set on the control does nothing.
+
+### Verified live
+
+Built a four-person family in Chromium and exercised every feature, then cleared the profile.
+Confirmed: the `version(6)` upgrade creates the attachments store on an existing database; two photos
+on one person show as cover + "Photo 2", and "Make cover" repaints both the card and the panel
+header; the storage panel attributes both of Anil's photos to him and lists the two documents under
+their own heading with their owners; the photo wall reads "2 of 4 people have a photo", orders 1910
+before 1915, badges the extra photo "+1" and explains the two it left out; the exported book is six
+pages — title, contents, four people — with contents entries 3–6 matching the footers, photos
+embedded, the note flattened to "Worked the mills. See Priya Iyer." and "Birth certificate.pdf"
+listed; with redaction on the canvas immediately shows both undated people as "Living Sawant", the
+title page says "2 people who may still be living have had their details withheld", the GEDCOM writes
+`1 NAME Living /Sawant/` with no dates or notes while both dead spouses keep theirs including the
+1938 `MARR` date, and the redacted person's document is not listed; the setting survives a reload;
+a real backup .zip carries all three photos, both attachments and `backup.json`; and forcing the
+print rules on gives a full-width People table with no chrome, no controls and no action column.
+
+### Deferred from this phase
+
+- **An embedded font for the family book.** jsPDF's standard fonts are WinAnsi, so a name in a
+  non-Latin script cannot be drawn at all — `toPdfText` only rescues the Latin-1-adjacent characters.
+  Fixing it properly means shipping a Unicode font, which would add megabytes to a bundle that has to
+  work offline, and choosing which scripts to cover. Its own piece of work.
+- **A viewer for attachments.** Every browser already has a better PDF and image viewer than this app
+  could build, and the file handed back is byte-identical to the one added.
 
 ---
 
