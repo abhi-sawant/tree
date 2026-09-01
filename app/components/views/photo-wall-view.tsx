@@ -62,18 +62,21 @@ export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
           />
           Only {tree.name}
         </Label>
-        <Select
-          data-print="hide"
-          className="h-8 w-40"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as PhotoWallSort)}
-        >
-          {PHOTO_WALL_SORTS.map(({ value, label }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
+        {/* Select's own wrapper is w-full, so the width has to be set on a
+            container rather than on the control. */}
+        <div data-print="hide" className="w-40">
+          <Select
+            className="h-8"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as PhotoWallSort)}
+          >
+            {PHOTO_WALL_SORTS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </div>
         <span className="ml-auto text-xs text-muted-foreground">
           {wall.withPhoto} of {wall.considered}{" "}
           {wall.considered === 1 ? "person has" : "people have"} a photo

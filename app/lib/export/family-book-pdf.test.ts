@@ -5,6 +5,7 @@ import {
   CONTENTS_ENTRIES_PER_PAGE,
   contentsPageCountFor,
   renderFamilyBook,
+  toPdfText,
 } from "~/lib/export/family-book-pdf"
 import type { Person } from "~/lib/types"
 
@@ -123,5 +124,30 @@ describe("renderFamilyBook", () => {
         photoDataUrls: new Map([["broken", "data:image/png;base64,!!!"]]),
       })
     ).not.toThrow()
+  })
+})
+
+// jsPDF's standard fonts encode to WinAnsi and drop what they can't encode,
+// silently. Unmapped, "1915–1990" reaches the page as "19151990" — one
+// meaningless number — and a bulleted note loses its bullets.
+describe("toPdfText", () => {
+  it("keeps a lifespan's dash visible", () => {
+    expect(toPdfText("1915\u20131990")).toBe("1915-1990")
+  })
+
+  it("keeps a note's bullets visible", () => {
+    expect(toPdfText("\u2022 moved 1935")).toBe("- moved 1935")
+  })
+
+  it("substitutes typographic quotes, dashes and ellipses", () => {
+    expect(toPdfText("\u201cAddy\u201d")).toBe('"Addy"')
+    expect(toPdfText("\u2018a\u2019")).toBe("'a'")
+    expect(toPdfText("a\u2014b")).toBe("a-b")
+    expect(toPdfText("more\u2026")).toBe("more...")
+    expect(toPdfText("a\u00a0b")).toBe("a b")
+  })
+
+  it("leaves Latin-1 accents alone — the standard fonts draw those", () => {
+    expect(toPdfText("née Iyer")).toBe("née Iyer")
   })
 })

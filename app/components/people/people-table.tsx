@@ -94,7 +94,9 @@ export function PeopleTable({
           <TableHead>Generation</TableHead>
           <TableHead>Trees</TableHead>
           <TableHead>Relatives</TableHead>
-          <TableHead className="w-0" />
+          {/* The row-action menu is the one column that means nothing on
+              paper, so it and its header come out of a print. */}
+          <TableHead data-print="hide" className="w-0" />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -222,7 +224,7 @@ export function PeopleTable({
               <TableCell className="text-xs text-muted-foreground">
                 {counts ? relativesSummary(counts) : "—"}
               </TableCell>
-              <TableCell>
+              <TableCell data-print="hide">
                 <PersonRowActions
                   person={person}
                   onOpenInTree={onOpenInTree}

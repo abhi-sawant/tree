@@ -147,16 +147,16 @@ function AttachmentRow({
     onEndRename()
   }
 
+  // Two rows rather than one. The panel is 340px wide, and a filename sharing a
+  // line with a size and two buttons truncates to about eight characters —
+  // "Birth ce…" identifies nothing, which is the one job the name has.
   return (
-    <li className="flex items-center gap-2 border-t border-border py-2 first:border-t-0">
-      <span className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
-        {isPdfAttachment(attachment.mime) ? "PDF" : "IMG"}
-      </span>
+    <li className="flex flex-col gap-1 border-t border-border py-2 first:border-t-0">
       {renaming ? (
         <Input
           autoFocus
           value={draft}
-          className="h-7 flex-1 text-12-5"
+          className="h-7 text-12-5"
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => void commitRename()}
           onKeyDown={(e) => {
@@ -172,33 +172,41 @@ function AttachmentRow({
         <button
           type="button"
           title="Rename"
-          className="min-w-0 flex-1 cursor-text truncate text-left text-12-5"
+          className="w-full cursor-text truncate text-left text-12-5"
           onClick={onStartRename}
         >
           {attachment.name}
         </button>
       )}
-      <span className="shrink-0 text-11 text-muted-foreground tabular-nums">
-        {formatBytes(attachment.size)}
-      </span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="xs"
-        onClick={() => triggerDownload(attachment.blob, attachment.name)}
-      >
-        Download
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="xs"
-        onClick={() =>
-          void deleteAttachment(attachment.id).then(() => toast("File removed"))
-        }
-      >
-        Remove
-      </Button>
+      <div className="flex items-center gap-2">
+        <span className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+          {isPdfAttachment(attachment.mime) ? "PDF" : "IMG"}
+        </span>
+        <span className="text-11 text-muted-foreground tabular-nums">
+          {formatBytes(attachment.size)}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          className="ml-auto"
+          onClick={() => triggerDownload(attachment.blob, attachment.name)}
+        >
+          Download
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          onClick={() =>
+            void deleteAttachment(attachment.id).then(() =>
+              toast("File removed")
+            )
+          }
+        >
+          Remove
+        </Button>
+      </div>
     </li>
   )
 }

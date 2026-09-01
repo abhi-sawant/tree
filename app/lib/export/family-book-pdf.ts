@@ -19,6 +19,37 @@ const BODY_BOTTOM = FOOTER_Y - 12
 // How many names fit in the contents at one per line.
 export const CONTENTS_ENTRIES_PER_PAGE = 44
 
+// jsPDF's built-in fonts encode to WinAnsi, and a character it can't encode is
+// dropped silently rather than substituted. That turns "1915–1990" into
+// "19151990" — a single meaningless number — and makes a bulleted note read as
+// unindented prose. So every string is mapped to characters the standard fonts
+// can actually draw, at the one point where it reaches the page.
+//
+// This belongs here and not in the content model: an en dash is the correct
+// thing for a lifespan to contain, and the model is what the book *says*. What
+// a particular font can draw is this file's problem.
+//
+// Only the characters this app itself produces, plus the typographic ones a
+// person is likely to type. A name in a non-Latin script is beyond what the
+// standard fonts can express at all — that needs an embedded font, which would
+// add megabytes to the bundle and is its own piece of work.
+const PDF_TEXT_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/[\u2013\u2014]/g, "-"], // en and em dash
+  [/\u2022/g, "-"], // bullet
+  [/[\u2018\u2019]/g, "'"],
+  [/[\u201c\u201d]/g, '"'],
+  [/\u2026/g, "..."],
+  [/\u00a0/g, " "], // non-breaking space
+]
+
+export function toPdfText(text: string): string {
+  let out = text
+  for (const [pattern, replacement] of PDF_TEXT_REPLACEMENTS) {
+    out = out.replace(pattern, replacement)
+  }
+  return out
+}
+
 export interface FamilyBookPdfInput {
   book: FamilyBook
   generatedDate: Date
@@ -110,7 +141,7 @@ function drawFooter(doc: jsPDF, page: number, title: string) {
   doc.setFont("helvetica", "normal")
   doc.setFontSize(8)
   doc.setTextColor(140)
-  doc.text(title, MARGIN, FOOTER_Y)
+  doc.text(toPdfText(title), MARGIN, FOOTER_Y)
   doc.text(String(page), PAGE_WIDTH - MARGIN, FOOTER_Y, { align: "right" })
   doc.setTextColor(0)
 }
@@ -119,7 +150,11 @@ function drawTitlePage(doc: jsPDF, input: FamilyBookPdfInput) {
   const { book, generatedDate } = input
   doc.setFont("helvetica", "bold")
   doc.setFontSize(28)
-  doc.text(doc.splitTextToSize(book.title, CONTENT_WIDTH), MARGIN, 80)
+  doc.text(
+    doc.splitTextToSize(toPdfText(book.title), CONTENT_WIDTH),
+    MARGIN,
+    80
+  )
 
   doc.setFont("helvetica", "normal")
   doc.setFontSize(11)
@@ -137,7 +172,7 @@ function drawTitlePage(doc: jsPDF, input: FamilyBookPdfInput) {
     )
   }
   if (input.redactionNote) lines.push(input.redactionNote)
-  doc.text(lines, MARGIN, 96)
+  doc.text(lines.map(toPdfText), MARGIN, 96)
   doc.setTextColor(0)
 }
 
@@ -165,7 +200,7 @@ function drawContents(
       (index + 1) * CONTENTS_ENTRIES_PER_PAGE
     )
     for (const entry of slice) {
-      doc.text(entry.name, MARGIN, y)
+      doc.text(toPdfText(entry.name), MARGIN, y)
       doc.text(String(entry.pageNumber), PAGE_WIDTH - MARGIN, y, {
         align: "right",
       })
@@ -186,13 +221,13 @@ function flow(doc: jsPDF, lines: string[], y: number, page: BookPage): number {
       doc.setFont("helvetica", "italic")
       doc.setFontSize(9)
       doc.setTextColor(140)
-      doc.text(`${page.name}, continued`, MARGIN, MARGIN + 4)
+      doc.text(toPdfText(`${page.name}, continued`), MARGIN, MARGIN + 4)
       doc.setTextColor(0)
       doc.setFont("helvetica", "normal")
       doc.setFontSize(10)
       cursor = MARGIN + 14
     }
-    doc.text(line, MARGIN, cursor)
+    doc.text(toPdfText(line), MARGIN, cursor)
     cursor += LINE
   }
   return cursor
@@ -205,7 +240,7 @@ function heading(doc: jsPDF, text: string, y: number, page: BookPage): number {
   const cursor = flow(doc, [""], y, page) - LINE
   doc.setFont("helvetica", "bold")
   doc.setFontSize(9)
-  doc.text(text.toUpperCase(), MARGIN, cursor)
+  doc.text(toPdfText(text).toUpperCase(), MARGIN, cursor)
   doc.setFont("helvetica", "normal")
   doc.setFontSize(10)
   return cursor + LINE + 1
@@ -229,20 +264,24 @@ function drawPersonPage(doc: jsPDF, page: BookPage, input: FamilyBookPdfInput) {
 
   doc.setFont("helvetica", "bold")
   doc.setFontSize(18)
-  doc.text(doc.splitTextToSize(page.name, headerWidth), headerLeft, MARGIN + 8)
+  doc.text(
+    doc.splitTextToSize(toPdfText(page.name), headerWidth),
+    headerLeft,
+    MARGIN + 8
+  )
 
   let y = MARGIN + 16
   if (page.alsoKnownAs) {
     doc.setFont("helvetica", "italic")
     doc.setFontSize(10)
     doc.setTextColor(110)
-    doc.text(page.alsoKnownAs, headerLeft, y)
+    doc.text(toPdfText(page.alsoKnownAs), headerLeft, y)
     doc.setTextColor(0)
     y += LINE
   }
   doc.setFont("helvetica", "normal")
   doc.setFontSize(11)
-  doc.text(page.lifespan, headerLeft, y)
+  doc.text(toPdfText(page.lifespan), headerLeft, y)
 
   // Below the photo or below the header, whichever is lower, so neither
   // overlaps the other.
@@ -279,7 +318,9 @@ function drawPersonPage(doc: jsPDF, page: BookPage, input: FamilyBookPdfInput) {
       flow(
         doc,
         page.notes.flatMap((line) =>
-          line ? (doc.splitTextToSize(line, CONTENT_WIDTH) as string[]) : [""]
+          line
+            ? (doc.splitTextToSize(toPdfText(line), CONTENT_WIDTH) as string[])
+            : [""]
         ),
         cursor,
         page

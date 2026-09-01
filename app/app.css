@@ -230,6 +230,19 @@
         display: table-header-group;
     }
 
+    /* Popups are portalled to the end of <body>, so they are not inside
+       anything a data-print attribute could cover — and one left open when
+       Cmd+P is pressed prints as a grey slab over the content. Matched by role
+       rather than by class so it holds for every menu, dialog and tooltip the
+       component library renders. */
+    [role="menu"],
+    [role="dialog"],
+    [role="alertdialog"],
+    [role="tooltip"],
+    [role="listbox"] {
+        display: none !important;
+    }
+
     /* React Flow's own overlays: toolbar, zoom controls, legend, minimap. */
     .react-flow__panel,
     .react-flow__controls,
