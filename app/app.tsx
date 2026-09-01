@@ -5,7 +5,11 @@ import { AppShell } from "~/components/shell/app-shell"
 import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { Button } from "~/components/ui/button"
 import { Toaster } from "~/components/ui/toast"
+import { useAutoSnapshots } from "~/lib/backup/use-auto-snapshots"
+import { useFolderBackup } from "~/lib/backup/use-folder-backup"
 import { usePeople, useRelationships, useTrees } from "~/lib/db/hooks"
+import { useChangeStamp } from "~/lib/db/use-change-stamp"
+import { useTabPresence } from "~/lib/db/use-tab-presence"
 import { computeGenerations } from "~/lib/graph/compute-generations"
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { getLastTreeId } from "~/lib/last-tree"
@@ -15,6 +19,18 @@ import { watchSystemTheme } from "~/lib/ui/theme-store"
 export default function App() {
   // Document-level, so it belongs here rather than in any one view.
   useEffect(watchSystemTheme, [])
+  // Subscribes to every write in the app, so it has to outlive any one view —
+  // and has to be mounted above the early returns below, or a snapshot would
+  // stop being taken whenever the boot skeleton showed.
+  // Elects one tab to do the automatic backup work, so two open tabs don't both
+  // deflate every photo. Must be above the early returns below for the same
+  // reason the snapshot subscription is.
+  const tabs = useTabPresence()
+  useAutoSnapshots(tabs.isLeader)
+  useFolderBackup(tabs.isLeader)
+  // Not gated: the stamp is a single tiny write, and whichever tab made the
+  // change is the one that should record that it happened.
+  useChangeStamp()
 
   const trees = useTrees()
   const people = usePeople()
@@ -78,6 +94,7 @@ export default function App() {
         relationships={relationships}
         unions={unions}
         generations={generations}
+        tabs={tabs}
       />
     </ReactFlowProvider>
   )

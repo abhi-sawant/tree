@@ -1,10 +1,13 @@
 import Dexie, { type Table } from "dexie"
 
+import { dataChangeMiddleware } from "~/lib/db/change-signal"
 import type {
   AppMetaRow,
+  BackupTarget,
   Person,
   Photo,
   Relationship,
+  Snapshot,
   Tree,
   TreeMember,
 } from "~/lib/types"
@@ -16,6 +19,8 @@ export class FamilyTreeDB extends Dexie {
   members!: Table<TreeMember, [string, string]>
   photos!: Table<Photo, string>
   appMeta!: Table<AppMetaRow, string>
+  snapshots!: Table<Snapshot, string>
+  backupTargets!: Table<BackupTarget, string>
 
   constructor() {
     super("FamilyTreeDB")
@@ -35,6 +40,23 @@ export class FamilyTreeDB extends Dexie {
     this.version(3).stores({
       people: "id, givenName, familyName, sex, [givenName+familyName]",
     })
+    // A new store, so this one does need a version bump — unlike the optional
+    // non-indexed Person fields added in Phases 1-3. `createdAt` is indexed
+    // because retention only ever asks for these in date order.
+    this.version(4).stores({
+      snapshots: "id, createdAt",
+    })
+    // Another new store. Holds at most one row, but a keyed table is still the
+    // right shape: a directory handle is an opaque structured-clonable object,
+    // which appMeta's string `value` cannot hold.
+    this.version(5).stores({
+      backupTargets: "id",
+    })
+
+    // Installed here rather than at the app root so that anything importing
+    // `db` — including tests — is watched. See change-signal.ts for why this
+    // sits at the DBCore layer instead of in the lib/db helpers.
+    this.use(dataChangeMiddleware())
   }
 }
 

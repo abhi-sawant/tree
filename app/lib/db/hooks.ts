@@ -1,6 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks"
 import { useEffect, useState } from "react"
 
+import { listSnapshots, type SnapshotSummary } from "~/lib/backup/snapshots"
 import { db } from "~/lib/db/db"
 import { getTreesForPerson, searchPeople, type SearchPeopleOptions, type TreeRef } from "~/lib/db/people"
 import type { Person, Photo, Relationship, Tree, TreeMember } from "~/lib/types"
@@ -82,4 +83,10 @@ export function useMembers(): TreeMember[] | undefined {
 
 export function useTreesForPerson(personId: string | undefined): TreeRef[] | undefined {
   return useLiveQuery(() => (personId ? getTreesForPerson(personId) : []), [personId])
+}
+
+// Blob-free by construction — listSnapshots drops it — so keeping this live
+// costs nothing even with ten archives stored.
+export function useSnapshots(): SnapshotSummary[] | undefined {
+  return useLiveQuery(() => listSnapshots(), [])
 }

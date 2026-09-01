@@ -83,3 +83,110 @@ export async function removePersonPhoto(personId: string): Promise<void> {
     await db.photos.delete(existing.photoId)
   })
 }
+
+// Re-encoding a JPEG is lossy every time, so a pass that saves a handful of
+// bytes spends real image quality for nothing. Below this fraction the original
+// is kept — the point of the action is reclaiming space, and there is none here.
+export const RECOMPRESS_MIN_SAVING = 0.05
+
+export function shouldKeepRecompressed(
+  before: number,
+  after: number,
+  minSaving: number = RECOMPRESS_MIN_SAVING
+): boolean {
+  if (before <= 0 || after <= 0) return false
+  return (before - after) / before >= minSaving
+}
+
+export interface RecompressResult {
+  photoId: string
+  before: number
+  after: number
+  // False means the original was kept, either because re-encoding didn't shrink
+  // it enough to be worth the quality loss or because it couldn't be decoded.
+  replaced: boolean
+}
+
+export interface RecompressOptions extends ResizeOptions {
+  minSaving?: number
+  // Injected so this is testable without a canvas, and so a caller can supply
+  // a different encoder without this module knowing about it.
+  encode?: (blob: Blob) => Promise<Blob>
+}
+
+// Rewrites the blob in place, keeping the same photo id. The id is what
+// Person.photoId points at, so replacing the row rather than the blob would
+// mean touching every person that references it — and a photo shared by two
+// people (possible in a hand-edited backup) would only get one of them updated.
+export async function recompressPhoto(
+  photoId: string,
+  options: RecompressOptions = {}
+): Promise<RecompressResult | undefined> {
+  const {
+    minSaving,
+    encode = (blob: Blob) => resizeAndCompressImage(blob, options),
+  } = options
+
+  const photo = await db.photos.get(photoId)
+  if (!photo) return undefined
+
+  const before = photo.blob.size
+  let encoded: Blob
+  try {
+    encoded = await encode(photo.blob)
+  } catch {
+    // A photo the browser can't decode — a HEIC on a browser without support,
+    // or a truncated blob from a damaged import. Leaving it exactly as it was
+    // is the only safe answer: the bytes may still be recoverable elsewhere.
+    return { photoId, before, after: before, replaced: false }
+  }
+
+  if (!shouldKeepRecompressed(before, encoded.size, minSaving)) {
+    return { photoId, before, after: encoded.size, replaced: false }
+  }
+
+  await db.photos.put({
+    ...photo,
+    blob: encoded,
+    mime: encoded.type || photo.mime,
+  })
+  return { photoId, before, after: encoded.size, replaced: true }
+}
+
+export interface RecompressAllResult {
+  considered: number
+  replaced: number
+  bytesBefore: number
+  bytesAfter: number
+}
+
+// Sequential on purpose. Each step decodes a full-size bitmap, and running
+// thirty of those at once is how a phone browser tab gets killed — the exact
+// data-loss failure this whole phase exists to avoid.
+export async function recompressAllPhotos(
+  options: RecompressOptions & {
+    onProgress?: (done: number, total: number) => void
+  } = {}
+): Promise<RecompressAllResult> {
+  const { onProgress, ...recompressOptions } = options
+  const ids = (await db.photos.toCollection().primaryKeys()) as string[]
+
+  const summary: RecompressAllResult = {
+    considered: 0,
+    replaced: 0,
+    bytesBefore: 0,
+    bytesAfter: 0,
+  }
+
+  for (const [index, id] of ids.entries()) {
+    const result = await recompressPhoto(id, recompressOptions)
+    onProgress?.(index + 1, ids.length)
+    if (!result) continue
+    summary.considered += 1
+    summary.bytesBefore += result.before
+    summary.bytesAfter += result.replaced ? result.after : result.before
+    if (result.replaced) summary.replaced += 1
+  }
+
+  return summary
+}

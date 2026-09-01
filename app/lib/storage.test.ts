@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
+  estimateStorage,
   isStorageApiSupported,
   isStoragePersisted,
   requestPersistentStorage,
@@ -31,6 +32,7 @@ describe("storage", () => {
     expect(isStorageApiSupported()).toBe(false)
     expect(await isStoragePersisted()).toBe(false)
     expect(await requestPersistentStorage()).toBe(false)
+    expect(await estimateStorage()).toBeUndefined()
   })
 
   it("reports supported when persist is available", () => {
@@ -71,5 +73,48 @@ describe("storage", () => {
       persist: vi.fn().mockRejectedValue(new Error("boom")),
     })
     expect(await requestPersistentStorage()).toBe(false)
+  })
+})
+
+describe("estimateStorage", () => {
+  it("passes the browser's own numbers through", async () => {
+    mockStorage({
+      estimate: vi.fn().mockResolvedValue({ usage: 1234, quota: 100_000 }),
+    })
+    expect(await estimateStorage()).toEqual({ usage: 1234, quota: 100_000 })
+  })
+
+  it("treats zero usage as a real answer", async () => {
+    mockStorage({
+      estimate: vi.fn().mockResolvedValue({ usage: 0, quota: 500 }),
+    })
+    expect(await estimateStorage()).toEqual({ usage: 0, quota: 500 })
+  })
+
+  it("gives up on a quota it can't divide by", async () => {
+    mockStorage({
+      estimate: vi.fn().mockResolvedValue({ usage: 10, quota: 0 }),
+    })
+    expect(await estimateStorage()).toBeUndefined()
+  })
+
+  it("gives up when the browser omits the quota", async () => {
+    mockStorage({ estimate: vi.fn().mockResolvedValue({ usage: 10 }) })
+    expect(await estimateStorage()).toBeUndefined()
+  })
+
+  it("defaults a missing usage to zero rather than discarding the quota", async () => {
+    mockStorage({ estimate: vi.fn().mockResolvedValue({ quota: 500 }) })
+    expect(await estimateStorage()).toEqual({ usage: 0, quota: 500 })
+  })
+
+  it("swallows an estimate() error", async () => {
+    mockStorage({ estimate: vi.fn().mockRejectedValue(new Error("boom")) })
+    expect(await estimateStorage()).toBeUndefined()
+  })
+
+  it("reports unavailable when estimate() isn't implemented", async () => {
+    mockStorage({ persist: vi.fn() })
+    expect(await estimateStorage()).toBeUndefined()
   })
 })

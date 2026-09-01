@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react"
 
 import { AppSidebar } from "~/components/shell/app-sidebar"
 import { AppTopbar } from "~/components/shell/app-topbar"
+import { BackupNudgeBanner } from "~/components/shell/backup-nudge"
+import { TabNotice } from "~/components/shell/tab-notice"
 import { CommandPalette } from "~/components/shell/command-palette"
 import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
@@ -11,13 +13,15 @@ import { InsightsView } from "~/components/views/insights-view"
 import { SettingsView } from "~/components/views/settings-view"
 import { TableView } from "~/components/views/table-view"
 import { TreeView } from "~/components/views/tree-view"
+import { useBackupNudge } from "~/lib/backup/use-backup-nudge"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { useTreeMembers } from "~/lib/db/hooks"
-import { setLastExportDate } from "~/lib/db/app-meta"
+import { clearBackupNudgeDismissal, setLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
 import { backupFilename } from "~/lib/export/filenames"
 import { exportBackup } from "~/lib/export/json"
 import type { UnionNode } from "~/lib/graph/derive-unions"
+import type { TabPresenceState } from "~/lib/db/use-tab-presence"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
 import { toast } from "~/lib/ui/toast-store"
 import type { Person, Relationship, Tree } from "~/lib/types"
@@ -29,6 +33,7 @@ interface AppShellProps {
   relationships: Relationship[]
   unions: UnionNode[]
   generations: Map<string, number>
+  tabs: TabPresenceState
 }
 
 export function AppShell({
@@ -38,6 +43,7 @@ export function AppShell({
   relationships,
   unions,
   generations,
+  tabs,
 }: AppShellProps) {
   const view = useAppShellStore((s) => s.view)
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
@@ -64,6 +70,8 @@ export function AppShell({
   const [exportingBackup, setExportingBackup] = useState(false)
   // Nudged after every backup so the sidebar and Settings re-read app-meta.
   const [exportToken, setExportToken] = useState(0)
+
+  const backupNudge = useBackupNudge(people, exportToken)
 
   const memberIds = useMemo(
     () => new Set((treeMembers ?? []).map((m) => m.personId)),
@@ -102,6 +110,9 @@ export function AppShell({
       // Only on success: "Last export" is a storage-risk signal, and a date
       // written after a failed export would be actively misleading.
       await setLastExportDate()
+      // A dismissal that outlived the thing it dismissed would swallow the next
+      // nudge a week into the following month.
+      await clearBackupNudgeDismissal()
       setExportToken((t) => t + 1)
       toast("Backup exported")
     } catch {
@@ -132,6 +143,18 @@ export function AppShell({
           onCreateTree={() => setCreateTreeOpen(true)}
           onExportBackup={() => void handleExportBackup()}
           exportingBackup={exportingBackup}
+        />
+
+        <TabNotice
+          peerCount={tabs.peerCount}
+          dataReplaced={tabs.dataReplaced}
+        />
+
+        <BackupNudgeBanner
+          verdict={backupNudge.verdict}
+          exporting={exportingBackup}
+          onExport={() => void handleExportBackup()}
+          onDismiss={backupNudge.dismiss}
         />
 
         {view === "tree" && (
@@ -171,6 +194,7 @@ export function AppShell({
             onExportBackup={() => void handleExportBackup()}
             exportingBackup={exportingBackup}
             exportToken={exportToken}
+            tabId={tabs.tabId}
           />
         )}
       </div>

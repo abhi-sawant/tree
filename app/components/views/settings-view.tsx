@@ -14,6 +14,9 @@ import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
+import { BackupFolderPanel } from "~/components/views/backup-folder-panel"
+import { SnapshotsPanel } from "~/components/views/snapshots-panel"
+import { StoragePanel } from "~/components/views/storage-panel"
 import { getLastExportDate } from "~/lib/db/app-meta"
 import { triggerDownload } from "~/lib/download"
 import {
@@ -28,6 +31,7 @@ import {
   importBackup,
   type ImportBackupResult,
 } from "~/lib/export/json"
+import { announceDataReplaced } from "~/lib/db/use-tab-presence"
 import { isStoragePersisted } from "~/lib/storage"
 import {
   THEME_OPTIONS,
@@ -40,12 +44,16 @@ interface SettingsViewProps {
   onExportBackup: () => void
   exportingBackup?: boolean
   exportToken: number
+  // This tab's identity, so a restore can tell the other tabs their view of the
+  // data no longer exists.
+  tabId: string
 }
 
 export function SettingsView({
   onExportBackup,
   exportingBackup,
   exportToken,
+  tabId,
 }: SettingsViewProps) {
   const [inputKey, setInputKey] = useState(0)
   const [pendingFile, setPendingFile] = useState<File | undefined>(undefined)
@@ -115,6 +123,9 @@ export function SettingsView({
     setImporting(true)
     try {
       const imported = await importBackup(pendingFile)
+      // Every other tab is now showing people who no longer exist. Told before
+      // this tab reloads, because the reload tears down its channel.
+      announceDataReplaced(tabId)
       // Reloading destroys any toast before it can render, so a partial
       // restore has to be reported in the dialog the user is already looking
       // at. The clean case keeps the original straight-to-reload behaviour.
@@ -158,10 +169,7 @@ export function SettingsView({
             {lastExport ? new Date(lastExport).toLocaleString() : "never"}
           </span>
         </div>
-        <p className="text-12-5 leading-relaxed text-muted-foreground">
-          Everything lives in this browser. Nothing is uploaded — export a
-          backup regularly.
-        </p>
+        <StoragePanel />
       </section>
 
       <section className="flex flex-col gap-2.5">
@@ -183,6 +191,16 @@ export function SettingsView({
           Saved in this browser and applied before the page paints, so switching
           to dark doesn&apos;t flash white on every load.
         </p>
+      </section>
+
+      <section className="flex flex-col gap-2.5">
+        <SectionHeading>Backup folder</SectionHeading>
+        <BackupFolderPanel />
+      </section>
+
+      <section className="flex flex-col gap-2.5">
+        <SectionHeading>Snapshots</SectionHeading>
+        <SnapshotsPanel tabId={tabId} />
       </section>
 
       <section className="flex flex-col gap-2.5">

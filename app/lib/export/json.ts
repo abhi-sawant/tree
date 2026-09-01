@@ -1,5 +1,9 @@
 import { db } from "~/lib/db/db"
-import { buildBackupZip, parseBackupFile } from "~/lib/export/archive"
+import {
+  buildBackupZip,
+  parseBackupFile,
+  type ParsedBackup,
+} from "~/lib/export/archive"
 import type { Person } from "~/lib/types"
 
 export { InvalidBackupError } from "~/lib/export/archive"
@@ -32,13 +36,36 @@ export async function exportBackup(now: Date = new Date()): Promise<Blob> {
   return buildBackupZip({ people, relationships, trees, members, photos }, now)
 }
 
-export async function importBackup(file: Blob): Promise<ImportBackupResult> {
-  const backup = await parseBackupFile(file)
+export interface ApplyBackupOptions {
+  // "replace" wipes the photo table and restores the archive's photos — what a
+  // backup file means. "keep" leaves the photo table alone, for a restore whose
+  // archive deliberately carries no photos (see lib/backup/snapshots.ts); any
+  // restored person pointing at a photo this browser no longer holds has the
+  // reference cleared rather than left dangling.
+  photos?: "replace" | "keep"
+}
 
-  // Leaving a photoId pointing at a photo that didn't survive the round trip
-  // would render fine (PersonAvatar falls back), but the restored database
-  // would be permanently inconsistent. Only rebuild the array when it matters.
-  const missing = new Set(backup.missingPhotoIds)
+// Shared by the file-import path and the snapshot-restore path so the two cannot
+// disagree about what "replace everything" means, and so both get the same
+// all-or-nothing transaction.
+export async function applyBackup(
+  backup: ParsedBackup,
+  options: ApplyBackupOptions = {}
+): Promise<{ people: Person[]; missingPhotoIds: string[] }> {
+  const { photos: photoMode = "replace" } = options
+
+  const knownPhotoIds =
+    photoMode === "replace"
+      ? new Set(backup.photos.map((photo) => photo.id))
+      : new Set((await db.photos.toCollection().primaryKeys()) as string[])
+
+  // Leaving a photoId pointing at a photo that isn't there would render fine
+  // (PersonAvatar falls back), but the restored database would be permanently
+  // inconsistent. Only rebuild the array when it actually matters.
+  const dangling = backup.people.filter(
+    (person) => person.photoId && !knownPhotoIds.has(person.photoId)
+  )
+  const missing = new Set(dangling.map((person) => person.photoId!))
   const people: Person[] = missing.size
     ? backup.people.map((person) =>
         person.photoId && missing.has(person.photoId)
@@ -63,7 +90,7 @@ export async function importBackup(file: Blob): Promise<ImportBackupResult> {
         db.relationships.clear(),
         db.trees.clear(),
         db.members.clear(),
-        db.photos.clear(),
+        ...(photoMode === "replace" ? [db.photos.clear()] : []),
       ])
 
       await Promise.all([
@@ -71,10 +98,17 @@ export async function importBackup(file: Blob): Promise<ImportBackupResult> {
         db.relationships.bulkAdd(backup.relationships),
         db.trees.bulkAdd(backup.trees),
         db.members.bulkAdd(backup.members),
-        db.photos.bulkAdd(backup.photos),
+        ...(photoMode === "replace" ? [db.photos.bulkAdd(backup.photos)] : []),
       ])
     }
   )
+
+  return { people, missingPhotoIds: [...missing] }
+}
+
+export async function importBackup(file: Blob): Promise<ImportBackupResult> {
+  const backup = await parseBackupFile(file)
+  const { people, missingPhotoIds } = await applyBackup(backup)
 
   return {
     schema: backup.schema,
@@ -85,6 +119,6 @@ export async function importBackup(file: Blob): Promise<ImportBackupResult> {
       members: backup.members.length,
       photos: backup.photos.length,
     },
-    missingPhotoIds: backup.missingPhotoIds,
+    missingPhotoIds,
   }
 }
