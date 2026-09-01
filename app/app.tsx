@@ -10,11 +10,14 @@ import { useFolderBackup } from "~/lib/backup/use-folder-backup"
 import { usePeople, useRelationships, useTrees } from "~/lib/db/hooks"
 import { useChangeStamp } from "~/lib/db/use-change-stamp"
 import { useTabPresence } from "~/lib/db/use-tab-presence"
+import { loadSampleTree } from "~/lib/demo/load-sample-tree"
+import { SAMPLE_PERSON_COUNT } from "~/lib/demo/sample-tree"
 import { computeGenerations } from "~/lib/graph/compute-generations"
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { getLastTreeId } from "~/lib/last-tree"
 import { resolveActiveTreeId, useAppShellStore } from "~/lib/ui/app-shell-store"
 import { watchSystemTheme } from "~/lib/ui/theme-store"
+import { toast } from "~/lib/ui/toast-store"
 
 export default function App() {
   // Document-level, so it belongs here rather than in any one view.
@@ -135,7 +138,23 @@ function BootSkeleton() {
 
 function WelcomeState() {
   const [createOpen, setCreateOpen] = useState(false)
+  const [loadingSample, setLoadingSample] = useState(false)
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
+
+  // The one moment the sample family is most worth offering: there is nothing
+  // here yet, so there is nothing it could be confused with, and "what does a
+  // filled-in tree even look like" is the question in the way of starting.
+  async function handleLoadSample() {
+    if (loadingSample) return
+    setLoadingSample(true)
+    try {
+      const { treeId } = await loadSampleTree()
+      setActiveTree(treeId)
+    } catch {
+      toast("Couldn't add the sample family")
+      setLoadingSample(false)
+    }
+  }
 
   return (
     <div className="flex h-svh w-full items-center justify-center p-6">
@@ -152,6 +171,20 @@ function WelcomeState() {
         <Button onClick={() => setCreateOpen(true)}>
           Create your first tree
         </Button>
+        <div className="flex flex-col items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={loadingSample}
+            onClick={() => void handleLoadSample()}
+          >
+            {loadingSample ? "Adding…" : "Or look at a sample family first"}
+          </Button>
+          <p className="text-11 text-muted-foreground">
+            {SAMPLE_PERSON_COUNT} invented people you can delete in one click
+            from Settings.
+          </p>
+        </div>
       </div>
 
       <CreateTreeDialog
