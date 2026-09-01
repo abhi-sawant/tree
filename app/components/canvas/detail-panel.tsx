@@ -5,6 +5,7 @@ import {
   type AddAction,
   type AddActionKind,
 } from "~/components/canvas/add-relative-menu"
+import { AddFamilyForm } from "~/components/canvas/add-family-form"
 import { RelativeForm } from "~/components/canvas/relative-form"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
@@ -35,6 +36,7 @@ import {
   updateRelationshipSubtype,
   type RelationshipDates,
 } from "~/lib/db/relationship-actions"
+import { addFamily } from "~/lib/db/add-family"
 import { removeRelationship } from "~/lib/db/relationships"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Label } from "~/components/ui/label"
@@ -252,6 +254,7 @@ function PersonDetail({
   const [formKey, setFormKey] = useState(0)
   const [removeOpen, setRemoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [familyOpen, setFamilyOpen] = useState(false)
 
   const parentRels = relationships.filter(
     (r) => r.type === "parent-child" && r.to === person.id
@@ -372,8 +375,65 @@ function PersonDetail({
             <AddRelativeMenu
               selection={{ kind: "person", person }}
               parentCount={parentRels.length}
-              onOpenAction={setAction}
+              onOpenAction={(next) => {
+                setFamilyOpen(false)
+                setAction(next)
+              }}
             />
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() => {
+                setAction(undefined)
+                setFamilyOpen(true)
+              }}
+            >
+              Add whole family…
+            </Button>
+
+            {familyOpen && (
+              <div className="flex flex-col gap-2.5 border border-border bg-muted/40 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-heading text-10 font-semibold tracking-widest uppercase">
+                    Add whole family
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFamilyOpen(false)}
+                    aria-label="Close"
+                    className="cursor-pointer text-13 text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <AddFamilyForm
+                  anchor={person}
+                  currentSpouses={spouseRels
+                    .map((r) =>
+                      people.get(r.from === person.id ? r.to : r.from)
+                    )
+                    .filter((p): p is Person => p !== undefined)}
+                  onSubmit={async (spouse, marriage, children) => {
+                    const result = await addFamily({
+                      anchorPersonId: person.id,
+                      treeId,
+                      spouse,
+                      marriage,
+                      children,
+                    })
+                    setFamilyOpen(false)
+                    const added =
+                      (result.spouse ? 1 : 0) + result.children.length
+                    toast(
+                      added === 1 ? "1 person added" : `${added} people added`
+                    )
+                  }}
+                  onCancel={() => setFamilyOpen(false)}
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -392,9 +452,10 @@ function PersonDetail({
                   : [person.id]
               }
               showDates={action.kind === "add-spouse"}
-              showSubtype={
-                action.kind === "add-parent" || action.kind === "add-child"
-              }
+              // Every kind except a spouse: a marriage has no subtype to
+              // choose. A sibling's subtype is their own link to the shared
+              // parents, which is as ordinary a thing to record as a child's.
+              showSubtype={action.kind !== "add-spouse"}
               onSubmitNew={async (values, dates, photoAction, subtype) => {
                 let created: Person | undefined
                 if (action.kind === "add-parent")
@@ -414,7 +475,12 @@ function PersonDetail({
                     subtype
                   )
                 else if (action.kind === "add-sibling")
-                  created = await addSiblingNew(person.id, treeId, values)
+                  created = await addSiblingNew(
+                    person.id,
+                    treeId,
+                    values,
+                    subtype
+                  )
                 if (created && photoAction.kind === "staged")
                   await setPersonPhoto(
                     created.id,
@@ -437,7 +503,12 @@ function PersonDetail({
                     subtype
                   )
                 else if (action.kind === "add-sibling")
-                  await addSiblingExisting(person.id, treeId, picked.id)
+                  await addSiblingExisting(
+                    person.id,
+                    treeId,
+                    picked.id,
+                    subtype
+                  )
                 setAction(undefined)
                 toast("Relative linked")
               }}

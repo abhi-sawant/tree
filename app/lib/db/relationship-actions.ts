@@ -239,10 +239,16 @@ export async function ensureParentsForSibling(
   )
 }
 
+// The subtype describes the *new sibling's* link to the shared parents, not
+// their relation to the person the add started from. Phase 1 offered it on
+// parent and child adds only; a step-sibling or an adopted sibling is exactly
+// as ordinary a thing to record, and without it the link had to be added and
+// then corrected in the Family tab.
 export async function addSiblingNew(
   personId: string,
   treeId: string,
-  siblingInput: CreatePersonInput
+  siblingInput: CreatePersonInput,
+  subtype?: ParentChildSubtype
 ): Promise<Person> {
   return db.transaction(
     "rw",
@@ -258,6 +264,7 @@ export async function addSiblingNew(
           type: "parent-child",
           from: parentId,
           to: sibling.id,
+          subtype,
         })
       }
       await addPersonToTree(treeId, sibling.id)
@@ -269,7 +276,8 @@ export async function addSiblingNew(
 export async function addSiblingExisting(
   personId: string,
   treeId: string,
-  siblingId: string
+  siblingId: string,
+  subtype?: ParentChildSubtype
 ): Promise<void> {
   await db.transaction(
     "rw",
@@ -284,6 +292,7 @@ export async function addSiblingExisting(
           type: "parent-child",
           from: parentId,
           to: siblingId,
+          subtype,
         })
       }
       await addPersonToTree(treeId, siblingId)
