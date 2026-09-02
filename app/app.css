@@ -4,6 +4,12 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
+/* Touch and stylus, as distinct from a mouse. Used where the right answer
+   depends on the input device rather than the viewport width — a tablet with a
+   trackpad wants the desktop hit areas at a width a tablet with a finger does
+   not. Viewport tiers are the `max-md:` / `md:max-lg:` / `lg:` variants; see
+   app/lib/ui/viewport-tier.ts. */
+@custom-variant coarse (@media (pointer: coarse));
 
 :root {
     --background: #f7f5f1;
