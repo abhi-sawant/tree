@@ -1,5 +1,5 @@
-// The nudge SPEC.md §5.2 stops short of: "No nagging. Just make the risk
-// legible." A banner that appears once a month, only when there is genuinely
+// The nudge stops short of nagging: just make the risk legible. A banner
+// that appears once a month, only when there is genuinely
 // something unsaved, and that can be sent away, stays on the legible side of
 // that line. Everything here exists to keep it there.
 export const STALE_AFTER_DAYS = 30

@@ -1,4 +1,4 @@
-// Composites for the canvas's contextual add-relative actions (PLAN.md §6).
+// Composites for the canvas's contextual add-relative actions (ADR.md D2/D10).
 // Each wraps its writes in one Dexie transaction so a validation failure deep
 // inside addRelationship (TooManyParentsError/RelationshipCycleError/
 // SelfReferenceError) rolls back everything already done in the same call —

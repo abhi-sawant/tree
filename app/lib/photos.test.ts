@@ -23,57 +23,78 @@ afterEach(async () => {
 
 describe("computeTargetDimensions", () => {
   it("passes through dimensions already within bounds", () => {
-    expect(computeTargetDimensions(400, 300, 800)).toEqual({ width: 400, height: 300 })
+    expect(computeTargetDimensions(400, 300, 800)).toEqual({
+      width: 400,
+      height: 300,
+    })
   })
 
   it("scales down a width-dominant image", () => {
-    expect(computeTargetDimensions(1600, 800, 800)).toEqual({ width: 800, height: 400 })
+    expect(computeTargetDimensions(1600, 800, 800)).toEqual({
+      width: 800,
+      height: 400,
+    })
   })
 
   it("scales down a height-dominant image", () => {
-    expect(computeTargetDimensions(800, 1600, 800)).toEqual({ width: 400, height: 800 })
+    expect(computeTargetDimensions(800, 1600, 800)).toEqual({
+      width: 400,
+      height: 800,
+    })
   })
 
   it("never upscales a small image", () => {
-    expect(computeTargetDimensions(100, 50, 800)).toEqual({ width: 100, height: 50 })
+    expect(computeTargetDimensions(100, 50, 800)).toEqual({
+      width: 100,
+      height: 50,
+    })
   })
 
   it("passes through an image exactly at the boundary", () => {
-    expect(computeTargetDimensions(800, 800, 800)).toEqual({ width: 800, height: 800 })
+    expect(computeTargetDimensions(800, 800, 800)).toEqual({
+      width: 800,
+      height: 800,
+    })
   })
 })
 
 describe("resizeAndCompressImage", () => {
   it("draws the decoded image onto a canvas sized by computeTargetDimensions and encodes as JPEG", async () => {
     const fakeBitmap = { width: 1600, height: 800, close: vi.fn() }
-    vi.stubGlobal(
-      "createImageBitmap",
-      vi.fn().mockResolvedValue(fakeBitmap),
-    )
+    vi.stubGlobal("createImageBitmap", vi.fn().mockResolvedValue(fakeBitmap))
 
     const drawImage = vi.fn()
     const outputBlob = new Blob(["resized"], { type: "image/jpeg" })
     let canvas: HTMLCanvasElement | undefined
 
     const originalCreateElement = document.createElement.bind(document)
-    vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
-      const el = originalCreateElement(tagName)
-      if (tagName === "canvas") {
-        canvas = el as HTMLCanvasElement
-        vi.spyOn(canvas, "getContext").mockReturnValue({
-          drawImage,
-        } as unknown as CanvasRenderingContext2D)
-        vi.spyOn(canvas, "toBlob").mockImplementation((cb) => cb(outputBlob))
+    vi.spyOn(document, "createElement").mockImplementation(
+      (tagName: string) => {
+        const el = originalCreateElement(tagName)
+        if (tagName === "canvas") {
+          canvas = el as HTMLCanvasElement
+          vi.spyOn(canvas, "getContext").mockReturnValue({
+            drawImage,
+          } as unknown as CanvasRenderingContext2D)
+          vi.spyOn(canvas, "toBlob").mockImplementation((cb) => cb(outputBlob))
+        }
+        return el
       }
-      return el
-    })
+    )
 
-    const result = await resizeAndCompressImage(new Blob(["input"]), { maxEdge: 800, quality: 0.8 })
+    const result = await resizeAndCompressImage(new Blob(["input"]), {
+      maxEdge: 800,
+      quality: 0.8,
+    })
 
     expect(canvas?.width).toBe(800)
     expect(canvas?.height).toBe(400)
     expect(drawImage).toHaveBeenCalledWith(fakeBitmap, 0, 0, 800, 400)
-    expect(canvas?.toBlob).toHaveBeenCalledWith(expect.any(Function), "image/jpeg", 0.8)
+    expect(canvas?.toBlob).toHaveBeenCalledWith(
+      expect.any(Function),
+      "image/jpeg",
+      0.8
+    )
     expect(result).toBe(outputBlob)
 
     vi.restoreAllMocks()
@@ -89,13 +110,24 @@ describe("setPersonPhoto", () => {
     const photoId = await setPersonPhoto(person.id, blob, "image/jpeg")
 
     expect((await db.people.get(person.id))?.photoId).toBe(photoId)
-    expect(await db.photos.get(photoId)).toMatchObject({ id: photoId, mime: "image/jpeg" })
+    expect(await db.photos.get(photoId)).toMatchObject({
+      id: photoId,
+      mime: "image/jpeg",
+    })
   })
 
   it("deletes the old Photo row when replacing an existing photo", async () => {
     const person = await createPerson({ givenName: "Ada" })
-    const firstId = await setPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
-    const secondId = await setPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+    const firstId = await setPersonPhoto(
+      person.id,
+      new Blob(["a"]),
+      "image/jpeg"
+    )
+    const secondId = await setPersonPhoto(
+      person.id,
+      new Blob(["b"]),
+      "image/jpeg"
+    )
 
     expect(await db.photos.get(firstId)).toBeUndefined()
     expect(await db.photos.get(secondId)).toBeDefined()
@@ -106,7 +138,11 @@ describe("setPersonPhoto", () => {
 describe("removePersonPhoto", () => {
   it("clears photoId and deletes the Photo row", async () => {
     const person = await createPerson({ givenName: "Ada" })
-    const photoId = await setPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
+    const photoId = await setPersonPhoto(
+      person.id,
+      new Blob(["a"]),
+      "image/jpeg"
+    )
 
     await removePersonPhoto(person.id)
 
@@ -125,7 +161,11 @@ describe("addPersonPhoto", () => {
   it("appends without disturbing the cover", async () => {
     const person = await createPerson({ givenName: "Ada" })
     const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
-    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+    const second = await addPersonPhoto(
+      person.id,
+      new Blob(["b"]),
+      "image/jpeg"
+    )
 
     const stored = await db.people.get(person.id)
     expect(personPhotoIds(stored)).toEqual([first, second])
@@ -146,7 +186,11 @@ describe("setPersonPhoto with a gallery", () => {
   it("replaces only the cover and leaves the rest in place", async () => {
     const person = await createPerson({ givenName: "Ada" })
     const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
-    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+    const second = await addPersonPhoto(
+      person.id,
+      new Blob(["b"]),
+      "image/jpeg"
+    )
 
     const replacement = await setPersonPhoto(
       person.id,
@@ -167,7 +211,11 @@ describe("removePersonPhotoById", () => {
   it("removes one photo and promotes nothing when it wasn't the cover", async () => {
     const person = await createPerson({ givenName: "Ada" })
     const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
-    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+    const second = await addPersonPhoto(
+      person.id,
+      new Blob(["b"]),
+      "image/jpeg"
+    )
 
     await removePersonPhotoById(person.id, second)
 
@@ -180,7 +228,11 @@ describe("removePersonPhotoById", () => {
   it("promotes the next photo when the cover is removed", async () => {
     const person = await createPerson({ givenName: "Ada" })
     const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
-    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+    const second = await addPersonPhoto(
+      person.id,
+      new Blob(["b"]),
+      "image/jpeg"
+    )
 
     await removePersonPhoto(person.id)
 
@@ -222,7 +274,11 @@ describe("setPersonCoverPhoto", () => {
   it("promotes a photo and mirrors it into the legacy field", async () => {
     const person = await createPerson({ givenName: "Ada" })
     const first = await addPersonPhoto(person.id, new Blob(["a"]), "image/jpeg")
-    const second = await addPersonPhoto(person.id, new Blob(["b"]), "image/jpeg")
+    const second = await addPersonPhoto(
+      person.id,
+      new Blob(["b"]),
+      "image/jpeg"
+    )
     const third = await addPersonPhoto(person.id, new Blob(["c"]), "image/jpeg")
 
     await setPersonCoverPhoto(person.id, third)

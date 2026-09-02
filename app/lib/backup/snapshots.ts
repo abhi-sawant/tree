@@ -4,8 +4,8 @@ import { applyBackup } from "~/lib/export/json"
 import type { Snapshot, SnapshotReason } from "~/lib/types"
 
 // Ten, paired with MIN_AUTO_INTERVAL_MS below, covers at least a hundred
-// minutes of work — the order of the two-hour session SPEC.md §5.1 describes as
-// the worst thing to lose. Keeping "the newest N" alone would not: auto
+// minutes of work — the order of a two-hour data-entry session, the worst
+// thing to lose. Keeping "the newest N" alone would not: auto
 // snapshots firing every few seconds would leave all ten inside the last
 // minute, with the state from before the damage already pruned away.
 export const MAX_SNAPSHOTS = 10
@@ -64,7 +64,7 @@ export interface CreateSnapshotOptions {
 // none of the risk: you either uploaded a photo or you didn't, whereas a
 // mistaken merge or delete can wipe out an afternoon of names and dates. Ten
 // copies of every photo would also multiply storage use by ten, in the one place
-// SPEC.md §5.1 identifies as the actual danger.
+// IndexedDB eviction under storage pressure (ADR.md D25) is the actual danger.
 export async function createSnapshot(
   reason: SnapshotReason,
   options: CreateSnapshotOptions = {}

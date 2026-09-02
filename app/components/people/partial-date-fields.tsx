@@ -34,7 +34,7 @@ export function PartialDateFields({
 
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-xs font-semibold tracking-wide uppercase text-primary mb-3">
+      <legend className="mb-3 text-xs font-semibold tracking-wide text-primary uppercase">
         {legend}
       </legend>
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">

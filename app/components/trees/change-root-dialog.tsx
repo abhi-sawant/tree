@@ -16,7 +16,11 @@ interface ChangeRootDialogProps {
   tree: Tree
 }
 
-export function ChangeRootDialog({ open, onOpenChange, tree }: ChangeRootDialogProps) {
+export function ChangeRootDialog({
+  open,
+  onOpenChange,
+  tree,
+}: ChangeRootDialogProps) {
   const members = useTreeMembers(tree.id)
   const people = usePeople()
   const peopleById = new Map((people ?? []).map((p) => [p.id, p]))
@@ -56,7 +60,11 @@ export function ChangeRootDialog({ open, onOpenChange, tree }: ChangeRootDialogP
           ))}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
         </DialogFooter>

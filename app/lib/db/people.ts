@@ -15,7 +15,7 @@ export interface CreatePersonOptions {
   // by, and several people created inside one millisecond would tie and fall
   // back to comparing random UUIDs — which scrambles the order they were
   // entered in. Any caller creating a batch of siblings at once must space them
-  // out here. (PHASES.md: prefer injecting `now` over reading the clock.)
+  // out here. (Prefer injecting `now` over reading the clock.)
   createdAt?: number
 }
 

@@ -18,7 +18,11 @@ interface RenameTreeDialogProps {
   tree: Tree
 }
 
-export function RenameTreeDialog({ open, onOpenChange, tree }: RenameTreeDialogProps) {
+export function RenameTreeDialog({
+  open,
+  onOpenChange,
+  tree,
+}: RenameTreeDialogProps) {
   const [name, setName] = useState(tree.name)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -42,7 +46,11 @@ export function RenameTreeDialog({ open, onOpenChange, tree }: RenameTreeDialogP
             autoFocus
           />
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">Save</Button>

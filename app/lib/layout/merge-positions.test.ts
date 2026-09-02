@@ -18,8 +18,13 @@ describe("mergeLayoutPositions", () => {
   })
 
   it("leaves non-overridden ids untouched", () => {
-    const elkPositions = { "person:a": { x: 0, y: 0 }, "person:b": { x: 10, y: 10 } }
-    const merged = mergeLayoutPositions(elkPositions, [member({ personId: "a" })])
+    const elkPositions = {
+      "person:a": { x: 0, y: 0 },
+      "person:b": { x: 10, y: 10 },
+    }
+    const merged = mergeLayoutPositions(elkPositions, [
+      member({ personId: "a" }),
+    ])
 
     expect(merged["person:a"]).toEqual({ x: 0, y: 0 })
     expect(merged["person:b"]).toEqual({ x: 10, y: 10 })

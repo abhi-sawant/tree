@@ -3,8 +3,8 @@ import { formatBytes } from "~/lib/storage-breakdown"
 // What a scan or document may be. PDFs and images cover what people actually
 // have: a photographed certificate, a scanned letter, an exported record. The
 // list is closed rather than "anything the user picks", because everything in
-// here is stored verbatim in a quota SPEC.md §5.1 already calls the app's
-// biggest risk, and a video dropped in by accident would eat it in one go.
+// here is stored verbatim in a quota that eviction can already wipe out
+// (ADR.md D25), and a video dropped in by accident would eat it in one go.
 export const ATTACHMENT_MIME_TYPES = ["application/pdf"] as const
 export const ATTACHMENT_ACCEPT = "application/pdf,image/*"
 
