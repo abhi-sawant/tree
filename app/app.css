@@ -177,11 +177,27 @@
   --shadow-float: 0 18px 40px -20px rgb(0 0 0 / 0.6);
 }
 
-/* The canvas node handles are anchor points for edges, never drag targets
-   (every node sets isConnectable={false}), so they shouldn't be drawn. */
+/* The canvas node handles are the anchor points edges are drawn between. They
+   are invisible because the cards carry no visible ports, but on a person card
+   they stay interactive: dragging between two of them is how a relationship
+   gets recorded (see lib/canvas/connect-intent.ts). Union dots opt out in the
+   component instead, via isConnectable={false}.
+
+   Under a coarse pointer they are switched off entirely. An invisible 8px
+   target on a card's edge is exactly where a pan gesture starts, and a finger
+   cannot tell the two apart — so on touch every attempt to move the canvas
+   from near a card would start drawing a link instead. The same relationship
+   is one tap away in the detail sheet. !important because React Flow's own
+   stylesheet is injected after this one and sets pointer-events itself, which
+   is also why the plain declaration that used to be here never took effect. */
 .react-flow__handle {
   opacity: 0;
-  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .react-flow__handle {
+    pointer-events: none !important;
+  }
 }
 
 @layer base {

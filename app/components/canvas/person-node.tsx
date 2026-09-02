@@ -9,6 +9,7 @@ import { Pin, Users } from "lucide-react"
 import { useState } from "react"
 
 import type { AddActionKind } from "~/components/canvas/add-relative-menu"
+import { NodeActionsSheet } from "~/components/canvas/node-actions-sheet"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
@@ -31,6 +32,8 @@ import type { PersonNodeData } from "~/lib/layout/to-react-flow-graph"
 import { personDisplayName } from "~/lib/person-name"
 import { HANDLE, directionGeometry } from "~/lib/canvas/layout-direction"
 import { coverPhotoId } from "~/lib/person-photos"
+import { useLongPress } from "~/lib/canvas/use-long-press"
+import { useIsMobile } from "~/lib/ui/viewport-tier"
 
 export type PersonNodeType = Node<PersonNodeData, "person">
 
@@ -66,6 +69,9 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   )
   const [removeOpen, setRemoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [actionsOpen, setActionsOpen] = useState(false)
+  const isMobile = useIsMobile()
+  const longPress = useLongPress(() => setActionsOpen(true))
   const name = personDisplayName(person)
   const dates = [
     formatPartialDate(person.birth),
@@ -158,7 +164,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
         position={Position.Bottom}
         offset={8}
       >
-        <div className="flex gap-1">
+        <div className="flex gap-1 max-md:gap-1.5">
           {QUICK_ADD.map(({ kind, label }) => (
             <Button
               key={kind}
@@ -172,43 +178,69 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
         </div>
       </NodeToolbar>
 
-      <ContextMenu>
-        <ContextMenuTrigger className="relative h-full w-full">
+      {/* Touch gets an explicit long press rather than the context menu's own:
+          on the canvas the gesture has to lose to a drag, since the same
+          finger on the same card means "pin it here" if it travels and "show
+          me the actions" if it doesn't (see lib/canvas/long-press.ts). What it
+          opens is a sheet with room to name each action and say what the
+          destructive ones do, and it carries what the toolbar and tree menu
+          hold on a wide screen — a long press is the only place "focus on this
+          person" and "make root" can live on a phone. */}
+      {isMobile ? (
+        <div className="relative h-full w-full" {...longPress}>
           {card}
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          {overridden && (
+        </div>
+      ) : (
+        <ContextMenu>
+          <ContextMenuTrigger className="relative h-full w-full">
+            {card}
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            {overridden && (
+              <ContextMenuItem
+                onClick={() => void clearMemberPosition(treeId, person.id)}
+              >
+                <Pin /> Reset position
+              </ContextMenuItem>
+            )}
             <ContextMenuItem
-              onClick={() => void clearMemberPosition(treeId, person.id)}
+              onClick={() =>
+                requestAddRelative(personNodeId(person.id), "add-child")
+              }
             >
-              <Pin /> Reset position
+              + Add child
             </ContextMenuItem>
-          )}
-          <ContextMenuItem
-            onClick={() =>
-              requestAddRelative(personNodeId(person.id), "add-child")
-            }
-          >
-            + Add child
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={() =>
-              requestAddRelative(personNodeId(person.id), "add-spouse")
-            }
-          >
-            + Add spouse
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => setRemoveOpen(true)}>
-            Remove from tree
-          </ContextMenuItem>
-          <ContextMenuItem
-            variant="destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
-            Delete person…
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+            <ContextMenuItem
+              onClick={() =>
+                requestAddRelative(personNodeId(person.id), "add-spouse")
+              }
+            >
+              + Add spouse
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => setRemoveOpen(true)}>
+              Remove from tree
+            </ContextMenuItem>
+            <ContextMenuItem
+              variant="destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              Delete person…
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      )}
+
+      {isMobile && (
+        <NodeActionsSheet
+          open={actionsOpen}
+          onOpenChange={setActionsOpen}
+          person={person}
+          treeId={treeId}
+          overridden={overridden}
+          onRemoveFromTree={() => setRemoveOpen(true)}
+          onDelete={() => setDeleteOpen(true)}
+        />
+      )}
 
       <RemoveFromTreeDialog
         open={removeOpen}

@@ -5,13 +5,14 @@ import {
   Panel,
   ReactFlow,
   useReactFlow,
+  useStore,
   type Edge,
   type IsValidConnection,
   type Node,
   type OnConnect,
   type OnNodeDrag,
 } from "@xyflow/react"
-import { Maximize2, Minus, Plus } from "lucide-react"
+import { Maximize2, Minus, Plus, SlidersHorizontal } from "lucide-react"
 import { useEffect, useMemo } from "react"
 
 import { PersonNode } from "~/components/canvas/person-node"
@@ -19,6 +20,7 @@ import { Button } from "~/components/ui/button"
 import { MultiSelectPanel } from "~/components/canvas/multi-select-panel"
 import { TreeOutlinePanel } from "~/components/canvas/tree-outline-panel"
 import { TreeToolbar } from "~/components/canvas/tree-toolbar"
+import { ViewOptionsSheet } from "~/components/canvas/view-options-sheet"
 import { UnionNode } from "~/components/canvas/union-node"
 import {
   connectRefusalMessage,
@@ -36,6 +38,9 @@ import { setMemberPosition } from "~/lib/db/members"
 import { addRelationship } from "~/lib/db/relationships"
 import { toast } from "~/lib/ui/toast-store"
 import { parseNodeId } from "~/lib/graph/node-ids"
+import { LONG_PRESS_SLOP_PX } from "~/lib/canvas/long-press"
+import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useIsMobile } from "~/lib/ui/viewport-tier"
 import type { Person, Relationship } from "~/lib/types"
 
 const nodeTypes = { person: PersonNode, union: UnionNode }
@@ -54,9 +59,19 @@ const nodeTypes = { person: PersonNode, union: UnionNode }
 const NODE_KEYS_DESCRIPTION =
   "Arrow keys move to a relative. Enter edits this person. P, S and C add a parent, spouse or child. Turn on the tree outline for the whole tree as a list."
 
-const ARIA_LABEL_CONFIG = {
-  "node.a11yDescription.default": NODE_KEYS_DESCRIPTION,
-  "node.a11yDescription.keyboardDisabled": NODE_KEYS_DESCRIPTION,
+// The touch reading of the same sentence. Neither the arrow keys nor the
+// letter shortcuts exist for a finger, and a description that lists keys
+// nobody has is worse than none — which is why the original React Flow text
+// was replaced in the first place.
+const NODE_TOUCH_DESCRIPTION =
+  "Long-press this card for its actions. Drag it to pin it in place. Turn on the tree outline for the whole tree as a list."
+
+function ariaLabelConfig(touch: boolean) {
+  const description = touch ? NODE_TOUCH_DESCRIPTION : NODE_KEYS_DESCRIPTION
+  return {
+    "node.a11yDescription.default": description,
+    "node.a11yDescription.keyboardDisabled": description,
+  }
 }
 
 interface TreeCanvasProps {
@@ -92,6 +107,8 @@ export function TreeCanvas({
   }, [nodes])
   useCanvasKeyboard({ people, relationships, visiblePersonIds })
   const showOutline = useCanvasUIStore((s) => s.showOutline)
+  const selectMode = useCanvasUIStore((s) => s.selectMode)
+  const isMobile = useIsMobile()
 
   // Bulk actions are about people, so union dots in the selection are dropped
   // rather than counted: a union has no membership of its own to add or remove
@@ -211,7 +228,7 @@ export function TreeCanvas({
           // The wrapper React Flow renders already carries role="application";
           // without a name it is announced as an unlabelled application region.
           aria-label="Family tree canvas"
-          ariaLabelConfig={ARIA_LABEL_CONFIG}
+          ariaLabelConfig={ariaLabelConfig(isMobile)}
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
@@ -235,12 +252,21 @@ export function TreeCanvas({
           // elementsSelectable and would put a second selection model alongside
           // the store's — see the note on elementsSelectable above.
           onNodeClick={(event, node) =>
-            event.shiftKey || event.metaKey || event.ctrlKey
+            // Touch has no modifier keys, so the same intent is expressed by
+            // turning on "select several" first (see the view-options sheet
+            // and the long-press menu). Without it, MultiSelectPanel and
+            // everything behind it are unreachable on a phone.
+            event.shiftKey || event.metaKey || event.ctrlKey || selectMode
               ? toggleSelected(node.id)
               : select(node.id)
           }
           onPaneClick={() => select(null)}
           onNodeDragStop={handleNodeDragStop}
+          // A drag writes a permanent position override (the Pin icon), so a
+          // stray few pixels while tapping a card would silently un-manage its
+          // layout. The same number the long press uses to decide it has
+          // become a drag, so the two can never both fire — or neither.
+          nodeDragThreshold={LONG_PRESS_SLOP_PX}
           fitView
           // Cards are designed at 184x60; letting fitView magnify a small tree
           // past 1:1 blows them up out of all proportion.
@@ -252,31 +278,65 @@ export function TreeCanvas({
             size={1}
             color="var(--canvas-dot)"
           />
-          <TreeToolbar
-            treeId={treeId}
-            generationCount={generationCount}
-            people={people}
-          />
+          {/* The seven-control toolbar needs a row 500px wide. On a phone the
+              same controls are one sheet, opened from the ☰ in the corner
+              stack and from the topbar's overflow. */}
+          {!isMobile && (
+            <TreeToolbar
+              treeId={treeId}
+              generationCount={generationCount}
+              people={people}
+            />
+          )}
           <Panel position="bottom-left">
-            <div className="flex gap-3 rounded-lg border border-border bg-card px-2.5 py-2 shadow-card">
-              {legend.map((item) => (
-                <div key={item.label} className="flex items-center gap-1.5">
-                  <span
-                    className="h-0.5 w-2"
-                    style={{ background: item.color }}
-                  />
-                  <span className="font-heading text-9-5 font-medium text-muted-foreground">
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {/* The legend explains three edge colours. On a phone it would
+                cover a quarter of the canvas to do it, and the same three
+                colours are named in Appearance — so what sits here instead is
+                the one thing you cannot read off the canvas: how far in you
+                are zoomed. */}
+            {isMobile ? (
+              <ZoomReadout />
+            ) : (
+              <div className="flex gap-3 rounded-lg border border-border bg-card px-2.5 py-2 shadow-card">
+                {legend.map((item) => (
+                  <div key={item.label} className="flex items-center gap-1.5">
+                    <span
+                      className="h-0.5 w-2"
+                      style={{ background: item.color }}
+                    />
+                    <span className="font-heading text-9-5 font-medium text-muted-foreground">
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Panel>
-          <ZoomControls />
+          <ZoomControls mobile={isMobile} />
           <CenterOnPendingNode nodes={nodes} />
         </ReactFlow>
       </div>
+
+      {isMobile && (
+        <ViewOptionsSheet
+          treeId={treeId}
+          generationCount={generationCount}
+          people={people}
+        />
+      )}
     </div>
+  )
+}
+
+// Zoom has no visible scale on a canvas that can hold a whole family, and
+// pinching past a useful range is easy — so the level is stated, along with
+// the gesture that changes it, which nothing else on screen says.
+function ZoomReadout() {
+  const zoom = useStore((state) => state.transform[2])
+  return (
+    <span className="flex items-center gap-2 rounded-full border border-border bg-card/90 px-3 py-1.5 text-11 font-medium text-muted-foreground">
+      {Math.round(zoom * 100)}% · pinch to zoom
+    </span>
   )
 }
 
@@ -302,18 +362,31 @@ function CenterOnPendingNode({ nodes }: { nodes: Node[] }) {
   return null
 }
 
-function ZoomControls() {
+function ZoomControls({ mobile }: { mobile: boolean }) {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
+  const setMobileSheet = useAppShellStore((s) => s.setMobileSheet)
+
+  // 28px buttons under a thumb are a coin toss, and these are the controls a
+  // reader reaches for most on a canvas they cannot see all of. On a phone
+  // they become a 48px stack, with the view-options sheet on the end — the
+  // corner is the one place on the canvas that is always reachable.
+  const size = mobile ? "icon-lg" : "icon-xs"
 
   return (
     <Panel position="bottom-right">
-      <div className="flex flex-col border border-border bg-card">
+      <div
+        className={
+          mobile
+            ? "flex flex-col overflow-hidden rounded-full border border-border bg-card shadow-float"
+            : "flex flex-col border border-border bg-card"
+        }
+      >
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          size={size}
           aria-label="Zoom in"
-          className="border-b border-border"
+          className="rounded-none border-b border-border"
           onClick={() => void zoomIn()}
         >
           <Plus />
@@ -321,9 +394,9 @@ function ZoomControls() {
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          size={size}
           aria-label="Zoom out"
-          className="border-b border-border"
+          className="rounded-none border-b border-border"
           onClick={() => void zoomOut()}
         >
           <Minus />
@@ -331,12 +404,25 @@ function ZoomControls() {
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          size={size}
           aria-label="Fit view"
+          className={mobile ? "rounded-none border-b border-border" : ""}
           onClick={() => void fitView()}
         >
           <Maximize2 />
         </Button>
+        {mobile && (
+          <Button
+            type="button"
+            variant="ghost"
+            size={size}
+            aria-label="View options"
+            className="rounded-none"
+            onClick={() => setMobileSheet("view-options")}
+          >
+            <SlidersHorizontal />
+          </Button>
+        )}
       </div>
     </Panel>
   )
