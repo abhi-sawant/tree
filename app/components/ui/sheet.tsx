@@ -109,24 +109,32 @@ function SheetContent({
   ...props
 }: DrawerPrimitive.Popup.Props & { variant?: SheetVariant }) {
   return (
-    <DrawerPrimitive.Portal>
-      <SheetBackdrop />
-      <DrawerPrimitive.Viewport
-        className={cn(
-          "fixed inset-0 z-100 flex items-end justify-center",
-          variant === "snap" && "touch-none"
-        )}
-      >
-        <DrawerPrimitive.Popup
-          data-slot="sheet-content"
-          data-variant={variant}
-          className={cn(POPUP_BASE, POPUP_VARIANT[variant], className)}
-          {...props}
+    // The keyboard provider has to sit inside Drawer.Root and outside the
+    // portal — it reads the root's context, and it is what publishes
+    // --drawer-keyboard-inset so a focused field stays above a soft keyboard.
+    // Applied to every sheet rather than only the form ones: a drawer with no
+    // form controls is unaffected by it, and remembering to opt in is exactly
+    // the kind of thing that gets forgotten on the one sheet that needed it.
+    <DrawerPrimitive.VirtualKeyboardProvider>
+      <DrawerPrimitive.Portal>
+        <SheetBackdrop />
+        <DrawerPrimitive.Viewport
+          className={cn(
+            "fixed inset-0 z-100 flex items-end justify-center",
+            variant === "snap" && "touch-none"
+          )}
         >
-          {children}
-        </DrawerPrimitive.Popup>
-      </DrawerPrimitive.Viewport>
-    </DrawerPrimitive.Portal>
+          <DrawerPrimitive.Popup
+            data-slot="sheet-content"
+            data-variant={variant}
+            className={cn(POPUP_BASE, POPUP_VARIANT[variant], className)}
+            {...props}
+          >
+            {children}
+          </DrawerPrimitive.Popup>
+        </DrawerPrimitive.Viewport>
+      </DrawerPrimitive.Portal>
+    </DrawerPrimitive.VirtualKeyboardProvider>
   )
 }
 

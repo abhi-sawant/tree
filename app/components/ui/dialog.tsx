@@ -56,6 +56,16 @@ function DialogContent({
           // its content grows, which puts the submit button somewhere the user
           // cannot reach or scroll to.
           "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100svh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 overflow-y-auto rounded-xl border border-border-strong bg-popover p-6 text-sm text-popover-foreground shadow-float duration-100 outline-none sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // Below `md` every dialog in the app is a bottom sheet instead of a
+          // centred box — a box with 16px of screen either side reads as a
+          // mistake on a phone, and the actions end up mid-screen where no
+          // thumb reaches. Done here rather than at the twelve call sites so a
+          // new dialog gets it without knowing about it. Surfaces that want a
+          // drag handle or a snap point use ui/sheet.tsx instead.
+          //
+          // zoom-in-100/zoom-out-100 undo tw-animate-css's zoom-95, which
+          // otherwise scales the sheet while it slides and reads as a wobble.
+          "max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:max-h-[85dvh] max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:gap-5 max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:p-5 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] max-md:data-open:zoom-in-100 max-md:data-open:slide-in-from-bottom-full max-md:data-closed:zoom-out-100 max-md:data-closed:slide-out-to-bottom-full",
           className
         )}
         {...props}
