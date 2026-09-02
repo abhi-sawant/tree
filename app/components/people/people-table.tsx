@@ -23,6 +23,7 @@ import { useState } from "react"
 import type { Person, Tree } from "~/lib/types"
 import { personDisplayName, personNameSegments } from "~/lib/person-name"
 import type { InlineField } from "~/lib/people/inline-edit"
+import type { PeopleSort, PeopleSortKey } from "~/lib/people/people-sort"
 import { coverPhotoId } from "~/lib/person-photos"
 
 function relativesSummary(counts: RelativeCounts): string {
@@ -49,6 +50,8 @@ interface PeopleTableProps {
     string,
     { parents: number; spouses: number; children: number }
   >
+  sort: PeopleSort
+  onSortChange: (key: PeopleSortKey) => void
   onOpenInTree: (person: Person) => void
   onEdit: (person: Person) => void
   onDelete: (person: Person) => void
@@ -57,8 +60,48 @@ interface PeopleTableProps {
   onMerge: (person: Person) => void
 }
 
+function SortableHead({
+  label,
+  sortKey,
+  sort,
+  onSortChange,
+}: {
+  label: string
+  sortKey: PeopleSortKey
+  sort: PeopleSort
+  onSortChange: (key: PeopleSortKey) => void
+}) {
+  const active = sort.key === sortKey
+  return (
+    <TableHead
+      // The column the list is ordered by, for a screen reader — which
+      // otherwise has only a small arrow glyph to go on.
+      aria-sort={
+        active
+          ? sort.direction === "asc"
+            ? "ascending"
+            : "descending"
+          : "none"
+      }
+    >
+      <button
+        type="button"
+        onClick={() => onSortChange(sortKey)}
+        className="flex cursor-pointer items-center gap-1 hover:text-foreground"
+      >
+        {label}
+        <span aria-hidden className={active ? "" : "opacity-0"}>
+          {sort.direction === "asc" ? "↑" : "↓"}
+        </span>
+      </button>
+    </TableHead>
+  )
+}
+
 export function PeopleTable({
   people,
+  sort,
+  onSortChange,
   treesByPersonId,
   generations,
   relativeCounts,
@@ -93,10 +136,29 @@ export function PeopleTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Born</TableHead>
+          {/* Three of the six columns can order the list. The other three
+              can't: "Died", "Trees" and "Relatives" are each a set rather than
+              a value, and a header that looks sortable and isn't is worse than
+              one that plainly isn't. */}
+          <SortableHead
+            label="Name"
+            sortKey="name"
+            sort={sort}
+            onSortChange={onSortChange}
+          />
+          <SortableHead
+            label="Born"
+            sortKey="birth"
+            sort={sort}
+            onSortChange={onSortChange}
+          />
           <TableHead>Died</TableHead>
-          <TableHead>Generation</TableHead>
+          <SortableHead
+            label="Generation"
+            sortKey="generation"
+            sort={sort}
+            onSortChange={onSortChange}
+          />
           <TableHead>Trees</TableHead>
           <TableHead>Relatives</TableHead>
           {/* The row-action menu is the one column that means nothing on
