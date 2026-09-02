@@ -81,7 +81,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
       // card is the selected one, which is otherwise a coloured ring.
       aria-current={selected ? "true" : undefined}
       className={cn(
-        "flex h-full w-full flex-col items-center justify-center gap-2.5 border border-neutral-500 bg-card px-3 text-center",
+        "flex h-full w-full flex-col items-center justify-center gap-2.5 rounded-lg border border-border bg-card px-3 text-center",
         // A softer ring than the selection one, so the selected card still
         // reads as the selected card within a highlighted line.
         onBloodline && !selected && "ring-2 ring-primary/40",
@@ -164,7 +164,6 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
               key={kind}
               type="button"
               size="xs"
-              className="bg-foreground text-background hover:bg-foreground/85"
               onClick={() => requestAddRelative(personNodeId(person.id), kind)}
             >
               {label}

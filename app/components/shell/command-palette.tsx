@@ -59,7 +59,7 @@ export function CommandPalette({
     <Dialog open={open} onOpenChange={setPaletteOpen}>
       <DialogPortal>
         <DialogOverlay />
-        <DialogPrimitive.Popup className="fixed top-24 left-1/2 z-150 flex h-fit w-140 -translate-x-1/2 flex-col bg-popover shadow-panel ring-1 ring-foreground/10 outline-none">
+        <DialogPrimitive.Popup className="fixed top-24 left-1/2 z-150 flex h-fit w-140 -translate-x-1/2 flex-col overflow-hidden rounded-xl border border-border-strong bg-popover shadow-float outline-none">
           <DialogPrimitive.Title className="sr-only">
             Search people
           </DialogPrimitive.Title>
@@ -72,7 +72,7 @@ export function CommandPalette({
               placeholder="Search anyone in this tree…"
               className="h-auto flex-1 border-0 bg-transparent p-0 text-sm"
             />
-            <span className="border border-border px-1.5 py-0.5 text-10 font-medium text-muted-foreground">
+            <span className="rounded-full border border-border px-1.5 py-0.5 text-10 font-medium text-muted-foreground">
               ESC
             </span>
           </div>
@@ -97,11 +97,11 @@ export function CommandPalette({
                     {personDisplayName(person)}
                   </span>
                   <span className="text-xs text-muted-foreground">{dates}</span>
-                  <span className="ml-auto flex items-center gap-1.5 font-heading text-9-5 font-medium tracking-widest text-muted-foreground uppercase">
+                  <span className="ml-auto flex items-center gap-1.5 font-heading text-9-5 font-medium text-muted-foreground">
                     {generation !== undefined && memberIds.has(person.id) ? (
                       <>
                         <span
-                          className="size-2 rounded-xs"
+                          className="size-2 rounded-full"
                           style={{
                             background: resolveGenerationColor(
                               generation,

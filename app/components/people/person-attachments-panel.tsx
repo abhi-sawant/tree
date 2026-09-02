@@ -86,7 +86,7 @@ export function PersonAttachmentsPanel({
           disabled={busy}
           onClick={() => fileInputRef.current?.click()}
         >
-          {busy ? "Adding…" : "Add files"}
+          {busy ? "Adding…" : "Add a document"}
         </Button>
         <span className="text-11 text-muted-foreground">
           PDFs and images, stored as they are
@@ -190,7 +190,7 @@ function AttachmentRow({
         </Tooltip>
       )}
       <div className="flex items-center gap-2">
-        <span className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+        <span className="font-heading text-9-5 font-semibold text-muted-foreground">
           {isPdfAttachment(attachment.mime) ? "PDF" : "IMG"}
         </span>
         <span className="text-11 text-muted-foreground tabular-nums">

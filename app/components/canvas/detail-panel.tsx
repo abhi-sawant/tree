@@ -326,7 +326,7 @@ function PersonDetail({
         <PersonAvatar photoId={coverPhotoId(person)} size="panel" />
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-2">
-            <h2 className="truncate font-heading text-sm font-semibold tracking-wide uppercase">
+            <h2 className="truncate font-heading text-sm font-semibold">
               {personName(person)}
             </h2>
             {person.isPlaceholder && <PlaceholderBadge />}
@@ -368,9 +368,7 @@ function PersonDetail({
           <TabsContent value="media" className="flex flex-col gap-5">
             <PersonPhotosPanel person={person} />
             <div className="flex flex-col gap-2 border-t border-border pt-4">
-              <h3 className="font-heading text-10 font-semibold tracking-widest uppercase">
-                Documents
-              </h3>
+              <h3 className="font-heading text-10 font-semibold">Documents</h3>
               <PersonAttachmentsPanel personId={person.id} />
             </div>
           </TabsContent>
@@ -470,9 +468,9 @@ function PersonDetail({
             </Button>
 
             {familyOpen && (
-              <div className="flex flex-col gap-2.5 border border-border bg-muted/40 p-3">
+              <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-muted/40 p-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-heading text-10 font-semibold tracking-widest uppercase">
+                  <span className="font-heading text-10 font-semibold">
                     Add whole family
                   </span>
                   <Button
@@ -657,9 +655,9 @@ function AddRelativePanel({
   const isMarriage = action.mode === "record-marriage"
 
   return (
-    <div className="flex flex-col gap-2.5 border border-border bg-muted/40 p-3">
+    <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-muted/40 p-3">
       <div className="flex items-center justify-between">
-        <span className="font-heading text-10 font-semibold tracking-widest uppercase">
+        <span className="font-heading text-10 font-semibold">
           {isMarriage ? "Record marriage" : ADD_TITLES[action.kind]}
         </span>
         <Button type="button" variant="ghost" size="icon-xs" onClick={onCancel}>
@@ -728,7 +726,7 @@ function UnionDetail({
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="font-heading text-sm font-semibold tracking-wide uppercase">
+        <h2 className="font-heading text-sm font-semibold">
           {nameA} &amp; {nameB}
         </h2>
         {union.kind === "real" ? (
@@ -741,7 +739,7 @@ function UnionDetail({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+        <p className="font-heading text-9-5 font-semibold text-muted-foreground">
           Children of this marriage
         </p>
         <UnionChildren childIds={childIds} people={people} onSelect={select} />
@@ -923,7 +921,7 @@ function RelationshipList({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+      <p className="font-heading text-9-5 font-semibold text-muted-foreground">
         {title}
       </p>
       {relationships.length === 0 && (
@@ -1051,8 +1049,8 @@ function MultipleBirthEditor({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
-        Born together with
+      <p className="font-heading text-9-5 font-semibold text-muted-foreground">
+        Born alongside
       </p>
       {siblingIds.map((siblingId) => (
         <Label key={siblingId} className="text-xs">

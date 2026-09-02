@@ -11,7 +11,7 @@ export function UpdatePrompt() {
   if (!needRefresh) return null
 
   return (
-    <div className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-fit items-center gap-3 border bg-card p-3 text-sm shadow-lg">
+    <div className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-fit items-center gap-3 rounded-xl border bg-card p-3 text-sm shadow-float">
       <span>An update is available.</span>
       <Button size="sm" onClick={() => updateServiceWorker(true)}>
         Reload

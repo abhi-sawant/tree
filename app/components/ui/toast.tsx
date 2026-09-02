@@ -9,7 +9,7 @@ export function Toaster() {
       data-print="hide"
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed bottom-6 left-1/2 z-300 -translate-x-1/2 bg-foreground px-4 py-2.75 text-12-5 font-medium text-background shadow-toast"
+      className="pointer-events-none fixed bottom-6 left-1/2 z-300 -translate-x-1/2 rounded-full bg-foreground px-4 py-2.75 text-12-5 font-medium text-background shadow-float"
     >
       {message}
     </div>

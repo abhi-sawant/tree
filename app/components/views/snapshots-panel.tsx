@@ -113,7 +113,7 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
       </p>
 
       {snapshots && snapshots.length > 0 ? (
-        <ul className="flex flex-col border border-border">
+        <ul className="flex flex-col overflow-hidden rounded-lg border border-border">
           {snapshots.map((snapshot) => (
             <li
               key={snapshot.id}
@@ -150,7 +150,7 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
           ))}
         </ul>
       ) : (
-        <p className="border border-border p-3 text-13">
+        <p className="rounded-lg border border-border p-3 text-13">
           No snapshots yet. One is taken shortly after your next edit.
         </p>
       )}

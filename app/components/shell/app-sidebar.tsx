@@ -53,25 +53,23 @@ export function AppSidebar({
       className="flex w-53 flex-none flex-col gap-4.5 border-r border-border bg-sidebar px-3 py-4"
     >
       <div className="flex items-center gap-2 px-1">
-        <div className="flex size-5.5 items-center justify-center bg-primary font-heading text-11 font-bold text-primary-foreground">
+        <div className="flex size-5.5 items-center justify-center rounded-lg bg-primary font-heading text-11 font-bold text-primary-foreground">
           FT
         </div>
-        <span className="font-heading text-xs font-semibold tracking-widest uppercase">
-          Family Tree
-        </span>
+        <span className="font-heading text-xs font-semibold">Family Tree</span>
       </div>
 
       <Button
         type="button"
         variant="outline"
         onClick={() => setPaletteOpen(true)}
-        className="w-full justify-start gap-1.5 tracking-normal normal-case px-2"
+        className="w-full justify-start gap-1.5 px-2 tracking-normal normal-case"
       >
         <span className="text-11 text-muted-foreground">⌕</span>
         <span className="text-xs text-muted-foreground">
           Search {people?.length ?? 0} people
         </span>
-        <span className="ml-auto border border-border px-1 text-10 font-medium text-muted-foreground">
+        <span className="ml-auto rounded-full border border-border px-1 text-10 font-medium text-muted-foreground">
           ⌘K
         </span>
       </Button>
@@ -89,10 +87,8 @@ export function AppSidebar({
                 setView("tree")
               }}
               className={cn(
-                "flex h-8.5 w-full cursor-pointer items-center gap-2 border-l-2 px-2 text-left hover:bg-muted",
-                active
-                  ? "border-primary bg-primary/10"
-                  : "border-transparent bg-transparent"
+                "flex h-8.5 w-full cursor-pointer items-center gap-2 rounded-full px-2 text-left hover:bg-muted",
+                active ? "bg-primary/10" : "bg-transparent"
               )}
             >
               <span className="truncate text-xs font-semibold">
@@ -156,7 +152,7 @@ export function AppSidebar({
         />
       </div>
 
-      <div className="mt-auto flex flex-col gap-1.5 border border-border bg-background p-2.5">
+      <div className="mt-auto flex flex-col gap-1.5 rounded-lg border border-border bg-background p-2.5">
         <div className="flex items-center gap-1.5">
           <span
             className={cn(
@@ -164,7 +160,7 @@ export function AppSidebar({
               persisted ? "bg-success" : "bg-muted-foreground"
             )}
           />
-          <span className="font-heading text-10 font-semibold tracking-widest uppercase">
+          <span className="font-heading text-10 font-semibold">
             {persisted === undefined
               ? "Checking storage"
               : persisted
@@ -192,7 +188,7 @@ export function AppSidebar({
 
 function SidebarLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mx-1 mb-1.5 font-heading text-10 font-semibold tracking-widest text-muted-foreground uppercase">
+    <p className="mx-1 mb-1.5 font-heading text-10 font-semibold text-muted-foreground">
       {children}
     </p>
   )
@@ -218,13 +214,13 @@ function SidebarNavItem({
       type="button"
       onClick={() => onSelect(target)}
       className={cn(
-        "flex h-8 w-full cursor-pointer items-center px-2.5 text-left text-xs hover:bg-muted",
+        "flex h-8 w-full cursor-pointer items-center rounded-full px-2.5 text-left text-xs hover:bg-muted",
         view === target ? "bg-accent" : "bg-transparent"
       )}
     >
       {label}
       {hint && (
-        <span className="ml-auto border border-border px-1 text-10 font-medium text-muted-foreground">
+        <span className="ml-auto rounded-full border border-border px-1 text-10 font-medium text-muted-foreground">
           {hint}
         </span>
       )}

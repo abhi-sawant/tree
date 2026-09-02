@@ -49,9 +49,7 @@ export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
       <div className="flex flex-wrap items-center gap-4">
-        <h2 className="font-heading text-xs font-semibold tracking-widest uppercase">
-          Photo wall
-        </h2>
+        <h2 className="font-heading text-sm font-semibold">Photo wall</h2>
         <Label
           data-print="hide"
           className="flex-row items-center gap-2 text-sm font-normal normal-case"
@@ -135,7 +133,7 @@ function PhotoTile({
           setView("tree")
         }}
       >
-        <span className="relative block aspect-square w-full overflow-hidden border border-border bg-muted">
+        <span className="relative block aspect-square w-full overflow-hidden rounded-xl border border-border bg-muted">
           <img
             // Lazy, because a family with three hundred photos would otherwise
             // decode all of them before the first row is on screen.
@@ -145,7 +143,7 @@ function PhotoTile({
             className="size-full object-cover"
           />
           {entry.extraPhotoCount > 0 && (
-            <span className="absolute right-1 bottom-1 bg-background/85 px-1 font-heading text-10 font-semibold tracking-widest">
+            <span className="absolute right-1 bottom-1 bg-background/85 px-1 font-heading text-10 font-semibold">
               +{entry.extraPhotoCount}
             </span>
           )}

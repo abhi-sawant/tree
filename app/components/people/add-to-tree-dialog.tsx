@@ -47,7 +47,7 @@ export function AddToTreeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add to tree</DialogTitle>
+          <DialogTitle>Add to a tree</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -98,7 +98,7 @@ export function AddToTreeDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            Close
+            Cancel
           </Button>
         </DialogFooter>
       </DialogContent>

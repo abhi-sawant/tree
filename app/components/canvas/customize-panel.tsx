@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react"
+import { useMemo } from "react"
 
 import { Button } from "~/components/ui/button"
 import {
@@ -13,6 +13,7 @@ import { Checkbox } from "~/components/ui/checkbox"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
+import { SectionHeading } from "~/components/ui/section-heading"
 import { COLOR_BY_OPTIONS, type ColorBy } from "~/lib/canvas/color-groups"
 import { EDGE_ROUTINGS, type EdgeRouting } from "~/lib/canvas/edge-routing"
 import {
@@ -86,7 +87,7 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
 
         <div className="flex max-h-[60vh] flex-col gap-6 overflow-y-auto pr-1">
           <section className="flex flex-col gap-2.5">
-            <SectionHeading>Layout</SectionHeading>
+            <SectionHeading as="h3">Layout</SectionHeading>
             <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
               Direction
               <Select
@@ -129,7 +130,7 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
           </section>
 
           <section className="flex flex-col gap-2.5">
-            <SectionHeading>What each card shows</SectionHeading>
+            <SectionHeading as="h3">What each card shows</SectionHeading>
             <div className="flex flex-wrap gap-x-6 gap-y-2">
               <Label className="text-sm font-normal normal-case">
                 <Checkbox
@@ -180,7 +181,7 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
           </section>
 
           <section className="flex flex-col gap-2.5">
-            <SectionHeading>Relationship colors</SectionHeading>
+            <SectionHeading as="h3">Relationship colors</SectionHeading>
             <div className="flex flex-wrap gap-4">
               <ColorField
                 label="Marriage"
@@ -200,7 +201,7 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
           </section>
 
           <section className="flex flex-col gap-2.5">
-            <SectionHeading>Card colors</SectionHeading>
+            <SectionHeading as="h3">Card colors</SectionHeading>
             <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
               Group cards by
               <Select
@@ -246,14 +247,6 @@ export function CustomizePanel({ open, onOpenChange }: CustomizePanelProps) {
   )
 }
 
-function SectionHeading({ children }: { children: ReactNode }) {
-  return (
-    <h3 className="font-heading text-xs font-semibold tracking-widest uppercase">
-      {children}
-    </h3>
-  )
-}
-
 function ColorField({
   label,
   value,
@@ -273,7 +266,7 @@ function ColorField({
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-12 cursor-pointer border border-border bg-transparent p-0.5"
+        className="h-8 w-12 cursor-pointer rounded-lg border border-border bg-transparent p-0.5"
         aria-label={label}
       />
       <span className="text-11 text-muted-foreground">{label}</span>

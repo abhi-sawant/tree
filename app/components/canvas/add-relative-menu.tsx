@@ -55,7 +55,7 @@ export function AddRelativeMenu({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      <p className="text-xs font-semibold text-muted-foreground">
         Add relative
       </p>
       <div className="flex flex-wrap gap-2">

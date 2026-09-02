@@ -164,7 +164,7 @@ export function AddFamilyForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+        <p className="font-heading text-9-5 font-semibold text-muted-foreground">
           Other parent
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -259,7 +259,7 @@ export function AddFamilyForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <p className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">
+        <p className="font-heading text-9-5 font-semibold text-muted-foreground">
           Children
         </p>
         <p className="text-11 leading-relaxed text-muted-foreground">
@@ -269,7 +269,7 @@ export function AddFamilyForm({
         {children.map((row, index) => (
           <div
             key={index}
-            className="flex flex-col gap-2 border border-border/60 p-2"
+            className="flex flex-col gap-2 rounded-lg border border-border/60 p-2"
           >
             <div className="flex items-end gap-2">
               <div className="flex min-w-0 flex-1 basis-24 flex-col gap-1">

@@ -22,14 +22,14 @@ const HEADING_TAGS = ["h3", "h4", "h5"] as const
 
 const HEADING_CLASS: Record<MarkdownVariant, Record<1 | 2 | 3, string>> = {
   compact: {
-    1: "font-heading text-sm font-semibold tracking-wide uppercase",
-    2: "font-heading text-13 font-semibold tracking-wide uppercase",
-    3: "font-heading text-11 font-semibold tracking-widest uppercase",
+    1: "font-heading text-sm font-semibold",
+    2: "font-heading text-13 font-semibold",
+    3: "font-heading text-11 font-semibold text-muted-foreground",
   },
   page: {
-    1: "mt-1.5 font-heading text-sm font-semibold tracking-widest uppercase",
-    2: "mt-1.5 font-heading text-13 font-semibold tracking-wide uppercase",
-    3: "font-heading text-11 font-semibold tracking-widest uppercase",
+    1: "mt-1.5 font-heading text-base font-semibold",
+    2: "mt-1.5 font-heading text-sm font-semibold",
+    3: "font-heading text-13 font-semibold text-muted-foreground",
   },
 }
 

@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 
 import { Button } from "~/components/ui/button"
+import { SectionHeading } from "~/components/ui/section-heading"
 import {
   findAnniversaries,
   type Anniversary,
@@ -78,7 +79,7 @@ export function InsightsView({
     <div className="flex flex-1 flex-col gap-7 overflow-y-auto p-6">
       <section className="flex flex-col gap-2">
         <SectionHeading>{tree.name}</SectionHeading>
-        <div className="flex flex-wrap gap-x-8 gap-y-3 border border-border p-3">
+        <div className="flex flex-wrap gap-x-8 gap-y-3 rounded-lg border border-border p-3">
           <Tile value={stats.peopleCount} label="people" />
           <Tile value={stats.generations.length} label="generations" />
           <Tile
@@ -249,7 +250,7 @@ function Tile({
   return (
     <div className="flex flex-col gap-0.5">
       <span className="font-heading text-xl font-semibold">{shown}</span>
-      <span className="font-heading text-10 font-semibold tracking-widest text-muted-foreground uppercase">
+      <span className="font-heading text-10 font-semibold text-muted-foreground">
         {label}
       </span>
     </div>
@@ -283,7 +284,7 @@ function AnniversaryRow({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border border-b-0 border-border p-3 last:border-b">
-      <span className="w-18 shrink-0 font-heading text-10 font-semibold tracking-widest text-muted-foreground uppercase">
+      <span className="w-18 shrink-0 font-heading text-10 font-semibold text-muted-foreground">
         {anniversary.daysUntil === 0 ? "Today" : `In ${anniversary.daysUntil}d`}
       </span>
       <span className="min-w-0 flex-1 text-13">
@@ -320,7 +321,7 @@ function SuperlativeRow({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border border-b-0 border-border p-3 last:border-b">
-      <span className="font-heading text-10 font-semibold tracking-widest text-muted-foreground uppercase">
+      <span className="font-heading text-10 font-semibold text-muted-foreground">
         {title}
       </span>
       {entry ? (
@@ -392,13 +393,5 @@ function DetailRow({ label, value }: { label: string; value: string }) {
         {value}
       </span>
     </div>
-  )
-}
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="font-heading text-xs font-semibold tracking-widest uppercase">
-      {children}
-    </h2>
   )
 }

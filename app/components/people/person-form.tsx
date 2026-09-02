@@ -165,6 +165,16 @@ export function PersonForm({
     onSubmit(result.data, photoAction)
   }
 
+  // Keyed by the failing field's path so a specific input can show its own
+  // message inline; anything whose path[0] isn't handled inline (nothing
+  // today, but the schema may grow) still surfaces via the bottom fallback.
+  const fieldErrors: Record<string, string> = Object.fromEntries(
+    (error?.issues ?? []).map((issue) => [String(issue.path[0]), issue.message])
+  )
+  const unhandledIssues = (error?.issues ?? []).filter(
+    (issue) => String(issue.path[0]) !== "givenName"
+  )
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {showIdentity && (
@@ -176,8 +186,13 @@ export function PersonForm({
               ref={givenNameRef}
               value={givenName}
               onChange={(e) => setGivenName(e.target.value)}
-              required
+              aria-invalid={!!fieldErrors.givenName}
             />
+            {fieldErrors.givenName && (
+              <p className="mt-1 text-xs text-destructive">
+                {fieldErrors.givenName}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -243,9 +258,7 @@ export function PersonForm({
 
       {showIdentity && (
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-xs font-semibold tracking-wide uppercase">
-            Other details
-          </legend>
+          <legend className="text-xs font-semibold">Other details</legend>
           {customFields.map((field, index) => (
             <div key={index} className="flex items-end gap-2">
               <div className="flex min-w-0 flex-1 basis-32 flex-col gap-1">
@@ -368,9 +381,9 @@ export function PersonForm({
         </div>
       )}
 
-      {error && (
+      {unhandledIssues.length > 0 && (
         <p className="text-sm text-destructive">
-          {error.issues[0]?.message ?? "Invalid input."}
+          {unhandledIssues[0]?.message ?? "Invalid input."}
         </p>
       )}
 

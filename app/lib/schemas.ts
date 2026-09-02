@@ -11,7 +11,7 @@ export const SexSchema = z.enum(["male", "female", "other"])
 
 export const PersonSchema = z.object({
   id: z.string(),
-  givenName: z.string().min(1),
+  givenName: z.string().min(1, "A given name is required."),
   familyName: z.string().optional(),
   maidenName: z.string().optional(),
   nickname: z.string().optional(),

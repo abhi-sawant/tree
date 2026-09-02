@@ -8,6 +8,7 @@ import {
 import { createPerson, updatePerson } from "~/lib/db/people"
 import { addPersonToTree } from "~/lib/db/trees"
 import { removePersonPhoto, setPersonPhoto } from "~/lib/photos"
+import { personDisplayName } from "~/lib/person-name"
 import type { PersonFormValues } from "~/lib/schemas"
 import type { Person } from "~/lib/types"
 
@@ -47,7 +48,9 @@ export function PersonFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{person ? "Edit person" : "Add person"}</DialogTitle>
+          <DialogTitle>
+            {person ? `Edit ${personDisplayName(person)}` : "Add a person"}
+          </DialogTitle>
         </DialogHeader>
         <PersonForm
           key={person?.id ?? "new"}

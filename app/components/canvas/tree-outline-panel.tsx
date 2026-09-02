@@ -56,7 +56,7 @@ export function TreeOutlinePanel({
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
         <h2
           id="tree-outline-heading"
-          className="font-heading text-10 font-semibold tracking-widest uppercase"
+          className="font-heading text-10 font-semibold"
         >
           Tree outline
         </h2>

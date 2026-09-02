@@ -84,9 +84,9 @@ export function StoragePanel() {
   return (
     <div className="flex flex-col gap-2.5">
       {usage ? (
-        <div className="flex flex-col gap-1.5 border border-border p-3">
+        <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
           <div className="flex items-baseline gap-2">
-            <span className="font-heading text-10 font-semibold tracking-widest uppercase">
+            <span className="font-heading text-10 font-semibold">
               Browser storage
             </span>
             <span className="ml-auto text-xs text-muted-foreground">
@@ -104,17 +104,15 @@ export function StoragePanel() {
           </div>
         </div>
       ) : (
-        <p className="border border-border p-3 text-12-5 text-muted-foreground">
+        <p className="rounded-lg border border-border p-3 text-12-5 text-muted-foreground">
           This browser doesn&apos;t report a storage quota.
         </p>
       )}
 
       {breakdown && (
-        <div className="flex flex-col gap-1.5 border border-border p-3">
+        <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
           <div className="flex items-baseline gap-2">
-            <span className="font-heading text-10 font-semibold tracking-widest uppercase">
-              Photos
-            </span>
+            <span className="font-heading text-10 font-semibold">Photos</span>
             <span className="ml-auto text-xs text-muted-foreground">
               {breakdown.photoCount}{" "}
               {breakdown.photoCount === 1 ? "photo" : "photos"},{" "}
@@ -154,9 +152,9 @@ export function StoragePanel() {
       )}
 
       {breakdown && breakdown.attachmentCount > 0 && (
-        <div className="flex flex-col gap-1.5 border border-border p-3">
+        <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
           <div className="flex items-baseline gap-2">
-            <span className="font-heading text-10 font-semibold tracking-widest uppercase">
+            <span className="font-heading text-10 font-semibold">
               Documents
             </span>
             <span className="ml-auto text-xs text-muted-foreground">

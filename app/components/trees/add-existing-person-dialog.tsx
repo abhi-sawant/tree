@@ -6,6 +6,7 @@ import { Checkbox } from "~/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -69,6 +70,10 @@ export function AddExistingPersonDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add existing person</DialogTitle>
+          <DialogDescription>
+            Anyone already in the pool can join this tree. Their record and
+            relationships are untouched.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -111,7 +116,7 @@ export function AddExistingPersonDialog({
             Cancel
           </Button>
           <Button type="button" disabled={!picked} onClick={handleSubmit}>
-            Add
+            Add to tree
           </Button>
         </DialogFooter>
       </DialogContent>

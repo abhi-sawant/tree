@@ -111,10 +111,10 @@ function BootSkeleton() {
     <div className="flex h-svh w-full">
       <div className="flex w-53 flex-none flex-col gap-4.5 border-r border-border bg-sidebar px-3 py-4">
         <div className="flex items-center gap-2 px-1">
-          <div className="flex size-5.5 items-center justify-center bg-primary font-heading text-11 font-bold text-primary-foreground">
+          <div className="flex size-5.5 items-center justify-center rounded-lg bg-primary font-heading text-11 font-bold text-primary-foreground">
             FT
           </div>
-          <span className="font-heading text-xs font-semibold tracking-widest uppercase">
+          <span className="font-heading text-xs font-semibold">
             Family Tree
           </span>
         </div>
@@ -162,12 +162,10 @@ function WelcomeState() {
   return (
     <div className="flex h-svh w-full items-center justify-center p-6">
       <div className="flex max-w-sm flex-col items-center gap-4 text-center">
-        <div className="flex size-8.5 items-center justify-center bg-primary font-heading text-13 font-bold text-primary-foreground">
+        <div className="flex size-8.5 items-center justify-center rounded-lg bg-primary font-heading text-13 font-bold text-primary-foreground">
           FT
         </div>
-        <h1 className="font-heading text-lg font-semibold tracking-wider uppercase">
-          Welcome
-        </h1>
+        <h1 className="font-heading text-lg font-semibold">Welcome</h1>
         <p className="text-sm text-muted-foreground">
           Create your first tree to get started.
         </p>

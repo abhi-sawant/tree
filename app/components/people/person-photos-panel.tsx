@@ -118,7 +118,7 @@ export function PersonPhotosPanel({ person }: PersonPhotosPanelProps) {
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <span
                 className={cn(
-                  "font-heading text-10 font-semibold tracking-widest uppercase",
+                  "font-heading text-10 font-semibold",
                   index === 0 ? "text-primary" : "text-muted-foreground"
                 )}
               >

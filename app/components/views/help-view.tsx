@@ -96,7 +96,7 @@ export function HelpView() {
         {current && (
           <article className="flex max-w-2xl flex-col gap-5">
             <header className="flex flex-col gap-1">
-              <h2 className="font-heading text-sm font-semibold tracking-widest uppercase">
+              <h2 className="font-heading text-sm font-semibold">
                 {current.topic.title}
               </h2>
               <p className="text-13 text-muted-foreground">
@@ -125,7 +125,7 @@ export function HelpView() {
 
             {sections.map((section) => (
               <section key={section.heading} className="flex flex-col gap-2">
-                <h3 className="font-heading text-13 font-semibold tracking-wide uppercase">
+                <h3 className="font-heading text-13 font-semibold">
                   {section.heading}
                 </h3>
                 <MarkdownView source={section.body} variant="page" />
@@ -153,7 +153,7 @@ function ShortcutTable({ shortcuts }: { shortcuts: HelpShortcut[] }) {
           className="flex items-center gap-3 border-b border-border px-2.5 py-1.5 last:border-b-0"
         >
           <dt className="w-24 flex-none">
-            <kbd className="border border-border bg-muted px-1.5 py-0.5 font-mono text-11">
+            <kbd className="rounded-lg border border-border bg-muted px-1.5 py-0.5 font-mono text-11">
               {shortcut.keys}
             </kbd>
           </dt>

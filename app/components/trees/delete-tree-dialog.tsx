@@ -8,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
+import { useTreeMembers } from "~/lib/db/hooks"
 import { deleteTree } from "~/lib/db/trees"
 import type { Tree } from "~/lib/types"
 
@@ -24,6 +25,9 @@ export function DeleteTreeDialog({
   tree,
   onDeleted,
 }: DeleteTreeDialogProps) {
+  const members = useTreeMembers(tree.id)
+  const memberCount = members?.length ?? 0
+
   async function handleConfirm() {
     await deleteTree(tree.id)
     onOpenChange(false)
@@ -34,17 +38,18 @@ export function DeleteTreeDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete "{tree.name}"?</AlertDialogTitle>
+          <AlertDialogTitle>Delete this tree?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes the tree and its member list only — people and their
-            relationships are untouched and remain in the pool. This can't be
-            undone.
+            "{tree.name}" and its {memberCount}{" "}
+            {memberCount === 1 ? "membership" : "memberships"} are deleted. The
+            people themselves stay in the pool, along with their relationships
+            and photos. This can't be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={handleConfirm}>
-            Delete
+            Delete tree
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

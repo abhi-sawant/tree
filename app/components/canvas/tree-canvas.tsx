@@ -258,14 +258,14 @@ export function TreeCanvas({
             people={people}
           />
           <Panel position="bottom-left">
-            <div className="flex gap-3 border border-border bg-card px-2.5 py-2">
+            <div className="flex gap-3 rounded-lg border border-border bg-card px-2.5 py-2 shadow-card">
               {legend.map((item) => (
                 <div key={item.label} className="flex items-center gap-1.5">
                   <span
                     className="h-0.5 w-2"
                     style={{ background: item.color }}
                   />
-                  <span className="font-heading text-9-5 font-medium tracking-wider text-muted-foreground uppercase">
+                  <span className="font-heading text-9-5 font-medium text-muted-foreground">
                     {item.label}
                   </span>
                 </div>

@@ -9,17 +9,19 @@ interface CanvasMessageProps {
 function CanvasMessage({ title, description, action }: CanvasMessageProps) {
   return (
     <div className="flex h-full w-full flex-1 flex-col items-center justify-center gap-1.5 text-center">
-      <p className="text-sm font-medium">{title}</p>
-      {description && (
-        <p className="text-sm text-muted-foreground">{description}</p>
-      )}
-      {action && <div className="mt-1.5">{action}</div>}
+      <div className="flex max-w-sm flex-col items-center gap-1.5 rounded-lg border border-border bg-card px-6 py-5">
+        <p className="text-sm font-medium">{title}</p>
+        {description && (
+          <p className="text-sm text-muted-foreground">{description}</p>
+        )}
+        {action && <div className="mt-1.5">{action}</div>}
+      </div>
     </div>
   )
 }
 
 export function CanvasLoadingState({
-  label = "Loading tree…",
+  label = "Laying out tree…",
 }: {
   label?: string
 }) {

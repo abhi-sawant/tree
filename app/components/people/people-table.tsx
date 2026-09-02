@@ -2,7 +2,6 @@ import { EditableCell } from "~/components/people/editable-cell"
 import { PersonAvatar } from "~/components/people/person-avatar"
 import { PersonRowActions } from "~/components/people/people-row-actions"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
-import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import {
   Table,
@@ -213,7 +212,7 @@ export function PeopleTable({
                 {generation === undefined ? (
                   "—"
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 font-heading text-10 font-medium tracking-widest uppercase">
+                  <span className="inline-flex items-center gap-1.5 font-heading text-10 font-medium">
                     <span
                       className="size-2 rounded-xs"
                       style={{
@@ -228,15 +227,13 @@ export function PeopleTable({
                 )}
               </TableCell>
               <TableCell>
-                <div className="flex flex-wrap gap-1">
-                  {trees.length > 0
-                    ? trees.map((tree) => (
-                        <Badge key={tree.id} variant="secondary">
-                          {tree.name}
-                        </Badge>
-                      ))
-                    : "—"}
-                </div>
+                {trees.length > 0 ? (
+                  <span className="text-sm font-medium">
+                    {trees.map((tree) => tree.name).join(", ")}
+                  </span>
+                ) : (
+                  "—"
+                )}
               </TableCell>
               <TableCell className="text-xs text-muted-foreground">
                 {counts ? relativesSummary(counts) : "—"}

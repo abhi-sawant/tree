@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 
 import { MergePeopleDialog } from "~/components/people/merge-people-dialog"
 import { Button } from "~/components/ui/button"
+import { SectionHeading } from "~/components/ui/section-heading"
 import {
   Tooltip,
   TooltipContent,
@@ -83,7 +84,7 @@ export function HealthView({
     <div className="flex flex-1 flex-col gap-7 overflow-y-auto p-6">
       <section className="flex flex-col gap-2">
         <SectionHeading>Summary</SectionHeading>
-        <div className="flex items-center gap-4 border border-border p-3">
+        <div className="flex items-center gap-4 rounded-lg border border-border p-3 shadow-card">
           <Tally severity="error" count={counts.error} />
           <Tally severity="warning" count={counts.warning} />
           <Tally severity="duplicate" count={duplicates.length} />
@@ -100,7 +101,7 @@ export function HealthView({
       </section>
 
       {findings.length === 0 && duplicates.length === 0 && (
-        <p className="border border-border p-4 text-13">
+        <p className="rounded-lg border border-border p-4 text-13">
           Nothing to report. Every recorded date is consistent, every person has
           a birth year and a tree, and no two records look like the same person.
         </p>
@@ -145,7 +146,7 @@ export function HealthView({
             are guesses — there is no identity to match on, so nothing here is
             merged for you.
           </p>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-2">
             {duplicates.map((candidate) => (
               <DuplicateRow
                 key={candidate.personIds.join(":")}
@@ -189,11 +190,11 @@ function FindingSection({
       <SectionHeading>
         {title} ({findings.length})
       </SectionHeading>
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-2">
         {findings.map((finding, index) => (
           <div
             key={`${finding.code}:${finding.personIds.join(",")}:${index}`}
-            className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border border-b-0 border-border p-3 last:border-b"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border p-3"
           >
             <span
               className={
@@ -256,7 +257,7 @@ function DuplicateRow({
   onMerge: () => void
 }) {
   return (
-    <div className="flex flex-col gap-1.5 border border-b-0 border-border p-3 last:border-b">
+    <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className="min-w-0 flex-1 text-13">
           <span className="font-medium">{candidate.labels[0]}</span>
@@ -301,17 +302,9 @@ function Tally({ severity, count }: { severity: TallyKind; count: number }) {
   return (
     <div className="flex items-baseline gap-1.5">
       <span className="font-heading text-lg font-semibold">{count}</span>
-      <span className="font-heading text-10 font-semibold tracking-widest text-muted-foreground uppercase">
+      <span className="font-heading text-10 font-semibold text-muted-foreground">
         {count === 1 ? singular : plural}
       </span>
     </div>
-  )
-}
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="font-heading text-xs font-semibold tracking-widest uppercase">
-      {children}
-    </h2>
   )
 }

@@ -113,7 +113,7 @@ export function AppTopbar({
               type="button"
               className="flex cursor-pointer flex-col gap-0.5 text-left"
             >
-              <span className="flex items-center gap-1.5 font-heading text-15 font-semibold tracking-wider uppercase">
+              <span className="flex items-center gap-1.5 font-heading text-15 font-semibold">
                 {tree.name}
                 <ChevronDown className="size-3 text-muted-foreground" />
               </span>
@@ -159,7 +159,7 @@ export function AppTopbar({
       </DropdownMenu>
 
       <div className="flex items-center gap-2">
-        <div className="flex border border-border">
+        <div className="flex gap-0.5 rounded-full border border-border p-0.5">
           <ViewTab
             label="Tree"
             active={view === "tree"}
@@ -287,7 +287,7 @@ function ViewTab({
       type="button"
       onClick={onClick}
       className={cn(
-        "h-8 cursor-pointer px-3 font-heading text-xs font-semibold tracking-widest uppercase",
+        "h-7 cursor-pointer rounded-full px-3 font-heading text-xs font-semibold",
         active
           ? "bg-foreground text-background"
           : "bg-transparent text-muted-foreground hover:text-foreground"

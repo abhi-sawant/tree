@@ -92,7 +92,7 @@ export function SampleTreePanel() {
         goes in its own tree so nothing of yours is mixed in with it.
       </p>
 
-      <div className="flex flex-wrap items-center gap-2 border border-border p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3">
         <span className="text-13">
           {present
             ? `Loaded — ${personCount} sample ${personCount === 1 ? "person" : "people"} in this browser.`
@@ -158,7 +158,7 @@ export function SampleTreePanel() {
       </AlertDialog>
 
       {removed && (
-        <div className="flex flex-col gap-2 border border-border p-3">
+        <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
           <p className="text-13">
             Removed {removed.peopleRemoved}{" "}
             {removed.peopleRemoved === 1 ? "person" : "people"}.
