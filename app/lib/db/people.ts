@@ -75,11 +75,21 @@ export async function searchPeople(
     // Maiden name and nickname are searched alongside the display name: a
     // woman recorded under her married name is otherwise unfindable by the
     // name her birth records carry, which is the name a researcher has.
+    //
+    // Notes and custom fields are searched too, because that is where
+    // everything the fixed schema has no column for ends up — a birthplace, an
+    // occupation, the name of the village. Searching only names would mean the
+    // one place people record those facts is the one place search can't see.
     const haystack = [
       person.givenName,
       person.familyName,
       person.maidenName,
       person.nickname,
+      person.notes,
+      ...(person.customFields ?? []).flatMap((field) => [
+        field.label,
+        field.value,
+      ]),
     ]
       .filter(Boolean)
       .join(" ")

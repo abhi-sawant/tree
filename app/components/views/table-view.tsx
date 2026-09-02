@@ -224,7 +224,7 @@ export function TableView({
               No one matches &ldquo;{query.trim()}&rdquo;
             </p>
             <p className="text-12-5 text-muted-foreground">
-              Search covers names, including maiden names and nicknames.
+              Search covers names, notes and any details you have added.
             </p>
           </div>
           <Button
