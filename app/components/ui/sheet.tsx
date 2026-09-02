@@ -189,6 +189,65 @@ function SheetBody({ className, ...props }: DrawerPrimitive.Content.Props) {
   )
 }
 
+// A row in an action sheet. Its own component because five sheets need the
+// same thing — a 48px tap target, an optional icon, a label with an optional
+// second line, an optional trailing indicator — and five hand-rolled versions
+// would disagree about the height within a week.
+function SheetItem({
+  icon,
+  label,
+  detail,
+  trailing,
+  destructive,
+  selected,
+  className,
+  ...props
+}: React.ComponentProps<"button"> & {
+  icon?: React.ReactNode
+  label: React.ReactNode
+  detail?: React.ReactNode
+  trailing?: React.ReactNode
+  destructive?: boolean
+  selected?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      data-slot="sheet-item"
+      aria-current={selected ? "true" : undefined}
+      className={cn(
+        "flex min-h-13 w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-left disabled:pointer-events-none disabled:opacity-50",
+        selected ? "bg-primary/10" : "hover:bg-muted",
+        destructive && "text-destructive",
+        className
+      )}
+      {...props}
+    >
+      {icon && (
+        <span
+          className={cn(
+            "flex-none",
+            destructive ? "text-destructive" : "text-muted-foreground"
+          )}
+        >
+          {icon}
+        </span>
+      )}
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-15 font-medium">{label}</span>
+        {detail && (
+          <span className="text-12-5 text-muted-foreground">{detail}</span>
+        )}
+      </span>
+      {trailing && (
+        <span className="ml-auto flex flex-none items-center gap-2 text-12-5 text-muted-foreground">
+          {trailing}
+        </span>
+      )}
+    </button>
+  )
+}
+
 function SheetTitle({ className, ...props }: DrawerPrimitive.Title.Props) {
   return (
     <DrawerPrimitive.Title
@@ -280,6 +339,7 @@ export {
   SheetFormBar,
   SheetHandle,
   SheetHeader,
+  SheetItem,
   SheetTitle,
   SheetTrigger,
 }

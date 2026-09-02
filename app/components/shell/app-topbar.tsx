@@ -1,7 +1,11 @@
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, MoreHorizontal, Plus, Search } from "lucide-react"
 import { useState } from "react"
 
-import { useTreeExport } from "~/components/canvas/use-tree-export"
+import { useExportActions } from "~/components/shell/export-actions"
+import {
+  ExportSheet,
+  TreeSwitcherSheet,
+} from "~/components/shell/topbar-sheets"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
 import { AddExistingPersonDialog } from "~/components/trees/add-existing-person-dialog"
 import { ChangeRootDialog } from "~/components/trees/change-root-dialog"
@@ -16,16 +20,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { triggerDownload } from "~/lib/download"
-import {
-  anniversariesIcsFilename,
-  gedcomFilename,
-  gedcomZipFilename,
-} from "~/lib/export/filenames"
-import { exportGedcom, exportGedcomZip } from "~/lib/export/gedcom"
 import { useRedaction } from "~/lib/export/use-redaction"
-import { exportAnniversariesIcs } from "~/lib/export/ics"
+import { usePeople } from "~/lib/db/hooks"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useIsMobile } from "~/lib/ui/viewport-tier"
 import { toast } from "~/lib/ui/toast-store"
 import { cn } from "~/lib/utils"
 import type { Tree } from "~/lib/types"
@@ -61,7 +59,10 @@ export function AppTopbar({
   const view = useAppShellStore((s) => s.view)
   const setView = useAppShellStore((s) => s.setView)
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
-  const { exportPng, exportPdf } = useTreeExport(tree.name)
+  const setPaletteOpen = useAppShellStore((s) => s.setPaletteOpen)
+  const setMobileSheet = useAppShellStore((s) => s.setMobileSheet)
+  const isMobile = useIsMobile()
+  const people = usePeople()
   const { redactLiving, setRedactLiving, presumedLivingCount } = useRedaction()
 
   const [dialog, setDialog] = useState<TreeDialog>(undefined)
@@ -71,36 +72,166 @@ export function AppTopbar({
   // anything while the canvas is on screen.
   const canvasExportsAvailable = view === "tree"
 
-  async function handleExportGedcom() {
-    try {
-      const blob = await exportGedcom({ redactLiving })
-      triggerDownload(blob, gedcomFilename())
-      toast("GEDCOM exported")
-    } catch {
-      toast("GEDCOM export failed — nothing was downloaded")
-    }
+  const exportActions = useExportActions({
+    treeName: tree.name,
+    canvasAvailable: canvasExportsAvailable,
+    onExportBackup,
+    exportingBackup,
+    onExportFamilyBook,
+    exportingFamilyBook,
+  })
+
+  // The tree's identity, shared by both layouts. The root name is dropped on a
+  // phone: three facts don't fit one line at 390px, and which tree is open
+  // plus how big it is are the two the reader is choosing between.
+  const treeTitle = (
+    <>
+      <span
+        className={cn(
+          "flex items-center gap-1.5 font-heading font-semibold",
+          isMobile ? "text-base" : "text-15"
+        )}
+      >
+        <span className="truncate">{tree.name}</span>
+        <ChevronDown className="size-3 flex-none text-muted-foreground" />
+      </span>
+      <span
+        className={cn(
+          "truncate text-muted-foreground",
+          isMobile ? "text-11" : "text-11"
+        )}
+      >
+        {memberCount} people · {generationCount} generations
+        {!isMobile && <> · root {rootName}</>}
+      </span>
+    </>
+  )
+
+  const viewSwitch = (
+    <div className="flex gap-0.5 rounded-full border border-border p-0.5">
+      <ViewTab
+        label="Tree"
+        active={view === "tree"}
+        onClick={() => setView("tree")}
+      />
+      <ViewTab
+        label="Table"
+        active={view === "table"}
+        onClick={() => setView("table")}
+      />
+    </div>
+  )
+
+  const treeDialogs = (
+    <>
+      <RenameTreeDialog
+        open={dialog === "rename"}
+        onOpenChange={(open) => !open && setDialog(undefined)}
+        tree={tree}
+      />
+      <ChangeRootDialog
+        open={dialog === "change-root"}
+        onOpenChange={(open) => !open && setDialog(undefined)}
+        tree={tree}
+      />
+      <AddExistingPersonDialog
+        open={dialog === "add-existing"}
+        onOpenChange={(open) => !open && setDialog(undefined)}
+        treeId={tree.id}
+      />
+      <DeleteTreeDialog
+        open={dialog === "delete"}
+        onOpenChange={(open) => !open && setDialog(undefined)}
+        tree={tree}
+        onDeleted={() => {
+          setDialog(undefined)
+          toast("Tree deleted")
+        }}
+      />
+      {addPersonOpen && (
+        <PersonFormDialog
+          open={addPersonOpen}
+          onOpenChange={setAddPersonOpen}
+          treeId={tree.id}
+        />
+      )}
+    </>
+  )
+
+  // ── Phone ────────────────────────────────────────────────────────────────
+  // Two rows instead of one, because the three groups the desktop bar holds
+  // side by side measure well over 390px together. Row one is identity and
+  // the two things worth a permanent button (search, add); row two is the
+  // view switch and the overflow. Every menu becomes a sheet.
+  if (isMobile) {
+    return (
+      <header
+        data-print="hide"
+        className="relative z-30 flex flex-none flex-col border-b border-border"
+      >
+        <div className="flex h-14 items-center gap-1 pr-2 pl-4">
+          <button
+            type="button"
+            onClick={() => setMobileSheet("tree-switcher")}
+            className="flex min-w-0 cursor-pointer flex-col gap-0.5 text-left"
+          >
+            {treeTitle}
+          </button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Search ${people?.length ?? 0} people`}
+            className="ml-auto"
+            onClick={() => setPaletteOpen(true)}
+          >
+            <Search />
+          </Button>
+          <Button
+            size="icon-sm"
+            aria-label="Add person"
+            onClick={() => setAddPersonOpen(true)}
+          >
+            <Plus />
+          </Button>
+        </div>
+
+        <div className="flex h-12 items-center gap-2 border-t border-border px-3">
+          {viewSwitch}
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto"
+            onClick={() => setMobileSheet("export")}
+          >
+            Export <ChevronDown />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="View options"
+            onClick={() => setMobileSheet("view-options")}
+          >
+            <MoreHorizontal />
+          </Button>
+        </div>
+
+        <TreeSwitcherSheet
+          tree={tree}
+          trees={trees}
+          people={people ?? []}
+          onRename={() => setDialog("rename")}
+          onChangeRoot={() => setDialog("change-root")}
+          onAddExisting={() => setDialog("add-existing")}
+          onCreateTree={onCreateTree}
+          onDelete={() => setDialog("delete")}
+        />
+        <ExportSheet actions={exportActions} />
+        {treeDialogs}
+      </header>
+    )
   }
 
-  async function handleExportGedcomZip() {
-    try {
-      const blob = await exportGedcomZip(new Date(), { redactLiving })
-      triggerDownload(blob, gedcomZipFilename())
-      toast("GEDCOM and photos exported")
-    } catch {
-      toast("GEDCOM export failed — nothing was downloaded")
-    }
-  }
-
-  async function handleExportIcs() {
-    try {
-      const blob = await exportAnniversariesIcs()
-      triggerDownload(blob, anniversariesIcsFilename())
-      toast("Anniversaries exported")
-    } catch {
-      toast("Calendar export failed — nothing was downloaded")
-    }
-  }
-
+  // ── Tablet and desktop ───────────────────────────────────────────────────
   return (
     <header
       data-print="hide"
@@ -111,16 +242,9 @@ export function AppTopbar({
           render={
             <button
               type="button"
-              className="flex cursor-pointer flex-col gap-0.5 text-left"
+              className="flex min-w-0 cursor-pointer flex-col gap-0.5 text-left"
             >
-              <span className="flex items-center gap-1.5 font-heading text-15 font-semibold">
-                {tree.name}
-                <ChevronDown className="size-3 text-muted-foreground" />
-              </span>
-              <span className="text-11 text-muted-foreground">
-                {memberCount} people · {generationCount} generations · root{" "}
-                {rootName}
-              </span>
+              {treeTitle}
             </button>
           }
         />
@@ -159,18 +283,7 @@ export function AppTopbar({
       </DropdownMenu>
 
       <div className="flex items-center gap-2">
-        <div className="flex gap-0.5 rounded-full border border-border p-0.5">
-          <ViewTab
-            label="Tree"
-            active={view === "tree"}
-            onClick={() => setView("tree")}
-          />
-          <ViewTab
-            label="Table"
-            active={view === "table"}
-            onClick={() => setView("table")}
-          />
-        </div>
+        {viewSwitch}
 
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -194,42 +307,15 @@ export function AppTopbar({
                 : `Withholds the name, dates, notes and photos of ${presumedLivingCount} ${presumedLivingCount === 1 ? "person" : "people"} with no recorded death. The canvas shows exactly what will be exported.`}
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              disabled={!canvasExportsAvailable}
-              onClick={() => void exportPng()}
-            >
-              PNG image
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={!canvasExportsAvailable}
-              onClick={() => void exportPdf()}
-            >
-              PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={exportingFamilyBook}
-              onClick={onExportFamilyBook}
-            >
-              {exportingFamilyBook
-                ? "Building…"
-                : "Family book (PDF, a page each)"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              disabled={exportingBackup}
-              onClick={onExportBackup}
-            >
-              {exportingBackup ? "Exporting…" : "Backup (.zip)"}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => void handleExportGedcomZip()}>
-              GEDCOM + photos (.zip)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => void handleExportGedcom()}>
-              GEDCOM 5.5.1 (no photos)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => void handleExportIcs()}>
-              Anniversaries (.ics)
-            </DropdownMenuItem>
+            {exportActions.map((action) => (
+              <DropdownMenuItem
+                key={action.id}
+                disabled={action.disabled}
+                onClick={action.run}
+              >
+                {action.label}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -238,37 +324,7 @@ export function AppTopbar({
         </Button>
       </div>
 
-      <RenameTreeDialog
-        open={dialog === "rename"}
-        onOpenChange={(open) => !open && setDialog(undefined)}
-        tree={tree}
-      />
-      <ChangeRootDialog
-        open={dialog === "change-root"}
-        onOpenChange={(open) => !open && setDialog(undefined)}
-        tree={tree}
-      />
-      <AddExistingPersonDialog
-        open={dialog === "add-existing"}
-        onOpenChange={(open) => !open && setDialog(undefined)}
-        treeId={tree.id}
-      />
-      <DeleteTreeDialog
-        open={dialog === "delete"}
-        onOpenChange={(open) => !open && setDialog(undefined)}
-        tree={tree}
-        onDeleted={() => {
-          setDialog(undefined)
-          toast("Tree deleted")
-        }}
-      />
-      {addPersonOpen && (
-        <PersonFormDialog
-          open={addPersonOpen}
-          onOpenChange={setAddPersonOpen}
-          treeId={tree.id}
-        />
-      )}
+      {treeDialogs}
     </header>
   )
 }

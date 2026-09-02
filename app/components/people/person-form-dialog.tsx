@@ -20,6 +20,10 @@ interface PersonFormDialogProps {
   // what the shell's "+ Add person" means, as opposed to the People view's
   // pool-only add.
   treeId?: string
+  // Seeds an empty form. Used where the reader has already typed the name
+  // somewhere else — searching for someone who isn't recorded yet — so they
+  // don't have to type it twice. Ignored when editing an existing person.
+  prefill?: Partial<PersonFormValues>
 }
 
 export function PersonFormDialog({
@@ -27,6 +31,7 @@ export function PersonFormDialog({
   onOpenChange,
   person,
   treeId,
+  prefill,
 }: PersonFormDialogProps) {
   async function handleSubmit(
     values: PersonFormValues,
@@ -54,7 +59,7 @@ export function PersonFormDialog({
         </DialogHeader>
         <PersonForm
           key={person?.id ?? "new"}
-          initialValues={person}
+          initialValues={person ?? prefill}
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}
           submitLabel={person ? "Save changes" : "Create"}

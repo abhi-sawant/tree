@@ -53,7 +53,7 @@ export function InstallPrompt() {
   if (!deferredEvent) return null
 
   return (
-    <div className="fixed inset-x-0 bottom-20 z-50 mx-auto flex w-fit items-center gap-3 rounded-xl border bg-card p-3 text-sm shadow-float">
+    <div className="fixed inset-x-0 bottom-20 z-50 mx-auto flex w-fit items-center gap-3 rounded-xl border bg-card p-3 text-sm shadow-float max-md:bottom-[calc(8rem+env(safe-area-inset-bottom,0px))] max-md:mx-4 max-md:w-auto max-md:flex-wrap">
       <span>Install Family Tree for offline use.</span>
       <Button size="sm" onClick={install}>
         Install

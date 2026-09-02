@@ -1,229 +1,34 @@
-import { useEffect, useState } from "react"
+import {
+  SidebarContent,
+  type SidebarContentProps,
+} from "~/components/shell/sidebar-content"
+import { useViewportTier } from "~/lib/ui/viewport-tier"
 
-import { Button } from "~/components/ui/button"
-import { useMembers, usePeople } from "~/lib/db/hooks"
-import { getLastExportDate } from "~/lib/db/app-meta"
-import { isStoragePersisted } from "~/lib/storage"
-import { useAppShellStore, type ShellView } from "~/lib/ui/app-shell-store"
-import { cn } from "~/lib/utils"
-import type { Tree } from "~/lib/types"
+type AppSidebarProps = Omit<SidebarContentProps, "variant" | "onClose">
 
-interface AppSidebarProps {
-  trees: Tree[]
-  activeTreeId: string | undefined
-  onCreateTree: () => void
-  onExportBackup: () => void
-  exportingBackup?: boolean
-  // Bumped by whatever last wrote a backup, so the "Last backup" line
-  // refreshes without the sidebar having to poll app-meta.
-  exportToken: number
-}
-
-export function AppSidebar({
-  trees,
-  activeTreeId,
-  onCreateTree,
-  onExportBackup,
-  exportingBackup,
-  exportToken,
-}: AppSidebarProps) {
-  const people = usePeople()
-  const members = useMembers()
-  const view = useAppShellStore((s) => s.view)
-  const setView = useAppShellStore((s) => s.setView)
-  const setActiveTree = useAppShellStore((s) => s.setActiveTree)
-  const setPaletteOpen = useAppShellStore((s) => s.setPaletteOpen)
-
-  const [persisted, setPersisted] = useState<boolean | undefined>(undefined)
-  const [lastExport, setLastExport] = useState<string | undefined>(undefined)
-
-  useEffect(() => {
-    void isStoragePersisted().then(setPersisted)
-  }, [])
-  useEffect(() => {
-    void getLastExportDate().then(setLastExport)
-  }, [exportToken])
-
-  const memberCount = (treeId: string) =>
-    (members ?? []).filter((m) => m.treeId === treeId).length
+// The desktop rail, and its tablet form. Not rendered at all on a phone, where
+// the bottom bar and the More screen take over — see MobileBottomNav.
+//
+// The tablet form is a 56px icon strip rather than a narrower version of the
+// full rail: 212px of names is a fifth of a 1024px window, and the detail
+// sheet has already taken the other side. The catalog doesn't cover this
+// width, so the rule chosen was to drop no destination — the tree list and the
+// storage card move behind the two rail buttons that stand for them.
+export function AppSidebar(props: AppSidebarProps) {
+  const tier = useViewportTier()
+  if (tier === "mobile") return null
+  const rail = tier === "tablet"
 
   return (
     <div
       data-print="hide"
-      className="flex w-53 flex-none flex-col gap-4.5 border-r border-border bg-sidebar px-3 py-4"
+      className={
+        rail
+          ? "flex w-14 flex-none flex-col items-center gap-3 border-r border-border bg-sidebar px-2 py-4"
+          : "flex w-53 flex-none flex-col gap-4.5 border-r border-border bg-sidebar px-3 py-4"
+      }
     >
-      <div className="flex items-center gap-2 px-1">
-        <div className="flex size-5.5 items-center justify-center rounded-lg bg-primary font-heading text-11 font-bold text-primary-foreground">
-          FT
-        </div>
-        <span className="font-heading text-xs font-semibold">Family Tree</span>
-      </div>
-
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setPaletteOpen(true)}
-        className="w-full justify-start gap-1.5 px-2 tracking-normal normal-case"
-      >
-        <span className="text-11 text-muted-foreground">⌕</span>
-        <span className="text-xs text-muted-foreground">
-          Search {people?.length ?? 0} people
-        </span>
-        <span className="ml-auto rounded-full border border-border px-1 text-10 font-medium text-muted-foreground">
-          ⌘K
-        </span>
-      </Button>
-
-      <div className="flex flex-col gap-0.5">
-        <SidebarLabel>Trees</SidebarLabel>
-        {trees.map((tree) => {
-          const active = tree.id === activeTreeId
-          return (
-            <button
-              key={tree.id}
-              type="button"
-              onClick={() => {
-                setActiveTree(tree.id)
-                setView("tree")
-              }}
-              className={cn(
-                "flex h-8.5 w-full cursor-pointer items-center gap-2 rounded-full px-2 text-left hover:bg-muted",
-                active ? "bg-primary/10" : "bg-transparent"
-              )}
-            >
-              <span className="truncate text-xs font-semibold">
-                {tree.name}
-              </span>
-              <span className="ml-auto text-11 text-muted-foreground">
-                {memberCount(tree.id)}
-              </span>
-            </button>
-          )
-        })}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onCreateTree}
-          className="w-full justify-start tracking-normal normal-case"
-        >
-          + New tree
-        </Button>
-      </div>
-
-      <div className="flex flex-col gap-0.5">
-        <SidebarLabel>Library</SidebarLabel>
-        <SidebarNavItem
-          label="People"
-          target="table"
-          view={view}
-          onSelect={setView}
-        />
-        <SidebarNavItem
-          label="Photo wall"
-          target="photos"
-          view={view}
-          onSelect={setView}
-        />
-        <SidebarNavItem
-          label="Insights"
-          target="insights"
-          view={view}
-          onSelect={setView}
-        />
-        <SidebarNavItem
-          label="Health"
-          target="health"
-          view={view}
-          onSelect={setView}
-        />
-        <SidebarNavItem
-          label="Settings"
-          target="settings"
-          view={view}
-          onSelect={setView}
-        />
-        <SidebarNavItem
-          label="Help"
-          target="help"
-          view={view}
-          onSelect={setView}
-          hint="?"
-        />
-      </div>
-
-      <div className="mt-auto flex flex-col gap-1.5 rounded-lg border border-border bg-background p-2.5">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              "size-1.5 rounded-full",
-              persisted ? "bg-success" : "bg-muted-foreground"
-            )}
-          />
-          <span className="font-heading text-10 font-semibold">
-            {persisted === undefined
-              ? "Checking storage"
-              : persisted
-                ? "Storage persisted"
-                : "Not persisted"}
-          </span>
-        </div>
-        <p className="text-11 leading-snug text-muted-foreground">
-          Last backup{" "}
-          {lastExport ? new Date(lastExport).toLocaleDateString() : "never"}.
-        </p>
-        <Button
-          variant="link"
-          size="xs"
-          className="h-auto justify-start p-0 text-11 tracking-normal normal-case"
-          disabled={exportingBackup}
-          onClick={onExportBackup}
-        >
-          {exportingBackup ? "Exporting…" : "Export now"}
-        </Button>
-      </div>
+      <SidebarContent {...props} variant={rail ? "rail" : "full"} />
     </div>
-  )
-}
-
-function SidebarLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mx-1 mb-1.5 font-heading text-10 font-semibold text-muted-foreground">
-      {children}
-    </p>
-  )
-}
-
-function SidebarNavItem({
-  label,
-  target,
-  view,
-  onSelect,
-  hint,
-}: {
-  label: string
-  target: ShellView
-  view: ShellView
-  onSelect: (view: ShellView) => void
-  // The key that opens it, shown the way the search box shows ⌘K — a shortcut
-  // nobody is told about is a shortcut nobody presses.
-  hint?: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(target)}
-      className={cn(
-        "flex h-8 w-full cursor-pointer items-center rounded-full px-2.5 text-left text-xs hover:bg-muted",
-        view === target ? "bg-accent" : "bg-transparent"
-      )}
-    >
-      {label}
-      {hint && (
-        <span className="ml-auto rounded-full border border-border px-1 text-10 font-medium text-muted-foreground">
-          {hint}
-        </span>
-      )}
-    </button>
   )
 }
