@@ -18,6 +18,7 @@ not folded in alongside anything else on this list.
 **Problem:** Data never leaves the browser it was created in.
 
 **Proposal:**
+
 - Introduce a sync-friendly change log: every Dexie write also appends a `{table, op, id, payload, ts}`
   row to a local `SyncLog` table. (Note: Phase 4 already added a Dexie change-signal middleware —
   `app/lib/db/change-signal.ts`, ADR D24 — for a different purpose (local durability triggers), but it
@@ -44,6 +45,7 @@ not folded in alongside anything else on this list.
 **Problem:** No concept of a user — one browser profile is one person's entire dataset.
 
 **Proposal:**
+
 - Only meaningful once §1 (cloud sync) exists.
 - Auth via a standard provider (email magic link or OAuth) rather than rolling custom password
   storage.
@@ -61,6 +63,7 @@ merge machinery this can now reuse, which was the blocker noted when this item w
 another tool (Ancestry, FamilySearch, Gramps, etc.).
 
 **Proposal:**
+
 - Hand-roll a parser (mirroring the hand-rolled writer) rather than pulling in a heavy GEDCOM
   library — a ~200–300 line recursive-descent parser covering GEDCOM 5.5.1 is tractable.
 - Reverse of the export mapping: `INDI` → `Person`, `FAM` → a `spouse` relationship (if
@@ -89,34 +92,43 @@ minimal model yet.
 to cite where a fact came from, no place data.
 
 **Proposal (data model):**
+
 ```ts
 interface LifeEvent {
-  id: string;
-  personId: string;
-  type: 'birth' | 'death' | 'marriage' | 'residence' | 'occupation' | 'education' | 'custom';
-  label?: string;       // for 'custom'
-  date?: PartialDate;
-  place?: Place;
-  sourceIds?: string[];
-  notes?: string;
+  id: string
+  personId: string
+  type:
+    | "birth"
+    | "death"
+    | "marriage"
+    | "residence"
+    | "occupation"
+    | "education"
+    | "custom"
+  label?: string // for 'custom'
+  date?: PartialDate
+  place?: Place
+  sourceIds?: string[]
+  notes?: string
 }
 
 interface Place {
-  id: string;
-  name: string;          // free text: "Springfield, Illinois, USA"
-  lat?: number;
-  lng?: number;
+  id: string
+  name: string // free text: "Springfield, Illinois, USA"
+  lat?: number
+  lng?: number
 }
 
 interface Source {
-  id: string;
-  title: string;
-  citation?: string;     // free-text citation text
-  url?: string;
-  photoId?: string;      // scanned document/certificate — could point at the Phase 6 attachments
-                          // table (app/lib/db/attachments.ts) instead of a new Photo row
+  id: string
+  title: string
+  citation?: string // free-text citation text
+  url?: string
+  photoId?: string // scanned document/certificate — could point at the Phase 6 attachments
+  // table (app/lib/db/attachments.ts) instead of a new Photo row
 }
 ```
+
 - Birth/death on `Person` become sugar over an implicit `LifeEvent`, or stay as-is and let `LifeEvent`
   be strictly additive — avoids a breaking schema migration.
 - UI: an "Events" tab in the detail panel, a `<SourcePicker>` similar to the existing `<PersonPicker>`,
@@ -136,6 +148,7 @@ interface Source {
 canvas.
 
 **Proposal:**
+
 - Pure graph algorithm, no schema changes: BFS from both `X` and `Y` over the undirected relationship
   graph (parent-child edges traversed both directions, plus spouse edges), meeting in the middle.
 - Present the path as a plain-language description (e.g. "X is Y's spouse's brother's daughter") —
@@ -156,6 +169,7 @@ canvas.
 family.
 
 **Proposal:**
+
 - A timeline of just birth/death dates is a much smaller, shippable-sooner version than the full
   life-events one.
 - Rendering: a horizontal axis scaled by year, one row per person (or per family/branch), event
@@ -175,6 +189,7 @@ family.
 size — a large tree canvas becomes illegibly small when tiled to one page.
 
 **Proposal:**
+
 - Extend `app/lib/export/pdf.ts`: instead of one `fitView` capture, compute a grid of viewport rects
   covering the full graph bounds at a fixed, legible scale, capture each tile via `html-to-image`, and
   place each as its own PDF page via `jsPDF.addPage()`.
@@ -194,6 +209,7 @@ size — a large tree canvas becomes illegibly small when tiled to one page.
 Phase 3) generational rows.
 
 **Proposal:**
+
 - ELK itself supports alternative algorithms (`radial`, `mrtree`, `force`) — swapping the algorithm
   string in `app/lib/layout/use-elk-layout.ts` is the cheap first step, but each produces a different
   node/edge shape that the existing `PersonNode`/`UnionNode` renderers and the position-override model
@@ -218,6 +234,7 @@ now the tractable starting point it wasn't when first proposed.
 independently-built trees.
 
 **Proposal:**
+
 - Identity resolution is the core problem: no stable external ID exists (`Person.id` is locally
   generated), so matching has to be heuristic — name (fuzzy/normalized) + birth year (exact or ±1) +
   shared parent/spouse links as corroborating signal. `findDuplicates`' existing disqualifier rules
@@ -235,26 +252,21 @@ independently-built trees.
 
 ## 10. Mobile-specific interaction design
 
-**Status:** Not started. Desktop-first remains the standing decision (ADR D15).
+**Status:** Shipped. See ADR `D36`–`D37`; the design catalog it was built against is checked in at
+`design/mobile/`.
 
-**Problem:** Touch works via React Flow's built-in support; no dedicated mobile interaction design
-exists for anything built on top of it.
+**What is left over from it:**
 
-**Proposal:**
-- Audit against the app's actual interactions as they exist today (detail panel, add-relative menu,
-  Phase 5's keyboard shortcuts and drag-to-connect, Phase 3's canvas toolbar): pan/zoom/select work out
-  of the box, but a fixed side panel and hover-dependent affordances (disabled-state tooltips,
-  right-click-style menus) don't translate directly to touch.
-- Concrete gaps likely worth addressing first: the detail side panel as a bottom sheet or full-screen
-  overlay below some viewport width; tap-triggered equivalents for disabled-state tooltips; a "move
-  mode" toggle for drag-to-reposition, since a plain drag is indistinguishable from pan/select on small
-  targets; drag-to-connect (Phase 5) needs the same consideration.
-- Responsive layout breakpoints for `/people` (table view) — likely needs a card-list view below
-  tablet width.
-- Should start with a UX audit on an actual touch device (or simulator) against every existing flow,
-  cataloguing specific breakages, before writing any code.
-- **Natural pairing:** high-contrast mode and an automated accessibility audit (ADR D35) are the other
-  two open UX/robustness items with no data-model dependency — worth scoping together.
+- **Drag-to-connect has no touch equivalent.** It is switched off under a coarse pointer rather than
+  reimplemented, because the points you would drag between sit on a card's edge where a pan starts.
+  The add-relative flows record the same link. A deliberate gesture for it — a two-step "connect
+  these two" mode, say — is unbuilt and may not be worth building.
+- **`birthplace` and `occupation` are custom fields, not columns.** The design draws them as
+  first-class, and if they became real fields the People table could show and edit them. That is a
+  schema decision (`D6`-adjacent, and it touches GEDCOM export), deliberately not taken as part of a
+  layout pass.
+- **High-contrast mode and an automated a11y audit** (ADR `D35`) were expected to ship alongside
+  this and did not. They are still open, and no longer have anything to wait for.
 
 ---
 
@@ -266,6 +278,7 @@ exists for anything built on top of it.
 and permanent, modulo the D3/D4 delete-confirmation dialog.
 
 **Proposal:**
+
 - Command-pattern history: every mutating operation in `app/lib/db/*` already goes through a small set
   of functions (`createPerson`, `updatePerson`, `deletePerson`, `addRelationship`,
   `removeRelationship`, tree/member mutations, `mergePeople`) — wrap each with a paired inverse
@@ -292,12 +305,13 @@ Everything below was a proposal here and is now built. Kept as a pointer to the 
 records the decisions actually made, not as a changelog — see git history (PRs #15–#22) for the
 implementation detail.
 
-| Shipped | ADR entries |
-|---|---|
-| Sex, subtype-of-relationship, maiden name, nickname, multiple births, custom fields, and the data-quality validator | D19, D20 |
-| Family statistics, birthdays/anniversaries, `.ics` export, duplicate detection, merge people | D20, D21, D23 |
-| Focus/bloodline views, layout direction, connector shapes, card content, colour groups, theme toggle | — (see Phase 3 in git history if the reasoning is needed beyond what ADR captures) |
-| Storage breakdown, rolling snapshots, local-folder auto-backup, staleness nudge, multi-tab safety | D24, D25, D26, D27 |
-| Keyboard-driven canvas, drag-to-connect, "add whole family", multi-select/align, inline table editing, CSV import/export, markdown notes | D23, D32, D33 |
-| Multiple photos per person, document attachments, photo wall, family-book PDF, living-person redaction | D28, D29, D30 |
-| Bundled sample tree, offline help, canvas accessibility pass | D31, D34 |
+| Shipped                                                                                                                                  | ADR entries                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Sex, subtype-of-relationship, maiden name, nickname, multiple births, custom fields, and the data-quality validator                      | D19, D20                                                                           |
+| Family statistics, birthdays/anniversaries, `.ics` export, duplicate detection, merge people                                             | D20, D21, D23                                                                      |
+| Focus/bloodline views, layout direction, connector shapes, card content, colour groups, theme toggle                                     | — (see Phase 3 in git history if the reasoning is needed beyond what ADR captures) |
+| Storage breakdown, rolling snapshots, local-folder auto-backup, staleness nudge, multi-tab safety                                        | D24, D25, D26, D27                                                                 |
+| Keyboard-driven canvas, drag-to-connect, "add whole family", multi-select/align, inline table editing, CSV import/export, markdown notes | D23, D32, D33                                                                      |
+| Multiple photos per person, document attachments, photo wall, family-book PDF, living-person redaction                                   | D28, D29, D30                                                                      |
+| Bundled sample tree, offline help, canvas accessibility pass                                                                             | D31, D34                                                                           |
+| Responsive across phone, tablet and desktop; health-finding dismissals; anniversary window; People sort                                  | D36, D37                                                                           |
