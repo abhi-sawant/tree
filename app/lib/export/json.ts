@@ -30,18 +30,26 @@ export interface ImportBackupResult {
 // appMeta is deliberately excluded: lastExportDate records when *this* browser
 // last exported, which an imported file has no business overwriting.
 export async function exportBackup(now: Date = new Date()): Promise<Blob> {
-  const [people, relationships, trees, members, photos, attachments] =
-    await Promise.all([
-      db.people.toArray(),
-      db.relationships.toArray(),
-      db.trees.toArray(),
-      db.members.toArray(),
-      db.photos.toArray(),
-      db.attachments.toArray(),
-    ])
+  const [
+    people,
+    relationships,
+    trees,
+    members,
+    photos,
+    attachments,
+    dismissals,
+  ] = await Promise.all([
+    db.people.toArray(),
+    db.relationships.toArray(),
+    db.trees.toArray(),
+    db.members.toArray(),
+    db.photos.toArray(),
+    db.attachments.toArray(),
+    db.dismissals.toArray(),
+  ])
 
   return buildBackupZip(
-    { people, relationships, trees, members, photos, attachments },
+    { people, relationships, trees, members, photos, attachments, dismissals },
     now
   )
 }
@@ -113,6 +121,7 @@ export async function applyBackup(
       db.members,
       db.photos,
       db.attachments,
+      db.dismissals,
     ],
     async () => {
       await Promise.all([
@@ -122,6 +131,7 @@ export async function applyBackup(
         db.members.clear(),
         ...(photoMode === "replace" ? [db.photos.clear()] : []),
         ...(attachmentMode === "replace" ? [db.attachments.clear()] : []),
+        db.dismissals.clear(),
       ])
 
       await Promise.all([
@@ -140,6 +150,14 @@ export async function applyBackup(
               ),
             ]
           : []),
+        // Only dismissals whose people all survived the restore. One naming
+        // somebody the backup doesn't contain can never match a finding
+        // again — and could silence a real one if that id were reissued.
+        db.dismissals.bulkAdd(
+          backup.dismissals.filter((dismissal) =>
+            dismissal.personIds.every((id) => keptPeople.has(id))
+          )
+        ),
       ])
     }
   )

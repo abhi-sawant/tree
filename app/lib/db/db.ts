@@ -5,6 +5,7 @@ import type {
   AppMetaRow,
   Attachment,
   BackupTarget,
+  Dismissal,
   Person,
   Photo,
   Relationship,
@@ -23,6 +24,7 @@ export class FamilyTreeDB extends Dexie {
   appMeta!: Table<AppMetaRow, string>
   snapshots!: Table<Snapshot, string>
   backupTargets!: Table<BackupTarget, string>
+  dismissals!: Table<Dismissal, string>
 
   constructor() {
     super("FamilyTreeDB")
@@ -59,6 +61,14 @@ export class FamilyTreeDB extends Dexie {
     // detail panel, the delete cascade and a merge all ask exactly that.
     this.version(6).stores({
       attachments: "id, personId",
+    })
+
+    // A new store, so a bump — the same rule that covered snapshots,
+    // backupTargets and attachments. `personIds` is multi-entry so the
+    // delete cascade can ask "which dismissals mention this person" as a
+    // query rather than by scanning every row and parsing its key.
+    this.version(7).stores({
+      dismissals: "key, kind, *personIds",
     })
 
     // Installed here rather than at the app root so that anything importing

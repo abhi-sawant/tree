@@ -145,6 +145,7 @@ export async function deletePerson(id: string): Promise<void> {
       db.photos,
       db.trees,
       db.attachments,
+      db.dismissals,
     ],
     async () => {
       const rootTrees = await db.trees
@@ -171,6 +172,10 @@ export async function deletePerson(id: string): Promise<void> {
       // behind is unreachable from anywhere in the UI — bytes nothing can open
       // and nothing can delete.
       await db.attachments.where("personId").equals(id).delete()
+      // Health dismissals naming them. A dismissal about somebody who no
+      // longer exists can never match a finding again, and leaving it would
+      // let it silence a genuinely new finding if the id were ever reissued.
+      await db.dismissals.where("personIds").equals(id).delete()
 
       await db.people.delete(id)
     }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { MergePeopleDialog } from "~/components/people/merge-people-dialog"
 import { Button } from "~/components/ui/button"
@@ -19,12 +19,22 @@ import {
   type Finding,
   type Severity,
 } from "~/lib/analysis/validate"
+import {
+  duplicateKey,
+  duplicatePersonIds,
+  filterDismissed,
+  findingKey,
+  findingPersonIds,
+} from "~/lib/analysis/dismissals"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
-import { useMembers } from "~/lib/db/hooks"
+import { dismiss, undismiss } from "~/lib/db/dismissals"
+import { useDismissals, useMembers } from "~/lib/db/hooks"
 import { personNodeId } from "~/lib/graph/node-ids"
 import { personDisplayName } from "~/lib/person-name"
+import { formatWhen } from "~/lib/relative-time"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
-import type { Person, Relationship } from "~/lib/types"
+import { toast } from "~/lib/ui/toast-store"
+import type { Dismissal, Person, Relationship } from "~/lib/types"
 
 interface HealthViewProps {
   people: Person[]
@@ -42,8 +52,19 @@ export function HealthView({
   const memberships = useMembers()
   const setView = useAppShellStore((s) => s.setView)
   const requestCenter = useCanvasUIStore((s) => s.requestCenter)
+  const dismissals = useDismissals()
+  const dismissedKeys = useMemo(
+    () => new Set((dismissals ?? []).map((row) => row.key)),
+    [dismissals]
+  )
 
-  const findings = useMemo(
+  // The checks run off live queries, so they are already up to date whenever
+  // the data changes — there is nothing for a "re-check" button to trigger.
+  // What it can honestly do is say when the answer on screen was computed, and
+  // recompute it on demand so that stamp moves. See the note on the button.
+  const [checkedAt, setCheckedAt] = useState(() => Date.now())
+
+  const allFindings = useMemo(
     () =>
       memberships
         ? validate({ people, relationships, memberships })
@@ -51,10 +72,48 @@ export function HealthView({
     [people, relationships, memberships]
   )
 
-  const duplicates = useMemo(
+  const allDuplicates = useMemo(
     () => findDuplicates(people, relationships),
     [people, relationships]
   )
+
+  // Anything already looked at and rejected drops out. It is not deleted: the
+  // "Dismissed" section below lists it and takes it back.
+  const findings = useMemo(
+    () =>
+      allFindings && filterDismissed(allFindings, findingKey, dismissedKeys),
+    [allFindings, dismissedKeys]
+  )
+  const duplicates = useMemo(
+    () => filterDismissed(allDuplicates, duplicateKey, dismissedKeys),
+    [allDuplicates, dismissedKeys]
+  )
+  const dismissedCount =
+    (allFindings ? allFindings.length - findings!.length : 0) +
+    (allDuplicates.length - duplicates.length)
+
+  // Recomputing is what the data already does; the stamp is the honest part.
+  useEffect(() => {
+    setCheckedAt(Date.now())
+  }, [allFindings, allDuplicates])
+
+  async function handleDismissFinding(finding: Finding) {
+    await dismiss({
+      key: findingKey(finding),
+      kind: "finding",
+      personIds: findingPersonIds(finding),
+    })
+    toast("Ignored — reachable under Dismissed")
+  }
+
+  async function handleDismissDuplicate(candidate: DuplicateCandidate) {
+    await dismiss({
+      key: duplicateKey(candidate),
+      kind: "duplicate",
+      personIds: duplicatePersonIds(candidate),
+    })
+    toast("Marked as not a duplicate")
+  }
 
   const peopleById = useMemo(
     () => new Map(people.map((person) => [person.id, person])),
@@ -107,8 +166,28 @@ export function HealthView({
             <Tally severity="duplicate" count={duplicates.length} />
             <span className="ml-auto text-xs text-muted-foreground max-md:ml-0 max-md:basis-full">
               {people.length} {people.length === 1 ? "person" : "people"}{" "}
-              checked
+              checked {formatWhen(checkedAt)}
             </span>
+          </div>
+          {/* The checks run off live queries, so they are never stale and this
+              button cannot make them fresher. What it does is re-run them and
+              move the timestamp — which is the only claim worth offering, since
+              a button labelled "re-check" that did nothing would be lying about
+              the one thing this view exists to be trusted on. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => setCheckedAt(Date.now())}
+            >
+              Re-check
+            </Button>
+            {dismissedCount > 0 && (
+              <span className="text-11 text-muted-foreground">
+                {dismissedCount} {dismissedCount === 1 ? "item" : "items"}{" "}
+                ignored — listed at the bottom.
+              </span>
+            )}
           </div>
           <p className="text-12-5 leading-relaxed text-muted-foreground">
             Errors are contradictions the data cannot be right about. Warnings
@@ -133,6 +212,7 @@ export function HealthView({
             people={people}
             memberIds={memberIds}
             onShow={show}
+            onIgnore={(finding) => void handleDismissFinding(finding)}
           />
         )}
         {warnings.length > 0 && (
@@ -142,6 +222,7 @@ export function HealthView({
             people={people}
             memberIds={memberIds}
             onShow={show}
+            onIgnore={(finding) => void handleDismissFinding(finding)}
           />
         )}
 
@@ -177,7 +258,45 @@ export function HealthView({
                     const b = peopleById.get(candidate.personIds[1])
                     if (a && b) setMergePair([a, b])
                   }}
+                  onNotADuplicate={() => void handleDismissDuplicate(candidate)}
                 />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Everything ignored, and the way back. Dismissing has to be
+            reversible and visible: a check the reader silenced months ago and
+            cannot find again is a check the app is quietly not doing. */}
+        {(dismissals ?? []).length > 0 && (
+          <section className="flex flex-col gap-2">
+            <SectionHeading>
+              Dismissed ({(dismissals ?? []).length})
+            </SectionHeading>
+            <p className="text-12-5 leading-relaxed text-muted-foreground">
+              Things you have looked at and decided are fine. They stay out of
+              the lists above until you bring one back.
+            </p>
+            <div className="flex flex-col gap-2">
+              {(dismissals ?? []).map((row) => (
+                <div
+                  key={row.key}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border p-3"
+                >
+                  <p className="min-w-0 flex-1 text-13 leading-snug">
+                    {describeDismissal(row, peopleById)}
+                  </p>
+                  <span className="text-11 text-muted-foreground">
+                    {formatWhen(row.dismissedAt)}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onClick={() => void undismiss(row.key)}
+                  >
+                    Bring back
+                  </Button>
+                </div>
               ))}
             </div>
           </section>
@@ -187,18 +306,39 @@ export function HealthView({
   )
 }
 
+// A dismissal stores a key, not a sentence — the sentence was generated from
+// data that may since have changed. So this says what was dismissed and about
+// whom, and does not try to reconstruct the original wording.
+function describeDismissal(
+  row: Dismissal,
+  peopleById: Map<string, Person>
+): string {
+  const names = row.personIds
+    .map((id) => {
+      const person = peopleById.get(id)
+      return person ? personDisplayName(person) : undefined
+    })
+    .filter((name): name is string => name !== undefined)
+  const who = names.length > 0 ? names.join(" and ") : "someone since deleted"
+  return row.kind === "duplicate"
+    ? `${who} — not the same person`
+    : `A check about ${who}`
+}
+
 function FindingSection({
   title,
   findings,
   people,
   memberIds,
   onShow,
+  onIgnore,
 }: {
   title: string
   findings: Finding[]
   people: Person[]
   memberIds: Set<string>
   onShow: (personId: string) => void
+  onIgnore: (finding: Finding) => void
 }) {
   const peopleById = useMemo(
     () => new Map(people.map((person) => [person.id, person])),
@@ -227,6 +367,13 @@ function FindingSection({
               {finding.message}
             </p>
             <div className="flex shrink-0 items-center gap-1 max-md:shrink max-md:flex-wrap">
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => onIgnore(finding)}
+              >
+                Ignore
+              </Button>
               {finding.personIds.map((personId) => {
                 const person = peopleById.get(personId)
                 if (!person) return null
@@ -270,11 +417,13 @@ function DuplicateRow({
   memberIds,
   onShow,
   onMerge,
+  onNotADuplicate,
 }: {
   candidate: DuplicateCandidate
   memberIds: Set<string>
   onShow: (personId: string) => void
   onMerge: () => void
+  onNotADuplicate: () => void
 }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
@@ -299,6 +448,9 @@ function DuplicateRow({
           )}
           <Button variant="outline" size="xs" onClick={onMerge}>
             Merge
+          </Button>
+          <Button variant="ghost" size="xs" onClick={onNotADuplicate}>
+            Not a duplicate
           </Button>
         </div>
       </div>

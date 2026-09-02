@@ -108,6 +108,13 @@ export const BackupAttachmentSchema = z.object({
   file: ArchivePathSchema, // e.g. "attachments/<id>.pdf"
 })
 
+export const DismissalSchema = z.object({
+  key: z.string(),
+  kind: z.enum(["finding", "duplicate"]),
+  personIds: z.array(z.string()),
+  dismissedAt: z.number(),
+})
+
 const backupTables = {
   people: z.array(PersonSchema),
   relationships: z.array(RelationshipSchema),
@@ -148,6 +155,11 @@ export const BackupEnvelopeV2Schema = z.object({
   // backup drops the array (Zod strips it) and ignores the bytes in the
   // archive, which is the acceptable half of that trade.
   attachments: z.array(BackupAttachmentSchema).default([]),
+  // Same pattern again, for the health dismissals added with D36. They ride in
+  // the backup because they are the reader's own judgements about their own
+  // data — restoring a backup and being told again about the three things you
+  // already decided were fine is a restore that lost something.
+  dismissals: z.array(DismissalSchema).default([]),
 })
 
 export const AnyBackupEnvelopeSchema = z.discriminatedUnion("schema", [

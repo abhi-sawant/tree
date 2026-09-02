@@ -19,6 +19,7 @@ afterEach(async () => {
     db.trees.clear(),
     db.members.clear(),
     db.photos.clear(),
+    db.dismissals.clear(),
   ])
 })
 
@@ -442,5 +443,74 @@ describe("importBackup", () => {
       )
       expect(await db.people.get(root.id)).toBeDefined()
     })
+  })
+})
+
+describe("health dismissals in a backup", () => {
+  it("survives an export and restore", async () => {
+    // They are the reader's own judgements about their own data. A restore
+    // that told them again about the three things they already decided were
+    // fine would be a restore that lost something.
+    const person = makePerson({ givenName: "Suniti" })
+    await db.people.add(person)
+    await db.dismissals.add({
+      key: `missing-birth-year:${person.id}`,
+      kind: "finding",
+      personIds: [person.id],
+      dismissedAt: EXPORTED_AT.getTime(),
+    })
+
+    const blob = await exportBackup(EXPORTED_AT)
+    await db.dismissals.clear()
+    await importBackup(blob)
+
+    const restored = await db.dismissals.toArray()
+    expect(restored).toEqual([
+      {
+        key: `missing-birth-year:${person.id}`,
+        kind: "finding",
+        personIds: [person.id],
+        dismissedAt: EXPORTED_AT.getTime(),
+      },
+    ])
+  })
+
+  it("drops one naming a person the backup does not contain", async () => {
+    // It could never match a finding again, and would silence a real one if
+    // that id were ever reissued.
+    const person = makePerson()
+    await db.people.add(person)
+    await db.dismissals.add({
+      key: "duplicate:ghost,other-ghost",
+      kind: "duplicate",
+      personIds: ["ghost", "other-ghost"],
+      dismissedAt: EXPORTED_AT.getTime(),
+    })
+
+    const blob = await exportBackup(EXPORTED_AT)
+    await importBackup(blob)
+
+    expect(await db.dismissals.toArray()).toEqual([])
+  })
+
+  it("restores a backup written before dismissals existed", async () => {
+    // The array is additive with a default, so an older schema-2 manifest
+    // still validates rather than being rejected outright (D13).
+    const person = makePerson()
+    await db.people.add(person)
+    const blob = await exportBackup(EXPORTED_AT)
+
+    const files = unzipSync(new Uint8Array(await blob.arrayBuffer()))
+    const manifest = JSON.parse(
+      new TextDecoder().decode(files["backup.json"])
+    ) as Record<string, unknown>
+    delete manifest.dismissals
+    files["backup.json"] = new TextEncoder().encode(JSON.stringify(manifest))
+
+    const { zipSync } = await import("fflate")
+    const older = new Blob([zipSync(files) as unknown as BlobPart])
+
+    await expect(importBackup(older)).resolves.toBeDefined()
+    expect(await db.dismissals.toArray()).toEqual([])
   })
 })

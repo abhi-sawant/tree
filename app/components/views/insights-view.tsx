@@ -15,12 +15,16 @@ import {
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { personNodeId } from "~/lib/graph/node-ids"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import {
+  ANNIVERSARY_WINDOWS,
+  anniversaryWindowLabel,
+  useInsightsStore,
+} from "~/lib/ui/insights-store"
 import type { Person, Relationship, Tree } from "~/lib/types"
 
 // How far ahead to look when nothing falls today. Roughly a month: far enough
 // that the section is rarely empty, near enough that what it shows is still
 // worth acting on.
-const UPCOMING_WINDOW_DAYS = 31
 
 interface InsightsViewProps {
   tree: Tree
@@ -40,6 +44,8 @@ export function InsightsView({
 }: InsightsViewProps) {
   const setView = useAppShellStore((s) => s.setView)
   const requestCenter = useCanvasUIStore((s) => s.requestCenter)
+  const windowDays = useInsightsStore((s) => s.anniversaryWindowDays)
+  const setWindowDays = useInsightsStore((s) => s.setAnniversaryWindowDays)
 
   const stats = useMemo(
     () => computeStatistics(people, relationships),
@@ -52,7 +58,7 @@ export function InsightsView({
 
   const { todays, upcoming } = useMemo(() => {
     const all = findAnniversaries(people, relationships, referenceDate, {
-      withinDays: UPCOMING_WINDOW_DAYS,
+      withinDays: windowDays,
     })
     return {
       todays: all.filter((a) => a.daysUntil === 0),
@@ -117,15 +123,48 @@ export function InsightsView({
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionHeading>
-            {todays.length > 0 ? "Today" : "Coming up"}
-          </SectionHeading>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <SectionHeading>
+              {todays.length > 0 ? "Today" : "Coming up"}
+            </SectionHeading>
+            <span className="text-11 text-muted-foreground">
+              {anniversaryWindowLabel(windowDays)}
+            </span>
+            <div className="ml-auto flex gap-1 max-md:ml-0">
+              {ANNIVERSARY_WINDOWS.map((option) => (
+                <Button
+                  key={option.days}
+                  variant={windowDays === option.days ? "secondary" : "ghost"}
+                  size="xs"
+                  aria-pressed={windowDays === option.days}
+                  onClick={() => setWindowDays(option.days)}
+                >
+                  {option.days === 365
+                    ? "1y"
+                    : `${Math.round(option.days / 31)}m`}
+                </Button>
+              ))}
+            </div>
+          </div>
           {todays.length + upcoming.length === 0 ? (
-            <p className="border border-border p-3 text-13 text-muted-foreground">
-              No anniversaries in the next {UPCOMING_WINDOW_DAYS} days. Only
-              exact dates count — a bare year, or one recorded as approximate,
-              has no day to fall on.
-            </p>
+            <div className="flex flex-col items-start gap-2.5 border border-border p-3">
+              <p className="text-13 text-muted-foreground">
+                Nothing in the {anniversaryWindowLabel(windowDays)}. Only exact
+                dates count — a bare year, or one recorded as approximate, has
+                no day to fall on.
+              </p>
+              {/* The obvious next question when a window comes back empty is
+                  whether a wider one wouldn't. */}
+              {windowDays !== 365 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setWindowDays(365)}
+                >
+                  Widen to a year
+                </Button>
+              )}
+            </div>
           ) : (
             <div className="flex flex-col">
               {(todays.length > 0 ? todays : upcoming).map(

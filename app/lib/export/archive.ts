@@ -4,6 +4,7 @@ import { AnyBackupEnvelopeSchema } from "~/lib/schemas"
 import { extensionForMime } from "~/lib/export/mime"
 import type {
   Attachment,
+  Dismissal,
   Person,
   Photo,
   Relationship,
@@ -37,11 +38,15 @@ export interface BackupPayload {
   // Optional so a caller that predates documents — and createSnapshot, which
   // deliberately leaves them out — needs no change.
   attachments?: Attachment[]
+  // Optional for the same reason: a snapshot carries them, an old caller
+  // doesn't have to know they exist.
+  dismissals?: Dismissal[]
 }
 
 export interface ParsedBackup extends BackupPayload {
   schema: 1 | 2
   attachments: Attachment[]
+  dismissals: Dismissal[]
   // Photos the manifest referenced but the archive didn't contain. Import
   // continues without them rather than failing the whole restore.
   missingPhotoIds: string[]
@@ -151,6 +156,7 @@ export async function buildBackupZip(
     members: payload.members,
     photos: manifestPhotos,
     attachments: manifestAttachments,
+    dismissals: payload.dismissals ?? [],
   }
   entries[BACKUP_MANIFEST] = [strToU8(JSON.stringify(manifest)), DEFLATE]
 
@@ -266,6 +272,7 @@ function parseZipBackup(bytes: Uint8Array): ParsedBackup {
     members: envelope.members,
     photos,
     attachments,
+    dismissals: envelope.dismissals,
     missingPhotoIds,
     missingAttachmentIds,
   }
@@ -346,6 +353,8 @@ function decodeV1(envelope: {
       blob: base64ToBlob(photo.data, photo.mime),
     })),
     attachments: [],
+    // Schema 1 predates dismissals entirely.
+    dismissals: [],
     missingPhotoIds: [],
     missingAttachmentIds: [],
   }
