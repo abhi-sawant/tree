@@ -1,3 +1,4 @@
+import { Drawer } from "@base-ui/react/drawer"
 import { ReactFlowProvider } from "@xyflow/react"
 import { useEffect, useMemo, useState } from "react"
 
@@ -91,17 +92,22 @@ export default function App() {
 
   return (
     <TooltipProvider>
-      <ReactFlowProvider>
-        <AppShell
-          tree={tree}
-          trees={trees}
-          people={people}
-          relationships={relationships}
-          unions={unions}
-          generations={generations}
-          tabs={tabs}
-        />
-      </ReactFlowProvider>
+      {/* Publishes --drawer-keyboard-inset while a soft keyboard is up, which
+          is what lets a sheet's footer and its focused field stay above it.
+          Mounted once at the root because a sheet can open from anywhere. */}
+      <Drawer.VirtualKeyboardProvider>
+        <ReactFlowProvider>
+          <AppShell
+            tree={tree}
+            trees={trees}
+            people={people}
+            relationships={relationships}
+            unions={unions}
+            generations={generations}
+            tabs={tabs}
+          />
+        </ReactFlowProvider>
+      </Drawer.VirtualKeyboardProvider>
     </TooltipProvider>
   )
 }
