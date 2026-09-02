@@ -295,6 +295,7 @@ function SheetFormBar({
   submitLabel,
   onSubmit,
   submitDisabled,
+  submitProps,
   className,
 }: {
   title: React.ReactNode
@@ -303,6 +304,10 @@ function SheetFormBar({
   submitLabel: string
   onSubmit?: () => void
   submitDisabled?: boolean
+  // For a bar whose commit action submits a form it isn't inside: pass
+  // `{ type: "submit", form: id }`. HTML associates the two by id across any
+  // DOM distance, including the sheet's portal.
+  submitProps?: Partial<React.ComponentProps<typeof Button>>
   className?: string
 }) {
   return (
@@ -320,7 +325,12 @@ function SheetFormBar({
       </div>
       <SheetTitle className="truncate text-center text-15">{title}</SheetTitle>
       <div className="flex flex-1 basis-0 justify-end">
-        <Button size="sm" disabled={submitDisabled} onClick={onSubmit}>
+        <Button
+          size="sm"
+          disabled={submitDisabled}
+          onClick={onSubmit}
+          {...submitProps}
+        >
           {submitLabel}
         </Button>
       </div>

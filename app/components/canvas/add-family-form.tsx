@@ -306,8 +306,8 @@ export function AddFamilyForm({
                 </Button>
               )}
             </div>
-            <div className="flex items-end gap-2">
-              <div className="flex min-w-0 flex-1 basis-16 flex-col gap-1">
+            <div className="flex items-end gap-2 max-md:flex-wrap">
+              <div className="flex min-w-0 flex-1 basis-16 flex-col gap-1 max-md:basis-[calc(50%-0.25rem)]">
                 <Label htmlFor={`child-born-${index}`}>Born</Label>
                 <Input
                   id={`child-born-${index}`}
@@ -319,7 +319,7 @@ export function AddFamilyForm({
                   }
                 />
               </div>
-              <div className="flex min-w-0 flex-1 basis-20 flex-col gap-1">
+              <div className="flex min-w-0 flex-1 basis-20 flex-col gap-1 max-md:basis-[calc(50%-0.25rem)]">
                 <Label htmlFor={`child-sex-${index}`}>Sex</Label>
                 <Select
                   id={`child-sex-${index}`}
@@ -334,7 +334,7 @@ export function AddFamilyForm({
                   <option value="other">Other</option>
                 </Select>
               </div>
-              <div className="flex min-w-0 flex-1 basis-24 flex-col gap-1">
+              <div className="flex min-w-0 flex-1 basis-24 flex-col gap-1 max-md:basis-full">
                 <Label htmlFor={`child-subtype-${index}`}>Relationship</Label>
                 <Select
                   id={`child-subtype-${index}`}
