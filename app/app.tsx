@@ -5,6 +5,7 @@ import { AppShell } from "~/components/shell/app-shell"
 import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { Button } from "~/components/ui/button"
 import { Toaster } from "~/components/ui/toast"
+import { TooltipProvider } from "~/components/ui/tooltip"
 import { useAutoSnapshots } from "~/lib/backup/use-auto-snapshots"
 import { useFolderBackup } from "~/lib/backup/use-folder-backup"
 import { usePeople, useRelationships, useTrees } from "~/lib/db/hooks"
@@ -89,17 +90,19 @@ export default function App() {
   }
 
   return (
-    <ReactFlowProvider>
-      <AppShell
-        tree={tree}
-        trees={trees}
-        people={people}
-        relationships={relationships}
-        unions={unions}
-        generations={generations}
-        tabs={tabs}
-      />
-    </ReactFlowProvider>
+    <TooltipProvider>
+      <ReactFlowProvider>
+        <AppShell
+          tree={tree}
+          trees={trees}
+          people={people}
+          relationships={relationships}
+          unions={unions}
+          generations={generations}
+          tabs={tabs}
+        />
+      </ReactFlowProvider>
+    </TooltipProvider>
   )
 }
 

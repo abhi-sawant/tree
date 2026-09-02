@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 
 import { MarkdownView } from "~/components/markdown/markdown-view"
 import { Button } from "~/components/ui/button"
+import { Input } from "~/components/ui/input"
 import {
   searchHelp,
   type HelpSection,
@@ -42,7 +43,7 @@ export function HelpView() {
         aria-label="Help topics"
         className="flex w-60 flex-none flex-col gap-2 overflow-y-auto border-r border-border p-3"
       >
-        <input
+        <Input
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
@@ -50,7 +51,6 @@ export function HelpView() {
           }}
           placeholder="Search the help…"
           aria-label="Search the help"
-          className="h-8 w-full border border-border bg-background px-2 text-xs outline-none focus:border-primary"
         />
         {results.length === 0 ? (
           <p className="px-1 py-2 text-11 text-muted-foreground">

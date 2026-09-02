@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { XIcon } from "lucide-react"
 
 import {
   AddRelativeMenu,
@@ -17,6 +18,7 @@ import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { PartialDateFields } from "~/components/people/partial-date-fields"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import { Button } from "~/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import {
   useCanvasUIStore,
   useSelectedNodeId,
@@ -53,7 +55,6 @@ import { personDisplayName } from "~/lib/person-name"
 import { formatPartialDate } from "~/lib/partial-date"
 import type { PersonFormValues } from "~/lib/schemas"
 import { toast } from "~/lib/ui/toast-store"
-import { cn } from "~/lib/utils"
 import type { ParentChildSubtype, Person, Relationship } from "~/lib/types"
 import { coverPhotoId } from "~/lib/person-photos"
 
@@ -337,40 +338,34 @@ function PersonDetail({
         </div>
       </div>
 
-      <div className="flex flex-none border-b border-border">
-        {TABS.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "h-9.5 flex-1 cursor-pointer border-b-2 font-heading text-xs font-semibold tracking-widest uppercase",
-              tab === id
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value as DetailTab)}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <TabsList>
+          {TABS.map(({ id, label }) => (
+            <TabsTrigger key={id} value={id}>
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4">
-        {tab === "details" && (
-          <PersonForm
-            key={`${person.id}:${formKey}`}
-            section="details"
-            initialValues={person}
-            focusSignal={focusSignal}
-            onSubmit={handleUpdatePerson}
-            onCancel={() => setFormKey((k) => k + 1)}
-            cancelLabel="Revert"
-            submitLabel="Save"
-          />
-        )}
+        <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto p-4">
+          <TabsContent value="details">
+            <PersonForm
+              key={`${person.id}:${formKey}`}
+              section="details"
+              initialValues={person}
+              focusSignal={focusSignal}
+              onSubmit={handleUpdatePerson}
+              onCancel={() => setFormKey((k) => k + 1)}
+              cancelLabel="Revert"
+              submitLabel="Save"
+            />
+          </TabsContent>
 
-        {tab === "media" && (
-          <div className="flex flex-col gap-5">
+          <TabsContent value="media" className="flex flex-col gap-5">
             <PersonPhotosPanel person={person} />
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <h3 className="font-heading text-10 font-semibold tracking-widest uppercase">
@@ -378,50 +373,50 @@ function PersonDetail({
               </h3>
               <PersonAttachmentsPanel personId={person.id} />
             </div>
-          </div>
-        )}
+          </TabsContent>
 
-        {tab === "notes" &&
-          (editingNotes ? (
-            <div className="flex flex-col gap-2">
-              <PersonForm
-                key={`${person.id}:notes:${formKey}`}
-                section="notes"
-                initialValues={person}
-                onSubmit={async (values, photoAction) => {
-                  await handleUpdatePerson(values, photoAction)
-                  setEditingNotes(false)
-                }}
-                onCancel={() => setEditingNotes(false)}
-                submitLabel="Save notes"
-              />
-              <p className="text-11 leading-relaxed text-muted-foreground">
-                Write <code className="bg-muted px-1">[[Priya Iyer]]</code> to
-                link to someone. <code className="bg-muted px-1">**bold**</code>
-                , <code className="bg-muted px-1">*italic*</code>,{" "}
-                <code className="bg-muted px-1"># headings</code> and{" "}
-                <code className="bg-muted px-1">- lists</code> also work.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <NotesView
-                notes={person.notes ?? ""}
-                people={[...people.values()]}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="self-start"
-                onClick={() => setEditingNotes(true)}
-              >
-                {person.notes ? "Edit notes" : "Add notes"}
-              </Button>
-            </div>
-          ))}
+          <TabsContent value="notes">
+            {editingNotes ? (
+              <div className="flex flex-col gap-2">
+                <PersonForm
+                  key={`${person.id}:notes:${formKey}`}
+                  section="notes"
+                  initialValues={person}
+                  onSubmit={async (values, photoAction) => {
+                    await handleUpdatePerson(values, photoAction)
+                    setEditingNotes(false)
+                  }}
+                  onCancel={() => setEditingNotes(false)}
+                  submitLabel="Save notes"
+                />
+                <p className="text-11 leading-relaxed text-muted-foreground">
+                  Write <code className="bg-muted px-1">[[Priya Iyer]]</code> to
+                  link to someone.{" "}
+                  <code className="bg-muted px-1">**bold**</code>,{" "}
+                  <code className="bg-muted px-1">*italic*</code>,{" "}
+                  <code className="bg-muted px-1"># headings</code> and{" "}
+                  <code className="bg-muted px-1">- lists</code> also work.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <NotesView
+                  notes={person.notes ?? ""}
+                  people={[...people.values()]}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="self-start"
+                  onClick={() => setEditingNotes(true)}
+                >
+                  {person.notes ? "Edit notes" : "Add notes"}
+                </Button>
+              </div>
+            )}
+          </TabsContent>
 
-        {tab === "family" && (
-          <>
+          <TabsContent value="family">
             <RelationshipList
               showSubtype
               title="Parents"
@@ -480,14 +475,15 @@ function PersonDetail({
                   <span className="font-heading text-10 font-semibold tracking-widest uppercase">
                     Add whole family
                   </span>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={() => setFamilyOpen(false)}
-                    aria-label="Close"
-                    className="cursor-pointer text-13 text-muted-foreground hover:text-foreground"
                   >
-                    ✕
-                  </button>
+                    <XIcon />
+                    <span className="sr-only">Close</span>
+                  </Button>
                 </div>
                 <AddFamilyForm
                   anchor={person}
@@ -515,89 +511,99 @@ function PersonDetail({
                 />
               </div>
             )}
-          </>
-        )}
+          </TabsContent>
 
-        {action && (
-          <AddRelativePanel
-            action={action}
-            onModeChange={(mode) => setAction({ kind: action.kind, mode })}
-            onCancel={() => setAction(undefined)}
-          >
-            <RelativeForm
-              key={`${action.kind}:${action.mode}`}
-              mode={action.mode}
-              excludeIds={
-                action.kind === "add-parent"
-                  ? [person.id, ...parentRels.map((r) => r.from)]
-                  : [person.id]
-              }
-              showDates={action.kind === "add-spouse"}
-              // Every kind except a spouse: a marriage has no subtype to
-              // choose. A sibling's subtype is their own link to the shared
-              // parents, which is as ordinary a thing to record as a child's.
-              showSubtype={action.kind !== "add-spouse"}
-              onSubmitNew={async (values, dates, photoAction, subtype) => {
-                let created: Person | undefined
-                if (action.kind === "add-parent")
-                  created = await addParentNew(
-                    person.id,
-                    treeId,
-                    values,
-                    subtype
-                  )
-                else if (action.kind === "add-spouse")
-                  created = await addSpouseNew(person.id, treeId, values, dates)
-                else if (action.kind === "add-child")
-                  created = await addChildNew(
-                    { kind: "person", personId: person.id },
-                    treeId,
-                    values,
-                    subtype
-                  )
-                else if (action.kind === "add-sibling")
-                  created = await addSiblingNew(
-                    person.id,
-                    treeId,
-                    values,
-                    subtype
-                  )
-                if (created && photoAction.kind === "staged")
-                  await setPersonPhoto(
-                    created.id,
-                    photoAction.blob,
-                    photoAction.mime
-                  )
-                setAction(undefined)
-                toast("Relative added")
-              }}
-              onSubmitExisting={async (picked, dates, subtype) => {
-                if (action.kind === "add-parent")
-                  await addParentExisting(person.id, treeId, picked.id, subtype)
-                else if (action.kind === "add-spouse")
-                  await addSpouseExisting(person.id, treeId, picked.id, dates)
-                else if (action.kind === "add-child")
-                  await addChildExisting(
-                    { kind: "person", personId: person.id },
-                    treeId,
-                    picked.id,
-                    subtype
-                  )
-                else if (action.kind === "add-sibling")
-                  await addSiblingExisting(
-                    person.id,
-                    treeId,
-                    picked.id,
-                    subtype
-                  )
-                setAction(undefined)
-                toast("Relative linked")
-              }}
+          {action && (
+            <AddRelativePanel
+              action={action}
+              onModeChange={(mode) => setAction({ kind: action.kind, mode })}
               onCancel={() => setAction(undefined)}
-            />
-          </AddRelativePanel>
-        )}
-      </div>
+            >
+              <RelativeForm
+                key={`${action.kind}:${action.mode}`}
+                mode={action.mode}
+                excludeIds={
+                  action.kind === "add-parent"
+                    ? [person.id, ...parentRels.map((r) => r.from)]
+                    : [person.id]
+                }
+                showDates={action.kind === "add-spouse"}
+                // Every kind except a spouse: a marriage has no subtype to
+                // choose. A sibling's subtype is their own link to the shared
+                // parents, which is as ordinary a thing to record as a child's.
+                showSubtype={action.kind !== "add-spouse"}
+                onSubmitNew={async (values, dates, photoAction, subtype) => {
+                  let created: Person | undefined
+                  if (action.kind === "add-parent")
+                    created = await addParentNew(
+                      person.id,
+                      treeId,
+                      values,
+                      subtype
+                    )
+                  else if (action.kind === "add-spouse")
+                    created = await addSpouseNew(
+                      person.id,
+                      treeId,
+                      values,
+                      dates
+                    )
+                  else if (action.kind === "add-child")
+                    created = await addChildNew(
+                      { kind: "person", personId: person.id },
+                      treeId,
+                      values,
+                      subtype
+                    )
+                  else if (action.kind === "add-sibling")
+                    created = await addSiblingNew(
+                      person.id,
+                      treeId,
+                      values,
+                      subtype
+                    )
+                  if (created && photoAction.kind === "staged")
+                    await setPersonPhoto(
+                      created.id,
+                      photoAction.blob,
+                      photoAction.mime
+                    )
+                  setAction(undefined)
+                  toast("Relative added")
+                }}
+                onSubmitExisting={async (picked, dates, subtype) => {
+                  if (action.kind === "add-parent")
+                    await addParentExisting(
+                      person.id,
+                      treeId,
+                      picked.id,
+                      subtype
+                    )
+                  else if (action.kind === "add-spouse")
+                    await addSpouseExisting(person.id, treeId, picked.id, dates)
+                  else if (action.kind === "add-child")
+                    await addChildExisting(
+                      { kind: "person", personId: person.id },
+                      treeId,
+                      picked.id,
+                      subtype
+                    )
+                  else if (action.kind === "add-sibling")
+                    await addSiblingExisting(
+                      person.id,
+                      treeId,
+                      picked.id,
+                      subtype
+                    )
+                  setAction(undefined)
+                  toast("Relative linked")
+                }}
+                onCancel={() => setAction(undefined)}
+              />
+            </AddRelativePanel>
+          )}
+        </div>
+      </Tabs>
 
       <div className="flex flex-none justify-between gap-2 border-t border-border px-4 py-3">
         <Button variant="outline" size="sm" onClick={() => setRemoveOpen(true)}>
@@ -656,14 +662,10 @@ function AddRelativePanel({
         <span className="font-heading text-10 font-semibold tracking-widest uppercase">
           {isMarriage ? "Record marriage" : ADD_TITLES[action.kind]}
         </span>
-        <button
-          type="button"
-          onClick={onCancel}
-          aria-label="Close"
-          className="cursor-pointer text-13 text-muted-foreground hover:text-foreground"
-        >
-          ✕
-        </button>
+        <Button type="button" variant="ghost" size="icon-xs" onClick={onCancel}>
+          <XIcon />
+          <span className="sr-only">Close</span>
+        </Button>
       </div>
       {!isMarriage && (
         <div className="flex gap-1.5">
@@ -833,13 +835,15 @@ function UnionChildren({
           className="flex items-center gap-2 border border-border/60 px-2 py-1.5"
         >
           <PersonAvatar photoId={coverPhotoId(people.get(childId))} size="xs" />
-          <button
+          <Button
             type="button"
-            className="cursor-pointer text-xs hover:underline"
+            variant="link"
+            size="xs"
+            className="h-auto p-0 text-xs tracking-normal normal-case"
             onClick={() => onSelect(personNodeId(childId))}
           >
             {personName(people.get(childId))}
-          </button>
+          </Button>
         </div>
       ))}
     </>
@@ -937,13 +941,15 @@ function RelationshipList({
             <div className="flex items-center gap-2">
               <PersonAvatar photoId={coverPhotoId(other)} size="xs" />
               <div className="flex min-w-0 flex-col">
-                <button
+                <Button
                   type="button"
-                  className="cursor-pointer truncate text-left text-xs hover:underline"
+                  variant="link"
+                  size="xs"
+                  className="h-auto justify-start truncate p-0 text-xs tracking-normal normal-case"
                   onClick={() => onSelect(personNodeId(otherId))}
                 >
                   {personName(other)}
-                </button>
+                </Button>
                 {showDates && (r.start || r.end) && (
                   <span className="text-11 text-muted-foreground">
                     {formatPartialDate(r.start)}

@@ -3,6 +3,7 @@ import { PersonAvatar } from "~/components/people/person-avatar"
 import { PersonRowActions } from "~/components/people/people-row-actions"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { Badge } from "~/components/ui/badge"
+import { Button } from "~/components/ui/button"
 import {
   Table,
   TableBody,
@@ -11,6 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import { formatPartialDate } from "~/lib/partial-date"
@@ -108,15 +114,26 @@ export function PeopleTable({
             <TableRow key={person.id}>
               <TableCell>
                 <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    className="shrink-0 cursor-pointer"
-                    onClick={() => onOpenInTree(person)}
-                    aria-label={`Open ${personDisplayName(person)} in the tree`}
-                    title="Open in tree"
-                  >
-                    <PersonAvatar photoId={coverPhotoId(person)} size="sm" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="shrink-0"
+                          onClick={() => onOpenInTree(person)}
+                          aria-label={`Open ${personDisplayName(person)} in the tree`}
+                        >
+                          <PersonAvatar
+                            photoId={coverPhotoId(person)}
+                            size="sm"
+                          />
+                        </Button>
+                      }
+                    />
+                    <TooltipContent>Open in tree</TooltipContent>
+                  </Tooltip>
                   {/* Given, nickname and family laid out in personNameSegments'
                       order, so the editable cell can't drift from the way the
                       same name is assembled everywhere else. */}

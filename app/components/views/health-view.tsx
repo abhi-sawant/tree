@@ -3,6 +3,11 @@ import { useMemo, useState } from "react"
 import { MergePeopleDialog } from "~/components/people/merge-people-dialog"
 import { Button } from "~/components/ui/button"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip"
+import {
   findDuplicates,
   type DuplicateCandidate,
 } from "~/lib/analysis/duplicates"
@@ -206,13 +211,18 @@ function FindingSection({
                 if (!person) return null
                 if (!memberIds.has(personId)) {
                   return (
-                    <span
-                      key={personId}
-                      className="px-1.5 text-11 text-muted-foreground"
-                      title="Not a member of the tree that is open"
-                    >
-                      {personDisplayName(person)}
-                    </span>
+                    <Tooltip key={personId}>
+                      <TooltipTrigger
+                        render={
+                          <span className="px-1.5 text-11 text-muted-foreground">
+                            {personDisplayName(person)}
+                          </span>
+                        }
+                      />
+                      <TooltipContent>
+                        Not a member of the tree that is open
+                      </TooltipContent>
+                    </Tooltip>
                   )
                 }
                 return (

@@ -278,13 +278,15 @@ function ColorField({
       />
       <span className="text-11 text-muted-foreground">{label}</span>
       {resettable && (
-        <button
+        <Button
           type="button"
-          className="text-9-5 text-muted-foreground underline hover:text-foreground"
+          variant="link"
+          size="xs"
+          className="h-auto p-0 text-9-5 tracking-normal normal-case"
           onClick={onReset}
         >
           Reset
-        </button>
+        </Button>
       )}
     </div>
   )

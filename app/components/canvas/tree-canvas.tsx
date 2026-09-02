@@ -15,6 +15,7 @@ import { Maximize2, Minus, Plus } from "lucide-react"
 import { useEffect, useMemo } from "react"
 
 import { PersonNode } from "~/components/canvas/person-node"
+import { Button } from "~/components/ui/button"
 import { MultiSelectPanel } from "~/components/canvas/multi-select-panel"
 import { TreeOutlinePanel } from "~/components/canvas/tree-outline-panel"
 import { TreeToolbar } from "~/components/canvas/tree-toolbar"
@@ -307,30 +308,35 @@ function ZoomControls() {
   return (
     <Panel position="bottom-right">
       <div className="flex flex-col border border-border bg-card">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           aria-label="Zoom in"
-          className="size-7 cursor-pointer border-b border-border text-13 hover:bg-muted"
+          className="border-b border-border"
           onClick={() => void zoomIn()}
         >
-          <Plus className="mx-auto size-3.5" />
-        </button>
-        <button
+          <Plus />
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           aria-label="Zoom out"
-          className="size-7 cursor-pointer border-b border-border text-13 hover:bg-muted"
+          className="border-b border-border"
           onClick={() => void zoomOut()}
         >
-          <Minus className="mx-auto size-3.5" />
-        </button>
-        <button
+          <Minus />
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           aria-label="Fit view"
-          className="size-7 cursor-pointer hover:bg-muted"
           onClick={() => void fitView()}
         >
-          <Maximize2 className="mx-auto size-3" />
-        </button>
+          <Maximize2 />
+        </Button>
       </div>
     </Panel>
   )

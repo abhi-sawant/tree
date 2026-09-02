@@ -13,6 +13,7 @@ import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
+import { Button } from "~/components/ui/button"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -159,14 +160,15 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
       >
         <div className="flex gap-1">
           {QUICK_ADD.map(({ kind, label }) => (
-            <button
+            <Button
               key={kind}
               type="button"
-              className="h-6.5 cursor-pointer bg-foreground px-2.25 font-heading text-9-5 font-semibold tracking-widest text-background uppercase hover:bg-foreground/85"
+              size="xs"
+              className="bg-foreground text-background hover:bg-foreground/85"
               onClick={() => requestAddRelative(personNodeId(person.id), kind)}
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </NodeToolbar>

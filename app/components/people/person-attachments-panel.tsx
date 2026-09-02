@@ -4,6 +4,11 @@ import { useRef, useState } from "react"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip"
+import {
   ATTACHMENT_ACCEPT,
   attachmentProblem,
   isPdfAttachment,
@@ -169,14 +174,20 @@ function AttachmentRow({
           }}
         />
       ) : (
-        <button
-          type="button"
-          title="Rename"
-          className="w-full cursor-text truncate text-left text-12-5"
-          onClick={onStartRename}
-        >
-          {attachment.name}
-        </button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                className="w-full cursor-text truncate text-left text-12-5"
+                onClick={onStartRename}
+              >
+                {attachment.name}
+              </button>
+            }
+          />
+          <TooltipContent>Rename</TooltipContent>
+        </Tooltip>
       )}
       <div className="flex items-center gap-2">
         <span className="font-heading text-9-5 font-semibold tracking-widest text-muted-foreground uppercase">

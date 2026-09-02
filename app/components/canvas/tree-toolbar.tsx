@@ -19,6 +19,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
 import { resolveGenerationColor } from "~/lib/canvas/appearance-resolve"
 import {
@@ -104,24 +109,40 @@ export function TreeToolbar({
         <Button variant="outline" size="xs" onClick={() => void fitView()}>
           Fit
         </Button>
-        <Button
-          variant={showBloodline ? "default" : "outline"}
-          size="xs"
-          aria-pressed={showBloodline}
-          title="Glow the line of descent from the selected person to the tree root"
-          onClick={toggleBloodline}
-        >
-          <GitBranch /> Bloodline
-        </Button>
-        <Button
-          variant={showOutline ? "default" : "outline"}
-          size="xs"
-          aria-pressed={showOutline}
-          title="Read the tree as a nested list of who descends from whom"
-          onClick={toggleOutline}
-        >
-          <List /> Outline
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showBloodline ? "default" : "outline"}
+                size="xs"
+                aria-pressed={showBloodline}
+                onClick={toggleBloodline}
+              >
+                <GitBranch /> Bloodline
+              </Button>
+            }
+          />
+          <TooltipContent>
+            Glow the line of descent from the selected person to the tree root
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showOutline ? "default" : "outline"}
+                size="xs"
+                aria-pressed={showOutline}
+                onClick={toggleOutline}
+              >
+                <List /> Outline
+              </Button>
+            }
+          />
+          <TooltipContent>
+            Read the tree as a nested list of who descends from whom
+          </TooltipContent>
+        </Tooltip>
         <Button
           variant="outline"
           size="xs"

@@ -42,6 +42,9 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
   const [taking, setTaking] = useState(false)
   const [pending, setPending] = useState<SnapshotSummary | undefined>(undefined)
   const [restoring, setRestoring] = useState(false)
+  const [photoWarningCount, setPhotoWarningCount] = useState<
+    number | undefined
+  >(undefined)
 
   const totalBytes = (snapshots ?? []).reduce(
     (total, snapshot) => total + snapshot.size,
@@ -68,17 +71,17 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
       const result = await restoreSnapshot(pending.id)
       // Announced before the reload below tears this tab's channel down.
       announceDataReplaced(tabId)
+      setPending(undefined)
       // A reload destroys any toast before it renders, and every open view is
       // now showing data that no longer exists — same reasoning as the backup
-      // import path in settings-view.
+      // import path in settings-view. When photos were cleared, the reload is
+      // deferred to the warning dialog's dismissal (see photoWarningCount
+      // below) so the message is guaranteed to be seen first.
       if (result.clearedPhotoIds.length > 0) {
-        window.alert(
-          `Restored. ${result.clearedPhotoIds.length} restored ${
-            result.clearedPhotoIds.length === 1 ? "person" : "people"
-          } had a photo that is no longer stored in this browser, so those now show the default avatar.`
-        )
+        setPhotoWarningCount(result.clearedPhotoIds.length)
+      } else {
+        window.location.reload()
       }
-      window.location.reload()
     } catch {
       setRestoring(false)
       setPending(undefined)
@@ -195,6 +198,28 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
             >
               {restoring ? "Restoring…" : "Roll back"}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={photoWarningCount !== undefined}
+        onOpenChange={(open) => {
+          if (!open) window.location.reload()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restored</AlertDialogTitle>
+            <AlertDialogDescription>
+              {photoWarningCount} restored{" "}
+              {photoWarningCount === 1 ? "person" : "people"} had a photo that
+              is no longer stored in this browser, so those now show the default
+              avatar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continue</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

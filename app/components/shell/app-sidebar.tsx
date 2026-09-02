@@ -61,10 +61,11 @@ export function AppSidebar({
         </span>
       </div>
 
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => setPaletteOpen(true)}
-        className="flex h-8 cursor-pointer items-center gap-1.5 border border-border bg-background px-2 text-left hover:bg-muted"
+        className="w-full justify-start gap-1.5 tracking-normal normal-case px-2"
       >
         <span className="text-11 text-muted-foreground">⌕</span>
         <span className="text-xs text-muted-foreground">
@@ -73,7 +74,7 @@ export function AppSidebar({
         <span className="ml-auto border border-border px-1 text-10 font-medium text-muted-foreground">
           ⌘K
         </span>
-      </button>
+      </Button>
 
       <div className="flex flex-col gap-0.5">
         <SidebarLabel>Trees</SidebarLabel>
@@ -103,13 +104,15 @@ export function AppSidebar({
             </button>
           )
         })}
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={onCreateTree}
-          className="flex h-8.5 w-full cursor-pointer items-center px-2.5 text-left text-xs text-muted-foreground hover:bg-muted"
+          className="w-full justify-start tracking-normal normal-case"
         >
           + New tree
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-col gap-0.5">
