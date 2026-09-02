@@ -215,7 +215,9 @@ export function TreeCanvas({
           positions={positions}
         />
       )}
-      <div className="flex min-h-0 flex-1">
+      {/* `relative` so the outline can take the whole area on a phone, where
+          it is the screen rather than a rail beside the canvas. */}
+      <div className="relative flex min-h-0 flex-1">
         {showOutline && (
           <TreeOutlinePanel
             people={people}

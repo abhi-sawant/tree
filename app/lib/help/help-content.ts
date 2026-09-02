@@ -62,6 +62,19 @@ const ADD_RELATIVE_SHORTCUTS: HelpShortcut[] = Object.entries(
   description: ADD_RELATIVE_DESCRIPTION[kind],
 }))
 
+// The touch counterpart to the keyboard list. Written here rather than in the
+// page body so the same rows can be searched, and so a gesture that changes
+// has one place to change — the same reason ADD_RELATIVE_SHORTCUTS is shared
+// with the code that binds the keys.
+const TOUCH_GESTURES: HelpShortcut[] = [
+  { keys: "Tap", description: "Select a person, or a marriage dot" },
+  { keys: "Long-press", description: "Actions for that person" },
+  { keys: "Drag a card", description: "Pin it to a position of its own" },
+  { keys: "Pinch", description: "Zoom the canvas" },
+  { keys: "Drag the canvas", description: "Move around the tree" },
+  { keys: "Swipe down", description: "Put the detail sheet away" },
+]
+
 // Markdown source assembled from wrapped source lines.
 //
 // parseNotes closes a list on the first line that isn't a bullet, so a list
@@ -653,6 +666,27 @@ export const HELP_TOPICS: HelpTopic[] = [
           "It follows whatever the canvas is showing, so a focus view or a",
           "hidden generation narrows the list too.",
         ]),
+      },
+      {
+        heading: "On a phone or tablet",
+        body: md([
+          "The canvas is the whole screen. Everything the toolbar holds on a",
+          "wide screen — focus, bloodline, generations, appearance — is behind",
+          "the sliders button in the corner stack, next to zoom and fit.",
+          "",
+          "Selecting somebody raises a sheet resting over the canvas rather",
+          "than a panel beside it. It stays out of the way at first, showing",
+          "the name, the dates and what you can do next; drag its handle or",
+          "tap any tab to open the whole record, and swipe it down to put it",
+          "away. The canvas behind it stays live, so you can keep walking the",
+          "tree without closing it.",
+          "",
+          "Drawing a relationship by dragging between two cards is a mouse",
+          "gesture and is turned off under a finger: the points you would drag",
+          "between sit on a card's edge, exactly where a pan starts. Add the",
+          "relative from the sheet instead — it records the same link.",
+        ]),
+        shortcuts: TOUCH_GESTURES,
       },
       {
         heading: "Light and dark",

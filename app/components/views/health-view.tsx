@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 
 import { MergePeopleDialog } from "~/components/people/merge-people-dialog"
 import { Button } from "~/components/ui/button"
+import { MobileScreenHeader } from "~/components/shell/mobile-screen-header"
 import { SectionHeading } from "~/components/ui/section-heading"
 import {
   Tooltip,
@@ -70,9 +71,18 @@ export function HealthView({
 
   if (!findings) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-13 font-medium text-muted-foreground">Checking…</p>
-      </div>
+      <>
+        <MobileScreenHeader title="Health" />
+        <div className="flex flex-1 flex-col items-center justify-center gap-1.5">
+          <p className="text-13 font-medium text-muted-foreground">
+            Checking {people.length}{" "}
+            {people.length === 1 ? "record" : "records"}…
+          </p>
+          <p className="text-11 text-muted-foreground">
+            Dates, then relationships, then duplicates.
+          </p>
+        </div>
+      </>
     )
   }
 
@@ -81,89 +91,99 @@ export function HealthView({
   const warnings = findings.filter((f) => f.severity === "warning")
 
   return (
-    <div className="flex flex-1 flex-col gap-7 overflow-y-auto p-6">
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Summary</SectionHeading>
-        <div className="flex items-center gap-4 rounded-lg border border-border p-3 shadow-card">
-          <Tally severity="error" count={counts.error} />
-          <Tally severity="warning" count={counts.warning} />
-          <Tally severity="duplicate" count={duplicates.length} />
-          <span className="ml-auto text-xs text-muted-foreground">
-            {people.length} {people.length === 1 ? "person" : "people"} checked
-          </span>
-        </div>
-        <p className="text-12-5 leading-relaxed text-muted-foreground">
-          Errors are contradictions the data cannot be right about. Warnings are
-          gaps worth filling in. Nothing is reported unless the recorded dates
-          settle it — a bare year is treated as the whole year, so an
-          undecidable comparison stays quiet.
-        </p>
-      </section>
-
-      {findings.length === 0 && duplicates.length === 0 && (
-        <p className="rounded-lg border border-border p-4 text-13">
-          Nothing to report. Every recorded date is consistent, every person has
-          a birth year and a tree, and no two records look like the same person.
-        </p>
-      )}
-
-      {errors.length > 0 && (
-        <FindingSection
-          title="Errors"
-          findings={errors}
-          people={people}
-          memberIds={memberIds}
-          onShow={show}
-        />
-      )}
-      {warnings.length > 0 && (
-        <FindingSection
-          title="Warnings"
-          findings={warnings}
-          people={people}
-          memberIds={memberIds}
-          onShow={show}
-        />
-      )}
-
-      {mergePair && (
-        <MergePeopleDialog
-          open
-          onOpenChange={(open) => !open && setMergePair(undefined)}
-          person={mergePair[0]}
-          other={mergePair[1]}
-          onMerged={() => setMergePair(undefined)}
-        />
-      )}
-
-      {duplicates.length > 0 && (
+    <>
+      <MobileScreenHeader
+        title="Health"
+        detail={`${counts.error} ${counts.error === 1 ? "error" : "errors"} · ${counts.warning} ${counts.warning === 1 ? "warning" : "warnings"} · ${duplicates.length} ${duplicates.length === 1 ? "duplicate" : "duplicates"}`}
+      />
+      <div className="flex min-h-0 flex-1 flex-col gap-7 overflow-y-auto p-6 max-md:gap-6 max-md:p-4">
         <section className="flex flex-col gap-2">
-          <SectionHeading>
-            Possible duplicates ({duplicates.length})
-          </SectionHeading>
-          <p className="text-12-5 leading-relaxed text-muted-foreground">
-            People who may have been recorded twice, most likely first. These
-            are guesses — there is no identity to match on, so nothing here is
-            merged for you.
-          </p>
-          <div className="flex flex-col gap-2">
-            {duplicates.map((candidate) => (
-              <DuplicateRow
-                key={candidate.personIds.join(":")}
-                candidate={candidate}
-                memberIds={memberIds}
-                onShow={show}
-                onMerge={() => {
-                  const a = peopleById.get(candidate.personIds[0])
-                  const b = peopleById.get(candidate.personIds[1])
-                  if (a && b) setMergePair([a, b])
-                }}
-              />
-            ))}
+          <SectionHeading>Summary</SectionHeading>
+          {/* Three tallies plus a count is well over 358px on one line, and
+            "possible duplicates" alone is most of it. */}
+          <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border p-3 shadow-card max-md:gap-x-5 max-md:gap-y-2">
+            <Tally severity="error" count={counts.error} />
+            <Tally severity="warning" count={counts.warning} />
+            <Tally severity="duplicate" count={duplicates.length} />
+            <span className="ml-auto text-xs text-muted-foreground max-md:ml-0 max-md:basis-full">
+              {people.length} {people.length === 1 ? "person" : "people"}{" "}
+              checked
+            </span>
           </div>
+          <p className="text-12-5 leading-relaxed text-muted-foreground">
+            Errors are contradictions the data cannot be right about. Warnings
+            are gaps worth filling in. Nothing is reported unless the recorded
+            dates settle it — a bare year is treated as the whole year, so an
+            undecidable comparison stays quiet.
+          </p>
         </section>
-      )}
-    </div>
+
+        {findings.length === 0 && duplicates.length === 0 && (
+          <p className="rounded-lg border border-border p-4 text-13">
+            Nothing to report. Every recorded date is consistent, every person
+            has a birth year and a tree, and no two records look like the same
+            person.
+          </p>
+        )}
+
+        {errors.length > 0 && (
+          <FindingSection
+            title="Errors"
+            findings={errors}
+            people={people}
+            memberIds={memberIds}
+            onShow={show}
+          />
+        )}
+        {warnings.length > 0 && (
+          <FindingSection
+            title="Warnings"
+            findings={warnings}
+            people={people}
+            memberIds={memberIds}
+            onShow={show}
+          />
+        )}
+
+        {mergePair && (
+          <MergePeopleDialog
+            open
+            onOpenChange={(open) => !open && setMergePair(undefined)}
+            person={mergePair[0]}
+            other={mergePair[1]}
+            onMerged={() => setMergePair(undefined)}
+          />
+        )}
+
+        {duplicates.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <SectionHeading>
+              Possible duplicates ({duplicates.length})
+            </SectionHeading>
+            <p className="text-12-5 leading-relaxed text-muted-foreground">
+              People who may have been recorded twice, most likely first. These
+              are guesses — there is no identity to match on, so nothing here is
+              merged for you.
+            </p>
+            <div className="flex flex-col gap-2">
+              {duplicates.map((candidate) => (
+                <DuplicateRow
+                  key={candidate.personIds.join(":")}
+                  candidate={candidate}
+                  memberIds={memberIds}
+                  onShow={show}
+                  onMerge={() => {
+                    const a = peopleById.get(candidate.personIds[0])
+                    const b = peopleById.get(candidate.personIds[1])
+                    if (a && b) setMergePair([a, b])
+                  }}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </>
   )
 }
 
@@ -206,7 +226,7 @@ function FindingSection({
             <p className="min-w-0 flex-1 text-13 leading-snug">
               {finding.message}
             </p>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1 max-md:shrink max-md:flex-wrap">
               {finding.personIds.map((personId) => {
                 const person = peopleById.get(personId)
                 if (!person) return null
@@ -264,7 +284,7 @@ function DuplicateRow({
           {" and "}
           <span className="font-medium">{candidate.labels[1]}</span>
         </span>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1 max-md:shrink max-md:flex-wrap">
           {candidate.personIds.map((personId, index) =>
             memberIds.has(personId) ? (
               <Button

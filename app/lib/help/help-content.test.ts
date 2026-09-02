@@ -211,3 +211,33 @@ describe("searchHelp", () => {
     expect(searchHelp("triplets", [topic("data-safety")])).toEqual([])
   })
 })
+
+describe("touch gestures", () => {
+  // The manual is the only place the app explains a gesture, so a gesture the
+  // canvas responds to and the manual omits is a gesture nobody discovers.
+  it("documents every gesture the canvas responds to", () => {
+    const gestures = topic("canvas")
+      .sections.flatMap((section) => section.shortcuts ?? [])
+      .map((shortcut) => shortcut.keys.toLowerCase())
+    for (const gesture of [
+      "tap",
+      "long-press",
+      "drag a card",
+      "pinch",
+      "swipe down",
+    ]) {
+      expect(gestures).toContain(gesture)
+    }
+  })
+
+  it("says that drag-to-connect is off under a finger", () => {
+    // It is disabled in CSS under a coarse pointer (see app/app.css), which is
+    // invisible unless the manual says so — a reader would otherwise conclude
+    // the feature is broken rather than deliberately absent.
+    const body = topic("canvas")
+      .sections.map((section) => section.body)
+      .join("\n")
+      .toLowerCase()
+    expect(body).toContain("turned off under a finger")
+  })
+})

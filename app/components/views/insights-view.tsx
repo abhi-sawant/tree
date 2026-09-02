@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 
 import { Button } from "~/components/ui/button"
+import { MobileScreenHeader } from "~/components/shell/mobile-screen-header"
 import { SectionHeading } from "~/components/ui/section-heading"
 import {
   findAnniversaries,
@@ -66,162 +67,170 @@ export function InsightsView({
 
   if (stats.peopleCount === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6">
-        <p className="max-w-sm text-center text-13 text-muted-foreground">
-          Nothing to summarise yet — add people to {tree.name} and their
-          statistics will appear here.
-        </p>
-      </div>
+      <>
+        <MobileScreenHeader title="Insights" detail={tree.name} />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <p className="max-w-sm text-center text-13 text-muted-foreground">
+            Nothing to summarise yet — add people to {tree.name} and their
+            statistics will appear here.
+          </p>
+        </div>
+      </>
     )
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-7 overflow-y-auto p-6">
-      <section className="flex flex-col gap-2">
-        <SectionHeading>{tree.name}</SectionHeading>
-        <div className="flex flex-wrap gap-x-8 gap-y-3 rounded-lg border border-border p-3">
-          <Tile value={stats.peopleCount} label="people" />
-          <Tile value={stats.generations.length} label="generations" />
-          <Tile
-            value={stats.averageLifespan}
-            label="average lifespan"
-            suffix=" yrs"
-          />
-          <Tile
-            value={
-              stats.earliestBirthYear !== undefined &&
-              stats.latestBirthYear !== undefined
-                ? `${stats.earliestBirthYear}–${stats.latestBirthYear}`
-                : undefined
-            }
-            label="birth years"
-          />
-        </div>
-        <p className="text-12-5 leading-relaxed text-muted-foreground">
-          Scoped to the tree that is open, not the whole pool — the pool can
-          hold several unrelated families.{" "}
-          {stats.lifespanSampleSize > 0
-            ? `The average lifespan is drawn from the ${stats.lifespanSampleSize} ${
-                stats.lifespanSampleSize === 1 ? "person" : "people"
-              } with both a birth and a death year recorded.`
-            : "No lifespan average yet — nobody has both a birth and a death year recorded."}
-        </p>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>
-          {todays.length > 0 ? "Today" : "Coming up"}
-        </SectionHeading>
-        {todays.length + upcoming.length === 0 ? (
-          <p className="border border-border p-3 text-13 text-muted-foreground">
-            No anniversaries in the next {UPCOMING_WINDOW_DAYS} days. Only exact
-            dates count — a bare year, or one recorded as approximate, has no
-            day to fall on.
-          </p>
-        ) : (
-          <div className="flex flex-col">
-            {(todays.length > 0 ? todays : upcoming).map(
-              (anniversary, index) => (
-                <AnniversaryRow
-                  key={`${anniversary.kind}:${anniversary.personIds.join(",")}:${index}`}
-                  anniversary={anniversary}
-                  onShow={show}
-                />
-              )
-            )}
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Superlatives</SectionHeading>
-        <div className="flex flex-col">
-          <SuperlativeRow
-            title="Longest life"
-            entry={stats.longestLife}
-            unit="years"
-            onShow={show}
-          />
-          <SuperlativeRow
-            title="Most children"
-            entry={stats.mostChildren}
-            unit="children"
-            onShow={show}
-          />
-          <SuperlativeRow
-            title="Largest sibling group"
-            entry={stats.largestSiblingGroup}
-            unit="siblings"
-            onShow={show}
-          />
-          <SuperlativeRow
-            title="Longest marriage"
-            entry={stats.longestMarriage}
-            unit="years"
-            onShow={show}
-          />
-        </div>
-      </section>
-
-      <div className="flex flex-wrap gap-7">
-        <section className="flex min-w-56 flex-1 flex-col gap-2">
-          <SectionHeading>Generations</SectionHeading>
-          <BarList
-            rows={stats.generations.map((row) => ({
-              key: String(row.generation),
-              label: `Generation ${row.generation + 1}`,
-              count: row.count,
-            }))}
-            total={stats.peopleCount}
-          />
-        </section>
-
-        <section className="flex min-w-56 flex-1 flex-col gap-2">
-          <SectionHeading>Sex</SectionHeading>
-          <BarList
-            rows={SEX_ROWS.map(({ key, label }) => ({
-              key,
-              label,
-              count: stats.sexCounts[key],
-            })).filter((row) => row.count > 0)}
-            total={stats.peopleCount}
-          />
-        </section>
-      </div>
-
-      {stats.surnames.length > 0 && (
+    <>
+      <MobileScreenHeader title="Insights" detail={tree.name} />
+      <div className="flex min-h-0 flex-1 flex-col gap-7 overflow-y-auto p-6 max-md:gap-6 max-md:p-4">
         <section className="flex flex-col gap-2">
-          <SectionHeading>Surnames</SectionHeading>
-          <BarList
-            rows={stats.surnames.slice(0, 8).map((row) => ({
-              key: row.surname,
-              label: row.surname,
-              count: row.count,
-            }))}
-            total={stats.peopleCount}
-          />
-          {stats.surnames.length > 8 && (
-            <p className="text-11 text-muted-foreground">
-              {stats.surnames.length - 8} more not shown.
+          <SectionHeading className="max-md:hidden">{tree.name}</SectionHeading>
+          {/* A wrapping row of four tiles leaves an orphan on a phone; a
+            two-column grid keeps them paired. */}
+          <div className="flex flex-wrap gap-x-8 gap-y-3 rounded-lg border border-border p-3 max-md:grid max-md:grid-cols-2 max-md:gap-4 max-md:p-4">
+            <Tile value={stats.peopleCount} label="people" />
+            <Tile value={stats.generations.length} label="generations" />
+            <Tile
+              value={stats.averageLifespan}
+              label="average lifespan"
+              suffix=" yrs"
+            />
+            <Tile
+              value={
+                stats.earliestBirthYear !== undefined &&
+                stats.latestBirthYear !== undefined
+                  ? `${stats.earliestBirthYear}–${stats.latestBirthYear}`
+                  : undefined
+              }
+              label="birth years"
+            />
+          </div>
+          <p className="text-12-5 leading-relaxed text-muted-foreground">
+            Scoped to the tree that is open, not the whole pool — the pool can
+            hold several unrelated families.{" "}
+            {stats.lifespanSampleSize > 0
+              ? `The average lifespan is drawn from the ${stats.lifespanSampleSize} ${
+                  stats.lifespanSampleSize === 1 ? "person" : "people"
+                } with both a birth and a death year recorded.`
+              : "No lifespan average yet — nobody has both a birth and a death year recorded."}
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <SectionHeading>
+            {todays.length > 0 ? "Today" : "Coming up"}
+          </SectionHeading>
+          {todays.length + upcoming.length === 0 ? (
+            <p className="border border-border p-3 text-13 text-muted-foreground">
+              No anniversaries in the next {UPCOMING_WINDOW_DAYS} days. Only
+              exact dates count — a bare year, or one recorded as approximate,
+              has no day to fall on.
             </p>
+          ) : (
+            <div className="flex flex-col">
+              {(todays.length > 0 ? todays : upcoming).map(
+                (anniversary, index) => (
+                  <AnniversaryRow
+                    key={`${anniversary.kind}:${anniversary.personIds.join(",")}:${index}`}
+                    anniversary={anniversary}
+                    onShow={show}
+                  />
+                )
+              )}
+            </div>
           )}
         </section>
-      )}
 
-      <section className="flex flex-col gap-2">
-        <SectionHeading>Recorded detail</SectionHeading>
-        <div className="flex flex-col">
-          <DetailRow
-            label="Birth year recorded"
-            value={`${stats.withBirthYear} of ${stats.peopleCount}`}
-          />
-          <DetailRow
-            label="Placeholders still unresolved"
-            value={String(stats.placeholderCount)}
-          />
+        <section className="flex flex-col gap-2">
+          <SectionHeading>Superlatives</SectionHeading>
+          <div className="flex flex-col">
+            <SuperlativeRow
+              title="Longest life"
+              entry={stats.longestLife}
+              unit="years"
+              onShow={show}
+            />
+            <SuperlativeRow
+              title="Most children"
+              entry={stats.mostChildren}
+              unit="children"
+              onShow={show}
+            />
+            <SuperlativeRow
+              title="Largest sibling group"
+              entry={stats.largestSiblingGroup}
+              unit="siblings"
+              onShow={show}
+            />
+            <SuperlativeRow
+              title="Longest marriage"
+              entry={stats.longestMarriage}
+              unit="years"
+              onShow={show}
+            />
+          </div>
+        </section>
+
+        <div className="flex flex-wrap gap-7 max-md:gap-6">
+          <section className="flex min-w-56 flex-1 flex-col gap-2">
+            <SectionHeading>Generations</SectionHeading>
+            <BarList
+              rows={stats.generations.map((row) => ({
+                key: String(row.generation),
+                label: `Generation ${row.generation + 1}`,
+                count: row.count,
+              }))}
+              total={stats.peopleCount}
+            />
+          </section>
+
+          <section className="flex min-w-56 flex-1 flex-col gap-2">
+            <SectionHeading>Sex</SectionHeading>
+            <BarList
+              rows={SEX_ROWS.map(({ key, label }) => ({
+                key,
+                label,
+                count: stats.sexCounts[key],
+              })).filter((row) => row.count > 0)}
+              total={stats.peopleCount}
+            />
+          </section>
         </div>
-      </section>
-    </div>
+
+        {stats.surnames.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <SectionHeading>Surnames</SectionHeading>
+            <BarList
+              rows={stats.surnames.slice(0, 8).map((row) => ({
+                key: row.surname,
+                label: row.surname,
+                count: row.count,
+              }))}
+              total={stats.peopleCount}
+            />
+            {stats.surnames.length > 8 && (
+              <p className="text-11 text-muted-foreground">
+                {stats.surnames.length - 8} more not shown.
+              </p>
+            )}
+          </section>
+        )}
+
+        <section className="flex flex-col gap-2">
+          <SectionHeading>Recorded detail</SectionHeading>
+          <div className="flex flex-col">
+            <DetailRow
+              label="Birth year recorded"
+              value={`${stats.withBirthYear} of ${stats.peopleCount}`}
+            />
+            <DetailRow
+              label="Placeholders still unresolved"
+              value={String(stats.placeholderCount)}
+            />
+          </div>
+        </section>
+      </div>
+    </>
   )
 }
 
@@ -375,7 +384,7 @@ function BarList({
               style={{ width: `${(row.count / max) * 100}%` }}
             />
           </span>
-          <span className="w-14 shrink-0 text-right text-11 text-muted-foreground">
+          <span className="w-14 shrink-0 text-right text-11 text-muted-foreground max-md:w-12">
             {row.count}
             {total > 0 && ` · ${Math.round((row.count / total) * 100)}%`}
           </span>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
 
+import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Label } from "~/components/ui/label"
 import { Select } from "~/components/ui/select"
@@ -28,6 +29,7 @@ interface PhotoWallViewProps {
 export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
   const [sort, setSort] = useState<PhotoWallSort>("birth")
   const [treeOnly, setTreeOnly] = useState(false)
+  const setView = useAppShellStore((s) => s.setView)
 
   const wall = useMemo(
     () =>
@@ -47,9 +49,17 @@ export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
   const missing = wall.considered - wall.withPhoto
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
-      <div className="flex flex-wrap items-center gap-4">
-        <h2 className="font-heading text-sm font-semibold">Photo wall</h2>
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6 max-md:gap-3.5 max-md:p-4">
+      <div className="flex flex-wrap items-center gap-4 max-md:gap-x-3 max-md:gap-y-2.5">
+        <h2 className="font-heading text-sm font-semibold max-md:basis-full max-md:text-lg">
+          Photo wall
+        </h2>
+        {/* Stated first on a phone: it is the answer to "why are there gaps",
+            and at the end of a wrapping row it lands under the controls. */}
+        <span className="hidden text-12-5 text-muted-foreground max-md:-mt-2 max-md:block max-md:basis-full">
+          {wall.withPhoto} of {wall.considered}{" "}
+          {wall.considered === 1 ? "person has" : "people have"} a photo
+        </span>
         <Label
           data-print="hide"
           className="flex-row items-center gap-2 text-sm font-normal normal-case"
@@ -75,19 +85,26 @@ export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
             ))}
           </Select>
         </div>
-        <span className="ml-auto text-xs text-muted-foreground">
+        <span className="ml-auto text-xs text-muted-foreground max-md:hidden">
           {wall.withPhoto} of {wall.considered}{" "}
           {wall.considered === 1 ? "person has" : "people have"} a photo
         </span>
       </div>
 
       {wall.withPhoto === 0 ? (
-        <p className="max-w-md text-13 leading-relaxed text-muted-foreground">
-          No photos yet. Add one from a person&apos;s Media tab and their face
-          will appear here.
-        </p>
+        <div className="flex flex-col items-start gap-3">
+          <p className="max-w-md text-13 leading-relaxed text-muted-foreground">
+            No photos yet. Add one from a person&apos;s Media tab and their face
+            will appear here.
+          </p>
+          {/* Prose alone leaves the reader on a screen with nothing to do but
+              go back the way they came. */}
+          <Button variant="outline" size="sm" onClick={() => setView("table")}>
+            Go to People
+          </Button>
+        </div>
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3">
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3 max-md:grid-cols-2">
           {wall.entries.map((entry) => (
             <PhotoTile
               key={entry.personId}
