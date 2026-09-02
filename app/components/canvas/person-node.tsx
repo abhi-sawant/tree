@@ -75,6 +75,10 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
 
   const card = (
     <div
+      // The wrapper React Flow renders around this carries the full spoken
+      // label (see lib/canvas/aria-labels.ts); this only has to say whether the
+      // card is the selected one, which is otherwise a coloured ring.
+      aria-current={selected ? "true" : undefined}
       className={cn(
         "flex h-full w-full flex-col items-center justify-center gap-2.5 border border-neutral-500 bg-card px-3 text-center",
         // A softer ring than the selection one, so the selected card still
@@ -116,14 +120,19 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
         <div className="flex items-center gap-1.5">
           <span className="truncate text-xl font-semibold">{name}</span>
           {person.isPlaceholder && <PlaceholderBadge />}
+          {/* Both icons are decoration for a screen reader: "one of a multiple
+              birth" and "placed by hand" are already in the card's spoken
+              label, and announcing them here as well reads as a second,
+              stranger sentence after the first. */}
           {person.multipleBirthGroup && (
-            <Users
-              className="size-3.5 shrink-0 text-muted-foreground"
-              aria-label="One of a multiple birth"
-            />
+            <span aria-hidden title="One of a multiple birth">
+              <Users className="size-3.5 shrink-0 text-muted-foreground" />
+            </span>
           )}
           {overridden && (
-            <Pin className="size-3 shrink-0 text-muted-foreground" />
+            <span aria-hidden title="Placed by hand">
+              <Pin className="size-3 shrink-0 text-muted-foreground" />
+            </span>
           )}
         </div>
         {showDates && dates && (

@@ -1,5 +1,12 @@
 import { Panel, useReactFlow } from "@xyflow/react"
-import { Crosshair, GitBranch, LayoutGrid, Palette, X } from "lucide-react"
+import {
+  Crosshair,
+  GitBranch,
+  LayoutGrid,
+  List,
+  Palette,
+  X,
+} from "lucide-react"
 import { useState } from "react"
 
 import { CustomizePanel } from "~/components/canvas/customize-panel"
@@ -57,6 +64,8 @@ export function TreeToolbar({
   const clearFocus = useCanvasUIStore((s) => s.clearFocus)
   const showBloodline = useCanvasUIStore((s) => s.showBloodline)
   const toggleBloodline = useCanvasUIStore((s) => s.toggleBloodline)
+  const showOutline = useCanvasUIStore((s) => s.showOutline)
+  const toggleOutline = useCanvasUIStore((s) => s.toggleOutline)
   const generationColors = useAppearanceStore(
     (s) => s.settings.generationColors
   )
@@ -103,6 +112,15 @@ export function TreeToolbar({
           onClick={toggleBloodline}
         >
           <GitBranch /> Bloodline
+        </Button>
+        <Button
+          variant={showOutline ? "default" : "outline"}
+          size="xs"
+          aria-pressed={showOutline}
+          title="Read the tree as a nested list of who descends from whom"
+          onClick={toggleOutline}
+        >
+          <List /> Outline
         </Button>
         <Button
           variant="outline"

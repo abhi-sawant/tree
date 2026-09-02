@@ -3,7 +3,7 @@
 **Purpose:** a self-contained handoff document. Anyone (or any new session) picking up this work
 should be able to read only this file plus `SPEC.md` and continue without re-deriving anything.
 
-**Status:** Phases 1–6 complete. Phase 7 (Polish & reach) is next.
+**Status:** Phases 1–7 complete. The programme is finished; what remains is in §4.
 
 ---
 
@@ -133,7 +133,7 @@ These are load-bearing. Later phases should stay consistent with them.
 | 4 | Durability | 5 | ✅ Complete on `feat/v2-phase-4` |
 | 5 | Fast entry | 7 | ✅ Complete on `feat/v2-phase-5` |
 | 6 | Media & output | 5 | ✅ Complete on `feat/v2-phase-6` |
-| 7 | Polish & reach | 3 | Not started |
+| 7 | Polish & reach | 3 | ✅ Complete on `feat/v2-phase-7` |
 
 ---
 
@@ -755,13 +755,171 @@ print rules on gives a full-width People table with no chrome, no controls and n
 
 ---
 
-## Phase 7 — Polish & reach
+## Phase 7 — Polish & reach ✅
 
-| # | Feature | Notes |
+On `feat/v2-phase-7`. 3 commits, 1067 tests passing.
+
+| # | Feature | Commit |
 |---|---|---|
-| 7.1 | Demo / sample tree | Bundled fixture to explore before entering real data; doubles as a test fixture |
-| 7.2 | Bundled offline help | "Fully offline" means you can't link out to a wiki when someone's stuck |
-| 7.3 | Canvas accessibility pass | ARIA roles on nodes, focus order, and a screen-reader-friendly nested-list rendering of the tree |
+| 7.1 | Demo / sample tree | `d78ef59` |
+| 7.2 | Bundled offline help | `b4d0561` |
+| 7.3 | Canvas accessibility pass | `326b82a` |
+
+Built in numbered order: 7.1 produces the fixture 7.3's tests are written against, and 7.2
+documents both.
+
+### New modules
+
+`app/lib/demo/sample-tree.ts` · `app/lib/demo/load-sample-tree.ts` ·
+`app/lib/help/help-content.ts` · `app/lib/help/use-help-shortcut.ts` ·
+`app/lib/canvas/aria-labels.ts` · `app/lib/canvas/tree-outline.ts` ·
+`app/components/markdown/markdown-view.tsx` · `app/components/views/sample-tree-panel.tsx` ·
+`app/components/views/help-view.tsx` · `app/components/canvas/tree-outline-panel.tsx`
+
+### What changed in the shared layers
+
+- **The notes renderer is now `MarkdownView`,** shared by a person's notes and the help pages.
+  `notes-view.tsx` reduces to supplying the one thing specific to a note: what `[[a name in
+  brackets]]` means. Two walkers over the same parse tree would be two chances to forget a node
+  kind, and the property that nothing here needs `dangerouslySetInnerHTML` is a property of *that
+  one file*. Styling is not shared (a note in a 340px panel and a help page are different things),
+  and a caller with no person pool to resolve against gets the plain text the link was written as
+  rather than a link to nowhere.
+- **`PHOTO_MAX_EDGE` and `BIRTH_YEAR_TOLERANCE` are newly exported** — not because any code needed
+  them, but because the help page states both in words and a test pins the words to the constant.
+- **`toReactFlowGraph` sets `ariaLabel` on every node and `focusable: false` on unions.** The label
+  is what a card says out loud; see 7.3 below.
+- **`ShellView` gained `"help"`,** and `SidebarNavItem` gained a key hint, shown the way the search
+  box shows ⌘K.
+
+### Judgement calls to preserve
+
+- **The sample family's ids are fixed and prefixed (`demo-`), not random.** That buys three things
+  at once: loading twice restores the sample rather than duplicating it, removing it is an exact set
+  of rows rather than a guess, and a test can name a person. The alternative — an `isDemo` flag on
+  `Person` — would ride in every backup and every GEDCOM export from now on to record something
+  only ever true of fifteen rows in one browser.
+- **`loadSampleTree` is additive and never a replacement,** and writes its own tree called "Sample
+  family (demo)". The one thing a "try it before you commit" affordance must not be able to do is
+  destroy what somebody already entered, and a demo that could be mistaken for the reader's own
+  family halfway through an afternoon is nearly as bad.
+- **It is the only place in the app that writes rows directly rather than through
+  `createPerson`/`addRelationship`.** Those helpers are how *user input* becomes data, and they
+  would refuse a second load — everyone already has their two parents. The invariants they enforce
+  (no self-links, at most two parents, no cycles) are asserted against the fixture in a test
+  instead, which is a stronger guarantee than a runtime check that only ever runs on data that
+  cannot change.
+- **`removeSampleTree` reuses `deletePerson` and is deliberately not one transaction.**
+  `deletePerson` already owns what deleting a person means — the relationship sweep, the membership
+  sweep, the photos, the documents, the refusal when somebody is a tree's root. A hand-rolled
+  cascade would be a second definition of that, and the one most likely to miss the next table
+  added (Phase 6 added documents to exactly this cascade). The cost is that a failure part-way
+  leaves some of the sample behind, which is recoverable by pressing the button again because every
+  step is idempotent.
+- **Removal reports rather than hides.** A link broken to one of the reader's own people, a photo or
+  document they attached to a sample person, a sample person kept back because they are the root of
+  a tree the reader made — each is counted and named. The test for the first count is "one end is
+  going *and the other end is theirs*", not "one end is going": a link between two sample people is
+  entirely within the sample, and counting it would warn the reader about their own data losing
+  something it never had. The dialog also says that a snapshot taken while the sample was loaded
+  still contains it — the Phase 4 habit of stating the consequence rather than hiding it.
+- **The sample carries no photos, and the fixture's own test says so.** Bundling faces for people
+  who don't exist would grow an offline install; generating placeholder portraits would be inventing
+  likenesses. The photo wall reads "0 of 15 people have a photo", which is true. There is no
+  `requestPersistentStorage()` call either: the browser's one "keep this site's data" prompt should
+  be spent on the first person somebody actually cares about.
+- **The fixture must report *nothing at all* in the Health view, not merely no errors.** A shipped
+  sample lighting up red would teach a first-time reader that the app is broken, and nothing in this
+  data is undecidable, so zero findings is the honest bar. A test asserts `toEqual([])`.
+- **The help pages are data, so the manual can be tested against the app it describes.** Every
+  threshold quoted is asserted against the constant that owns it — 30-day staleness, 7-day snooze,
+  10 snapshots, the 10-minute floor, 800px photos, the 25 MB document cap, the 100-year living
+  presumption, the 2-year duplicate tolerance. The add-relative shortcut table is *derived* from
+  `ADD_RELATIVE_KEYS`, with a `Record` exhaustive over its values, so a fourth binding fails to
+  compile until it is described. An out-of-date manual is worse than none, because it is believed.
+- **Numbers are written into the prose and pinned by a test, not interpolated.** A content module
+  importing Dexie to quote a retention limit would be the wrong shape entirely. This is the same
+  arrangement as the theme script in `index.html`: duplicate where sharing is impractical, and pin
+  it with a test.
+- **Help assertions read the rendered prose, not the source lines.** A claim that straddles a line
+  break is one sentence on screen; the source file is not the thing the manual is judged on.
+- **`searchHelp` requires every term and ranks a title match first.** A topic found by its title
+  *or its summary* is offered whole, because a summary describes the whole topic and narrowing to
+  the one section that repeats the word would answer a smaller question than the one asked. When the
+  terms are spread across several sections with no single one holding them all, it falls back to the
+  whole page rather than to nothing.
+- **A card's aria-label carries its relationships, because the lines are what a screen reader can't
+  read.** Spouses and parents by name, children by count: at most two parents and rarely more than
+  two spouses, but a well-recorded family has nine children and a label nobody waits through is a
+  label nobody hears. The outline is where children are enumerated. Clauses are separated by full
+  stops, because that is where a screen reader pauses.
+- **Union dots are not tab stops.** A union is a 12px dot whose meaning is already in both spouses'
+  labels and spelled out in the outline, and the union nodes sit together at the end of the node
+  array — so leaving them focusable would append a run of near-identical stops to the end of every
+  tree's tab order for no information. They are labelled anyway, for a reader who arrives some other
+  way. Person cards stay focusable in `orderFamilyGraph`'s order, which is the order they are drawn
+  in.
+- **An implicit union is never called a marriage.** It exists because two people share a child;
+  saying "marriage" would assert something the data does not.
+- **The outline nests spouses under their partner and children under the couple,** mirroring the
+  canvas rather than transcribing it, and orders by the same comparator the canvas draws with so the
+  two agree about who comes first. Somebody reachable twice is named again but not expanded — the
+  reader still learns who a child's other parent is, and the list terminates. Which of the two
+  places gets the expansion follows the same rule `orderFamilyGraph` documents for a cousin
+  marriage, so the list and the picture stay consistent even there.
+- **The outline is a real panel, not a hidden one.** An invisible list of focusable buttons is a trap
+  for a sighted keyboard user, and a list worth offering to a screen reader is worth being able to
+  look at — it is also simply a good way to find somebody in a large tree. It renders *outside*
+  React Flow's `role="application"` subtree, where browse mode is not suppressed, and before the
+  canvas in the DOM.
+- **The outline is scoped to what is drawn,** taken from the rendered node array, so a focus view or
+  a hidden generation narrows it exactly as it narrows the canvas. An outline listing people with no
+  card would be describing a different tree — the same rule the keyboard navigation follows.
+
+### Bugs found and fixed along the way
+
+- **Three help pages had list items wrapped across two source lines.** `parseNotes` closes a list on
+  the first line that isn't a bullet, so each rendered as a list, a stray paragraph and a second
+  list — prose that looks right in the source and wrong on screen. The sample family's own notes had
+  the same bug. Rather than write every bullet as one over-long string literal, `md()` folds a
+  two-space-indented continuation onto the line before it, and a test checks every section of every
+  page for the paragraph-after-list signature.
+- **React Flow's per-card description was wrong,** and it is the one sentence read out on every
+  card: "press delete to remove it" and "use the arrow keys to move the node around" are both false
+  here (`elementsSelectable` is off, nothing is bound to Delete, and the arrows walk the family).
+  Overriding `node.a11yDescription.default` alone changed nothing — React Flow renders the
+  `keyboardDisabled` variant — so both are set. Found in the browser.
+- **"Showing the 1 part of this page that match …"** in the help search. Found in the browser.
+
+### Verified live
+
+Loaded the sample from the welcome screen in the embedded browser, exercised all three features,
+removed the sample and cleared the profile. Confirmed: the welcome screen offers "15 invented
+people you can delete in one click from Settings" and one click produces a 15-person, 4-generation
+tree rooted on Ravi Sawant with the adoption drawn dashed; Health reports **nothing at all**;
+the photo wall reads "0 of 15 people have a photo"; `?` opens the help, whose search narrows
+Relationships to its one section mentioning "triplets" and whose shortcut table lists P, S and C;
+the outline reads exactly as its unit test asserts, down to "married 1969 · marriage ended" and
+"· adopted"; following an entry selects that person's card and opens their detail panel; 15 person
+cards are tab stops in family order, the first announced as "Ravi Sawant, 12 Mar 1888 – 4 Nov 1961.
+Generation 1. Married to Sushila Sawant. No parents recorded. 2 children."; 6 union dots are
+labelled and none is a tab stop; and removing the sample leaves 0 people, 0 relationships, 0 trees
+and 0 members with the app back at its welcome screen.
+
+### Not confirmed live
+
+**The scroll-to half of following an outline entry.** React Flow's viewport transform stayed at the
+identity in the embedded browser pane, including its own initial `fitView` — reproduced with the
+canvas changes stashed, so it is not something this phase introduced. Worth a look in a real
+browser window.
+
+### Deferred from this phase
+
+- **High-contrast mode**, still. Phase 3 declined to invent colour values; nothing here changed
+  that, and the accessibility work in 7.3 is about structure rather than palette.
+- **An automated accessibility audit** (axe, or similar) in the test run. Everything asserted here
+  is asserted directly — labels, tab stops, list structure — which catches the specific things this
+  phase is about but not the next regression somebody introduces elsewhere.
 
 ---
 

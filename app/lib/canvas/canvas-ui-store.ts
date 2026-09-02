@@ -72,6 +72,15 @@ interface CanvasUIState {
   showBloodline: boolean
   toggleBloodline: () => void
 
+  // Whether the nested-list rendering of the tree is showing beside the canvas.
+  // Off by default — it is a second view of the same thing, not a permanent
+  // half of the screen — but it is a real panel rather than a hidden one: an
+  // invisible list of focusable buttons is a trap for a sighted keyboard user,
+  // and a list worth offering to a screen reader is a list worth being able to
+  // look at.
+  showOutline: boolean
+  toggleOutline: () => void
+
   focus: FocusScope | null
   setFocus: (focus: FocusScope) => void
   setFocusMode: (mode: FocusMode) => void
@@ -110,6 +119,9 @@ export const useCanvasUIStore = create<CanvasUIState>((set) => ({
   showBloodline: false,
   toggleBloodline: () =>
     set((state) => ({ showBloodline: !state.showBloodline })),
+
+  showOutline: false,
+  toggleOutline: () => set((state) => ({ showOutline: !state.showOutline })),
 
   focus: null,
   setFocus: (focus) => set({ focus }),

@@ -144,6 +144,13 @@ export function AppSidebar({
           view={view}
           onSelect={setView}
         />
+        <SidebarNavItem
+          label="Help"
+          target="help"
+          view={view}
+          onSelect={setView}
+          hint="?"
+        />
       </div>
 
       <div className="mt-auto flex flex-col gap-1.5 border border-border bg-background p-2.5">
@@ -193,11 +200,15 @@ function SidebarNavItem({
   target,
   view,
   onSelect,
+  hint,
 }: {
   label: string
   target: ShellView
   view: ShellView
   onSelect: (view: ShellView) => void
+  // The key that opens it, shown the way the search box shows ⌘K — a shortcut
+  // nobody is told about is a shortcut nobody presses.
+  hint?: string
 }) {
   return (
     <button
@@ -209,6 +220,11 @@ function SidebarNavItem({
       )}
     >
       {label}
+      {hint && (
+        <span className="ml-auto border border-border px-1 text-10 font-medium text-muted-foreground">
+          {hint}
+        </span>
+      )}
     </button>
   )
 }

@@ -22,7 +22,9 @@ const DEFAULT_LIMIT = 50
 // Beyond this many years apart, two records are not the same person, whatever
 // their names. Two rather than zero because a birth year is often off by one in
 // old records, and approximate years are common.
-const BIRTH_YEAR_TOLERANCE = 2
+// Exported for the same reason PHOTO_MAX_EDGE is: the help page describes this
+// rule in words, and the test beside the help content pins the words to it.
+export const BIRTH_YEAR_TOLERANCE = 2
 
 function normalize(value: string | undefined): string {
   if (!value) return ""
