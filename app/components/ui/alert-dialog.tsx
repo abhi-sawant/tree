@@ -53,6 +53,12 @@ function AlertDialogContent({
         data-size={size}
         className={cn(
           "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl border border-border-strong bg-popover p-6 text-popover-foreground shadow-float duration-100 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // A confirmation is a bottom sheet below `md`, for the reasons in
+          // ui/dialog.tsx. The width overrides are written against both
+          // data-size values rather than as a bare max-w-none: an attribute
+          // selector outranks a plain class, so an unqualified override would
+          // lose to max-w-xs however late it appears.
+          "max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:w-full max-md:translate-x-0 max-md:translate-y-0 max-md:gap-5 max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:p-5 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] max-md:data-[size=default]:max-w-none max-md:data-[size=sm]:max-w-none max-md:data-open:zoom-in-100 max-md:data-open:slide-in-from-bottom-full max-md:data-closed:zoom-out-100 max-md:data-closed:slide-out-to-bottom-full",
           className
         )}
         {...props}

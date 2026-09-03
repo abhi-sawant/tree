@@ -4,186 +4,212 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
+/* Touch and stylus, as distinct from a mouse. Used where the right answer
+   depends on the input device rather than the viewport width — a tablet with a
+   trackpad wants the desktop hit areas at a width a tablet with a finger does
+   not. Viewport tiers are the `max-md:` / `md:max-lg:` / `lg:` variants; see
+   app/lib/ui/viewport-tier.ts. */
+@custom-variant coarse (@media (pointer: coarse));
 
 :root {
-    --background: #f7f5f1;
-    --foreground: #1b1a17;
-    --card: #fffdf9;
-    --card-foreground: #1b1a17;
-    --popover: #fffdf9;
-    --popover-foreground: #1b1a17;
-    --primary: #146b54;
-    --primary-foreground: #fffdf9;
-    --secondary: #f0ece3;
-    --secondary-foreground: #1b1a17;
-    --muted: #f0ece3;
-    --muted-foreground: #79746a;
-    --accent: #e9f1ec;
-    --accent-foreground: #0f4c3d;
-    --destructive: #b3421f;
-    --destructive-foreground: #fffdf9;
-    --border: #eae5db;
-    --border-strong: #ded7c9;
-    --input: #eae5db;
-    --ring: #146b54;
-    --chart-1: #146b54;
-    --chart-2: #b3421f;
-    --chart-3: #79746a;
-    --chart-4: #0f4c3d;
-    --chart-5: #1b1a17;
-    --radius: 0.75rem;
-    --sidebar: #f4f1ea;
-    --sidebar-foreground: #1b1a17;
-    --sidebar-primary: #146b54;
-    --sidebar-primary-foreground: #fffdf9;
-    --sidebar-accent: #e9f1ec;
-    --sidebar-accent-foreground: #0f4c3d;
-    --sidebar-border: #eae5db;
-    --sidebar-ring: #146b54;
-    --edge-spouse: oklch(0.645 0.196 20.5);
-    --edge-parent-child: oklch(0.5 0.1 165);
-    --level-0: oklch(0.5 0.1 165);
-    --level-1: oklch(0.55 0.14 260);
-    --level-2: oklch(0.58 0.15 320);
-    --level-3: oklch(0.62 0.13 70);
-    --level-4: oklch(0.55 0.1 220);
-    --level-5: oklch(0.58 0.17 30);
-    --canvas-dot: color-mix(in oklch, var(--border), transparent 20%);
-    --success: #146b54;
+  --background: #f7f5f1;
+  --foreground: #1b1a17;
+  --card: #fffdf9;
+  --card-foreground: #1b1a17;
+  --popover: #fffdf9;
+  --popover-foreground: #1b1a17;
+  --primary: #146b54;
+  --primary-foreground: #fffdf9;
+  --secondary: #f0ece3;
+  --secondary-foreground: #1b1a17;
+  --muted: #f0ece3;
+  --muted-foreground: #79746a;
+  --accent: #e9f1ec;
+  --accent-foreground: #0f4c3d;
+  --destructive: #b3421f;
+  --destructive-foreground: #fffdf9;
+  --border: #eae5db;
+  --border-strong: #ded7c9;
+  --input: #eae5db;
+  --ring: #146b54;
+  --chart-1: #146b54;
+  --chart-2: #b3421f;
+  --chart-3: #79746a;
+  --chart-4: #0f4c3d;
+  --chart-5: #1b1a17;
+  --radius: 0.75rem;
+  --sidebar: #f4f1ea;
+  --sidebar-foreground: #1b1a17;
+  --sidebar-primary: #146b54;
+  --sidebar-primary-foreground: #fffdf9;
+  --sidebar-accent: #e9f1ec;
+  --sidebar-accent-foreground: #0f4c3d;
+  --sidebar-border: #eae5db;
+  --sidebar-ring: #146b54;
+  --edge-spouse: oklch(0.645 0.196 20.5);
+  --edge-parent-child: oklch(0.5 0.1 165);
+  --level-0: oklch(0.5 0.1 165);
+  --level-1: oklch(0.55 0.14 260);
+  --level-2: oklch(0.58 0.15 320);
+  --level-3: oklch(0.62 0.13 70);
+  --level-4: oklch(0.55 0.1 220);
+  --level-5: oklch(0.58 0.17 30);
+  --canvas-dot: color-mix(in oklch, var(--border), transparent 20%);
+  --success: #146b54;
 }
 
 .dark {
-    --background: #211e1a;
-    --foreground: #f3efe7;
-    --card: #2a2521;
-    --card-foreground: #f3efe7;
-    --popover: #2a2521;
-    --popover-foreground: #f3efe7;
-    --primary: #2e9c7a;
-    --primary-foreground: #0b1f19;
-    --secondary: #35302a;
-    --secondary-foreground: #f3efe7;
-    --muted: #35302a;
-    --muted-foreground: #b0a99c;
-    --accent: #24352e;
-    --accent-foreground: #8fcbb3;
-    --destructive: #e0714a;
-    --destructive-foreground: #241008;
-    --border: rgba(243, 239, 231, 0.1);
-    --border-strong: rgba(243, 239, 231, 0.18);
-    --input: rgba(243, 239, 231, 0.14);
-    --ring: #2e9c7a;
-    --chart-1: #2e9c7a;
-    --chart-2: #e0714a;
-    --chart-3: #b0a99c;
-    --chart-4: #8fcbb3;
-    --chart-5: #f3efe7;
-    --sidebar: #26221d;
-    --sidebar-foreground: #f3efe7;
-    --sidebar-primary: #2e9c7a;
-    --sidebar-primary-foreground: #0b1f19;
-    --sidebar-accent: #24352e;
-    --sidebar-accent-foreground: #8fcbb3;
-    --sidebar-border: rgba(243, 239, 231, 0.1);
-    --sidebar-ring: #2e9c7a;
-    --edge-spouse: oklch(0.7 0.19 20.5);
-    --edge-parent-child: oklch(0.65 0.13 165);
-    --level-0: oklch(0.65 0.13 165);
-    --level-1: oklch(0.68 0.16 260);
-    --level-2: oklch(0.7 0.17 320);
-    --level-3: oklch(0.75 0.14 70);
-    --level-4: oklch(0.68 0.11 220);
-    --level-5: oklch(0.7 0.19 30);
-    --canvas-dot: color-mix(in oklch, var(--border), transparent 20%);
-    --success: #2e9c7a;
+  --background: #211e1a;
+  --foreground: #f3efe7;
+  --card: #2a2521;
+  --card-foreground: #f3efe7;
+  --popover: #2a2521;
+  --popover-foreground: #f3efe7;
+  --primary: #2e9c7a;
+  --primary-foreground: #0b1f19;
+  --secondary: #35302a;
+  --secondary-foreground: #f3efe7;
+  --muted: #35302a;
+  --muted-foreground: #b0a99c;
+  --accent: #24352e;
+  --accent-foreground: #8fcbb3;
+  --destructive: #e0714a;
+  --destructive-foreground: #241008;
+  --border: rgba(243, 239, 231, 0.1);
+  --border-strong: rgba(243, 239, 231, 0.18);
+  --input: rgba(243, 239, 231, 0.14);
+  --ring: #2e9c7a;
+  --chart-1: #2e9c7a;
+  --chart-2: #e0714a;
+  --chart-3: #b0a99c;
+  --chart-4: #8fcbb3;
+  --chart-5: #f3efe7;
+  --sidebar: #26221d;
+  --sidebar-foreground: #f3efe7;
+  --sidebar-primary: #2e9c7a;
+  --sidebar-primary-foreground: #0b1f19;
+  --sidebar-accent: #24352e;
+  --sidebar-accent-foreground: #8fcbb3;
+  --sidebar-border: rgba(243, 239, 231, 0.1);
+  --sidebar-ring: #2e9c7a;
+  --edge-spouse: oklch(0.7 0.19 20.5);
+  --edge-parent-child: oklch(0.65 0.13 165);
+  --level-0: oklch(0.65 0.13 165);
+  --level-1: oklch(0.68 0.16 260);
+  --level-2: oklch(0.7 0.17 320);
+  --level-3: oklch(0.75 0.14 70);
+  --level-4: oklch(0.68 0.11 220);
+  --level-5: oklch(0.7 0.19 30);
+  --canvas-dot: color-mix(in oklch, var(--border), transparent 20%);
+  --success: #2e9c7a;
 }
 
 @theme inline {
-    --font-sans: 'Geist Variable', sans-serif;
-    --font-heading: 'Geist Variable', sans-serif;
-    --color-canvas-dot: var(--canvas-dot);
-    --color-edge-spouse: var(--edge-spouse);
-    --color-edge-parent-child: var(--edge-parent-child);
-    --color-success: var(--success);
-    --color-secondary-hover: color-mix(in oklch, var(--secondary), var(--foreground) 5%);
-    --color-border-strong: var(--border-strong);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
-    --radius-xs: calc(var(--radius) * 0.5);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 4 / 3);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
-    /* Micro type scale for dense UI labels (table cells, chrome, badges) that
+  --font-sans: "Geist Variable", sans-serif;
+  --font-heading: "Geist Variable", sans-serif;
+  --color-canvas-dot: var(--canvas-dot);
+  --color-edge-spouse: var(--edge-spouse);
+  --color-edge-parent-child: var(--edge-parent-child);
+  --color-success: var(--success);
+  --color-secondary-hover: color-mix(
+    in oklch,
+    var(--secondary),
+    var(--foreground) 5%
+  );
+  --color-border-strong: var(--border-strong);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-xs: calc(var(--radius) * 0.5);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 4 / 3);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Micro type scale for dense UI labels (table cells, chrome, badges) that
        fall between the default text-* steps. */
-    --text-9-5: 0.59375rem;
-    --text-10: 0.625rem;
-    --text-11: 0.6875rem;
-    --text-12-5: 0.78125rem;
-    --text-13: 0.8125rem;
-    --text-15: 0.9375rem;
-    --blur-2xs: 2px;
-    /* Two-step elevation system: a resting shadow for plain cards, a bigger
+  --text-9-5: 0.59375rem;
+  --text-10: 0.625rem;
+  --text-11: 0.6875rem;
+  --text-12-5: 0.78125rem;
+  --text-13: 0.8125rem;
+  --text-15: 0.9375rem;
+  --blur-2xs: 2px;
+  /* Two-step elevation system: a resting shadow for plain cards, a bigger
        soft one for anything that floats above the page (dialogs, menus,
        toasts, PWA prompts). Never tinted with the brand color. */
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05);
-    --shadow-float: 0 18px 40px -20px rgb(0 0 0 / 0.35);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-float: 0 18px 40px -20px rgb(0 0 0 / 0.35);
 }
 
 .dark {
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-float: 0 18px 40px -20px rgb(0 0 0 / 0.6);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-float: 0 18px 40px -20px rgb(0 0 0 / 0.6);
 }
 
-/* The canvas node handles are anchor points for edges, never drag targets
-   (every node sets isConnectable={false}), so they shouldn't be drawn. */
+/* The canvas node handles are the anchor points edges are drawn between. They
+   are invisible because the cards carry no visible ports, but on a person card
+   they stay interactive: dragging between two of them is how a relationship
+   gets recorded (see lib/canvas/connect-intent.ts). Union dots opt out in the
+   component instead, via isConnectable={false}.
+
+   Under a coarse pointer they are switched off entirely. An invisible 8px
+   target on a card's edge is exactly where a pan gesture starts, and a finger
+   cannot tell the two apart — so on touch every attempt to move the canvas
+   from near a card would start drawing a link instead. The same relationship
+   is one tap away in the detail sheet. !important because React Flow's own
+   stylesheet is injected after this one and sets pointer-events itself, which
+   is also why the plain declaration that used to be here never took effect. */
 .react-flow__handle {
-    opacity: 0;
-    pointer-events: none;
+  opacity: 0;
+}
+
+@media (pointer: coarse) {
+  .react-flow__handle {
+    pointer-events: none !important;
+  }
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
   body {
     @apply bg-background text-foreground;
-    }
+  }
   html {
     @apply font-sans;
-    }
+  }
 }
 
 /* Printing.
@@ -198,69 +224,69 @@
    have no variant (page margins, unclipping the scroll containers, forcing a
    light palette) sit beside the ones that do. */
 @media print {
-    [data-print="hide"] {
-        display: none !important;
-    }
+  [data-print="hide"] {
+    display: none !important;
+  }
 
-    @page {
-        margin: 12mm;
-    }
+  @page {
+    margin: 12mm;
+  }
 
-    /* The app is a full-height flex shell with its own scrollers, which on
+  /* The app is a full-height flex shell with its own scrollers, which on
        paper means everything below the fold is simply cut off. Unwind that so
        the content flows onto as many sheets as it needs. */
-    html,
-    body,
-    #root,
-    [data-print="flow"] {
-        height: auto !important;
-        max-height: none !important;
-        overflow: visible !important;
-        display: block !important;
-    }
+  html,
+  body,
+  #root,
+  [data-print="flow"] {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
 
-    /* Always the light palette, for the reason EXPORT_BACKGROUND_COLOR exists:
+  /* Always the light palette, for the reason EXPORT_BACKGROUND_COLOR exists:
        a dark-mode page prints as a sheet of solid ink. */
-    body {
-        background: #fff !important;
-        color: #000 !important;
-    }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
 
-    /* Backgrounds are dropped by most browsers when printing anyway, so a
+  /* Backgrounds are dropped by most browsers when printing anyway, so a
        muted-on-muted row would come out invisible. */
-    [data-print] *,
-    body * {
-        box-shadow: none !important;
-    }
+  [data-print] *,
+  body * {
+    box-shadow: none !important;
+  }
 
-    /* A row or a tile split across a page break is unreadable at both ends. */
-    tr,
-    li {
-        break-inside: avoid;
-    }
+  /* A row or a tile split across a page break is unreadable at both ends. */
+  tr,
+  li {
+    break-inside: avoid;
+  }
 
-    thead {
-        display: table-header-group;
-    }
+  thead {
+    display: table-header-group;
+  }
 
-    /* Popups are portalled to the end of <body>, so they are not inside
+  /* Popups are portalled to the end of <body>, so they are not inside
        anything a data-print attribute could cover — and one left open when
        Cmd+P is pressed prints as a grey slab over the content. Matched by role
        rather than by class so it holds for every menu, dialog and tooltip the
        component library renders. */
-    [role="menu"],
-    [role="dialog"],
-    [role="alertdialog"],
-    [role="tooltip"],
-    [role="listbox"] {
-        display: none !important;
-    }
+  [role="menu"],
+  [role="dialog"],
+  [role="alertdialog"],
+  [role="tooltip"],
+  [role="listbox"] {
+    display: none !important;
+  }
 
-    /* React Flow's own overlays: toolbar, zoom controls, legend, minimap. */
-    .react-flow__panel,
-    .react-flow__controls,
-    .react-flow__minimap,
-    .react-flow__attribution {
-        display: none !important;
-    }
+  /* React Flow's own overlays: toolbar, zoom controls, legend, minimap. */
+  .react-flow__panel,
+  .react-flow__controls,
+  .react-flow__minimap,
+  .react-flow__attribution {
+    display: none !important;
+  }
 }

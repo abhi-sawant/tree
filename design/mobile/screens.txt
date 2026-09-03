@@ -1,0 +1,1121 @@
+
+===== M Boot skeleton =====
+9:41
+Opening your trees…
+Welcome — no trees exist yet
+<div
+
+===== M Welcome state =====
+9:41
+FT
+Start your family tree
+Everything stays on this device. Add one person to begin, or open the sample family to look around first.
+Create a tree
+Open sample family
+Restore from a backup file
+Works offline. Nothing is uploaded.
+Create a tree — root is a new person
+<div
+
+===== M Create tree new root =====
+9:41
+Create a tree
+✕
+Tree name
+First person
+New person
+Existing person
+Given name
+Family name
+Born
+This person becomes the root. You can change the root later.
+Create tree
+Cancel
+Create a tree — root is an existing person
+<div
+
+===== M Create tree existing root =====
+9:41
+Create a tree
+✕
+Tree name
+First person
+New person
+Existing person
+⌕
+Search people
+Vijaya Pereira
+1918 – 2001 · in Sample family
+✓
+Thomas Pereira
+1916 – 1989 · in Sample family
+Nisha Pereira
+b. 1974 · in Sample family
+Vijaya stays in her other trees. Trees share one library of people.
+Create tree
+Cancel
+02 · Tree view &amp; navigation
+canvas · bottom bar · drawer · tree switcher
+Tree view — nothing selected (default landing state)
+<div
+
+===== M Tree view default =====
+9:41
+Sample family
+▾
+15 people · 4 generations
+⌕
++
+Tree
+Table
+Export
+▾
+⋯
+Also open in another tab. Edits appear in both.
+Ravi Sawant
+1888 – 1961
+Sushila Sawant
+c. 1892 – 1978
+Anil Sawant
+1915 – 1990
+Kamala Sawant
+1920 – 2004
+Vijaya Pereira
+1918 – 2001
+Rohan Sawant
+b. 1949
+Meera Nair
+b. 1946
+Ishaan Sawant
+b. 1979
+100% · pinch to zoom
++
+−
+Fit
+☰
+Tree
+People
+Photos
+More
+More — drawer holding everything off the bottom bar
+<div
+
+===== M More drawer =====
+9:41
+FT
+Family Tree
+✕
+⌕
+Search 15 people
+Trees
+Sample family (demo)
+15
+The Nair Family
+4
++ New tree
+Library
+Insights
+›
+Health
+3
+›
+Tree outline
+›
+Settings
+›
+Help
+›
+Storage persisted
+Last backup 28/08/2026.
+Export now
+Tree
+People
+Photos
+More
+Tree switcher — tapping the title in the topbar
+<div
+
+===== M Tree switcher =====
+9:41
+Switch tree
+Sample family (demo)
+15 people · root Ravi Sawant
+✓
+The Nair Family
+4 people · root Meera Nair
+Rename this tree
+Change root person
+New tree
+Delete this tree
+03 · Selection &amp; the detail sheet
+node states · long-press menus · peek → expanded sheet · tabs
+Node states — plain · selected (quick-add) · on bloodline · pinned · placeholder
+<div
+
+===== M Person node states =====
+9:41
+Plain
+Anil Sawant
+1915 – 1990
+Selected — quick-add buttons appear on the node edges
+Kamala Sawant
+1920 – 2004
++
++
++
+↑ parent
+→ partner
+↓ child
+On bloodline
+Rohan Sawant
+b. 1949
+Pinned
+⚲
+Meera Nair
+b. 1946
+Placeholder — tap to fill in an unknown parent
+Unknown parent
+Long-press a node — actions sheet (pinned variant)
+<div
+
+===== M Node long-press sheet =====
+9:41
+Meera Nair
+b. 14 Sep 1946 · pinned
+⚲
+Reset position
+◎
+Focus on this person
+↧
+Make root of this tree
+✎
+Edit details
+＋
+Add relative
+⊘
+Remove from this tree
+🗑
+Delete person
+Selection peek — sheet rests over the canvas, drag up for more
+<div
+
+===== M Detail peek =====
+9:41
+Sample family
+▾
+1 selected
+⌕
++
+Meera Nair
+b. 1946
+Suresh Nair
+b. 1944
+Meera Nair
+b. 14 Sep 1946 · Generation 3
+✕
+Add relative
+Edit
+⋯
+Details
+Family
+Media
+Notes
+Detail sheet expanded · Details tab
+<div
+
+===== M Detail sheet Details =====
+9:41
+Meera Nair
+b. 14 Sep 1946 · Generation 3
+✕
+Details
+Family
+Media
+Notes
+Full name
+Meera Nair (née Sawant)
+Born
+14 Sep 1946
+Age
+79
+Birthplace
+Kochi, Kerala
+Occupation
+Schoolteacher
+In trees
+Sample family
+The Nair Family · root
+Record
+Added
+12 Feb 2026
+Last edited
+28 Aug 2026
+Add relative
+Edit person
+Detail sheet · Family tab (relationships, subtypes, multiple birth)
+<div
+
+===== M Detail sheet Family =====
+9:41
+Rohan Sawant
+b. 8 Jun 1949 · Generation 3
+✕
+Details
+Family
+Media
+Notes
+Parents
+2
+Anil Sawant
+1915 – 1990 · biological
+›
+Kamala Sawant
+1920 – 2004 · biological
+›
+Partners
+1
+Latha Sawant
+married 22 Nov 1972
+›
+Children
+3
+Ishaan Sawant
+b. 1979 · twin
+›
+Isha Sawant
+b. 1979 · twin
+›
+Arjun Sawant
+b. 1984 · adopted
+›
+Add relative
+Add whole family
+Detail sheet · Media tab
+<div
+
+===== M Detail sheet Media =====
+9:41
+Meera Nair
+4 photos · 1 document
+✕
+Details
+Family
+Media
+Notes
+Profile photo
+meera-1968.jpg
+Shown on the node
+Replace
+All media
++ Add
+PDF
+will-1994
++
+Files stay on this device and are included in exports.
+Detail sheet · Notes (reading)
+<div
+
+===== M Detail sheet Notes =====
+9:41
+Meera Nair
+Note edited 28 Aug 2026
+✕
+Details
+Family
+Media
+Notes
+Taught at St. Teresa's for thirty-one years. Moved to Pune in 1971 after the wedding. Kept the family letters in a tin box that Ishaan now has — most of the dates before 1946 come from those.
+Edit note
+Notes (editing) — keyboard up, sheet at full height
+<div
+
+===== M Notes editing =====
+9:41
+Cancel
+Note · Meera Nair
+Save
+Taught at St. Teresa's for thirty-one years. Moved to Pune in 1971 after the wedding. Kept the family letters in a tin box that Ishaan now has — most of the dates before 1946 come from those.
+Autosaves when you leave
+214 characters
+q
+w
+e
+r
+t
+y
+u
+i
+o
+p
+a
+s
+d
+f
+g
+h
+j
+k
+l
+⇧
+z
+x
+c
+v
+b
+n
+m
+⌫
+123
+return
+Add relative — new child
+<div
+
+===== M Add child new =====
+9:41
+Add child to Rohan
+✕
+New person
+Existing person
+Given name
+Family name
+Born
+Relationship
+Adopted
+▾
+Other parent
+Latha Sawant
+▾
+✓
+Part of a multiple birth
+Add child
+Cancel
+Add relative — existing person as partner
+<div
+
+===== M Add spouse existing =====
+9:41
+Add partner to Meera
+✕
+New person
+Existing person
+⌕
+Suresh
+Suresh Nair
+b. 1944 · already in this tree
+✓
+Sureshbabu Menon
+b. 1941 · not in this tree
+Married
+Ended
+Leave both blank to record a partnership without a marriage date.
+Link as partner
+Cancel
+Add a whole family at once
+<div
+
+===== M Add whole family =====
+9:41
+‹
+Add family to Anil
+Add 4
+Partner
+Children
+3
+✕
+✕
+✕
++ Another child
+Everyone here is added to Sample family and linked to Anil in one step.
+Marriage dot selected — recorded
+<div
+
+===== M Union sheet recorded =====
+9:41
+Anil &amp; Kamala Sawant
+✕
+Married 3 Feb 1943 · ended 30 Jan 1990 (death)
+Married
+Ended
+Place
+Children of this union
+Rohan
+Meera
+Suniti
+Save marriage
+Remove marriage record
+Marriage not recorded · multi-selection
+<div
+
+===== M Union not recorded and multi-select =====
+9:41
+Union with nothing recorded yet
+Meera Nair &amp; Suresh Nair
+Not yet recorded as married.
+Their two children link them. Add a date to draw the marriage line solid.
+Record a marriage
+Two nodes selected
+2 people selected
+Clear
+Rohan Sawant
+Meera Nair
+Link as partners
+Merge these records
+Remove both from tree
+04 · Canvas chrome, menus &amp; conditional states
+view options · generations · focus · export · outline · appearance · empty states · dark
+View options — the desktop toolbar, as one sheet (bloodline, outline, focus on)
+<div
+
+===== M View options sheet =====
+9:41
+View
+✕
+Highlight bloodline
+Show tree outline
+Focus mode
+Meera Nair
+Photos on nodes
+Generations shown
+G1
+G2
+G3 hidden
+G4 hidden
+Fit to screen
+Appearance
+Export sheet — with redaction options
+<div
+
+===== M Export sheet =====
+9:41
+Export
+✕
+Backup file (.json)
+Everything, restorable
+›
+GEDCOM (.ged)
+For other genealogy apps
+›
+Spreadsheet (.csv)
+One row per person
+›
+Picture of the tree (.png)
+Current layout, 2× scale
+›
+Before sharing
+✓
+Hide details of living people
+Leave out notes and media
+4 living people will appear as “Living” with no dates.
+Export &amp; share
+Tree outline — the canvas as a nested list (own screen on mobile)
+<div
+
+===== M Tree outline =====
+9:41
+‹
+Tree outline
+15 people
+⌕
+▾
+Ravi Sawant
+root
+▾
+Anil Sawant
+3
+Rohan Sawant
+▸
+Meera Nair
+2
+Suniti Sawant
+▸
+Vijaya Pereira
+4
+Sudha Sawant
+Not connected to the root: 2 people. Tap to see them.
+Customize appearance
+<div
+
+===== M Customize appearance =====
+9:41
+Appearance
+✕
+Changes apply immediately and are saved on this device.
+Theme
+Light
+Dark
+System
+Node size
+Compact
+Comfortable
+Large
+Generation colours
+G1
+G2
+G3
+G4
+Colour the avatar ring
+Show generation bands
+Reset to defaults
+Canvas states — empty tree · laying out · tree not found
+<div
+
+===== M Canvas states =====
+9:41
+“The Nair Family” has no members yet
+Add the first person to start laying it out.
++ Add person
+Laying out 15 people…
+A moment, then it settles.
+That tree isn’t here any more
+It may have been deleted on this device.
+Open Sample family
+Dark theme — same tree view
+<div
+
+===== M Tree view dark =====
+9:41
+Sample family
+▾
+15 people · 4 generations
+⌕
++
+Tree
+Table
+Export ▾
+⋯
+Ravi Sawant
+1888 – 1961
+Sushila Sawant
+c. 1892 – 1978
+Anil Sawant
+1915 – 1990
+Kamala Sawant
+1920 – 2004
+Vijaya Pereira
+1918 – 2001
+Rohan Sawant
+b. 1949
+Meera Nair
+b. 1946
+100% · pinch to zoom
++
+−
+Fit
+☰
+Tree
+People
+Photos
+More
+05 · People (the table, as a list)
+search · sort · inline edit · row actions · no matches
+People — search and sort; each row carries the columns that matter
+<div
+
+===== M People list =====
+9:41
+People
+15 in this tree
++
+⌕
+Search people
+Name ↑
+Born
+Generation
+Anil Sawant
+1915 – 1990 · G2 · 3 children
+⋯
+Editing birthplace
+✓
+Meera Nair
+b. 1946 · G3 · in 2 trees
+⋯
+Rohan Sawant
+b. 1949 · G3 · 3 children
+⋯
+Ishaan Sawant
+b. 1979 · G4 · twin
+⋯
+Isha Sawant
+b. 1979 · G4 · twin
+⋯
+Suniti Sawant
+b. 1952 · G3 · no dates
+⋯
+Tap a row to open it in the tree · long-press to edit a field
+Tree
+People
+Photos
+More
+Row actions · search with no matches
+<div
+
+===== M Row actions and empty search =====
+9:41
+Row actions sheet
+Meera Nair
+Open in tree
+Edit details
+Add to another tree
+Merge with…
+Remove from this tree
+Delete person
+Search with no matches
+⌕
+dsouza
+✕
+No one matches “dsouza”
+Search covers names, places and notes.
++ Add “dsouza”
+06 · Photo wall · Insights · Health
+each with its empty and in-progress state
+Photo wall — two-up tiles, scope and sort in the header
+<div
+
+===== M Photo wall =====
+9:41
+Photo wall
+9 of 15 have photos
+This tree
+All people
+Oldest ▾
+Ravi Sawant
+1888 – 1961
++3
+Sushila Sawant
+c. 1892 – 1978
+Anil Sawant
+1915 – 1990
+Kamala Sawant
+1920 – 2004
+Meera Nair
+b. 1946
+No photo
+Rohan Sawant
+b. 1949
+Tree
+People
+Photos
+More
+Photo wall — nothing has a photo yet
+<div
+
+===== M Photo wall empty =====
+9:41
+Photo wall
+No photos yet
+Add a photo from a person’s Media tab and they will appear here.
+Go to People
+Tree
+People
+Photos
+More
+Insights — statistics, anniversaries, superlatives, distribution
+<div
+
+===== M Insights =====
+9:41
+‹
+Insights
+15
+people
+4
+generations
+72
+median lifespan
+2.6
+children per union
+Anniversaries · next 60 days
+14 Sep
+Meera Nair turns 80
+22 Nov
+Rohan &amp; Latha, 54 years
+4 Nov
+Ravi Sawant died, 65 years ago
+Superlatives
+Longest life
+Kamala Sawant · 84
+Largest family
+Rohan Sawant · 3
+Earliest record
+Ravi Sawant · 1888
+People by generation
+G1 · 2
+G2 · 5
+G3 · 6
+G4 · 2
+Insights — nothing to summarise · no anniversaries in the window
+<div
+
+===== M Insights empty =====
+9:41
+‹
+Insights
+Not enough recorded yet
+Add dates to at least two people and the statistics appear here.
+Anniversaries · next 60 days
+Nothing in the next 60 days
+The next one is 12 Mar.
+Widen to a year
+Health — errors, warnings, possible duplicates
+<div
+
+===== M Health =====
+9:41
+‹
+Health
+1 error · 2 warnings · 1 duplicate
+Re-check
+Errors
+Child born before parent
+Suniti Sawant (1952) is recorded as a child of Vijaya Pereira (1918) and Thomas Pereira (1916) — but also as born before her mother’s marriage in 1954.
+Open Suniti
+Ignore
+Warnings
+Missing death date
+Thomas Pereira would be 110. Add a death date or mark as living.
+Not connected to the root
+2 people sit outside Ravi Sawant’s tree.
+Possible duplicates
+Suresh Nair · Sureshbabu Nair
+Same birth year, same spouse, similar names.
+Review merge
+Not a duplicate
+Health — nothing to report · still checking
+<div
+
+===== M Health clean =====
+9:41
+‹
+Health
+✓
+Nothing to report
+All 15 records pass the date, relationship and duplicate checks.
+Checked 2 minutes ago
+Checking 15 records…
+Dates, then relationships, then duplicates.
+07 · Help (bundled manual)
+topic list · topic page · search narrowed · no results
+Help — topics (the desktop two-pane becomes list → page)
+<div
+
+===== M Help topics =====
+9:41
+‹
+Help
+⌕
+Search the manual
+Getting started
+Trees, people, the first hour
+›
+Adding relatives
+Parents, partners, children, families
+›
+Moving around the tree
+Pinch, focus, bloodline, outline
+›
+Merging duplicates
+What merging keeps and discards
+›
+Backups &amp; exports
+JSON, GEDCOM, CSV, pictures
+›
+Privacy &amp; storage
+Where the data lives
+›
+Gestures
+Everything you can do by touch
+›
+Help — a topic page, with the gesture table
+<div
+
+===== M Help topic =====
+9:41
+‹
+Moving around the tree
+The canvas holds the whole tree at once. Drag with one finger to move, pinch with two to zoom, and tap
+Fit
+to bring everything back into view.
+Gestures
+Tap
+Select a person
+Long-press
+Actions for that person
+Drag node
+Pin it to a position
+Two-finger tap
+Zoom out one step
+Swipe down
+Close the detail sheet
+Focus mode hides everyone who is not a direct ancestor or descendant of the person you pick. Bloodline highlighting keeps them visible but dims the rest.
+‹ Adding relatives
+Merging ›
+Help search — narrowed · nothing found
+<div
+
+===== M Help search states =====
+9:41
+Search narrowed to matching sections
+⌕
+backup
+✕
+3 sections match
+Backups &amp; exports
+…a
+backup
+file holds every tree, person and photo…
+Privacy &amp; storage
+…automatic
+backup
+runs once a week…
+Getting started
+…restore from a
+backup
+on the welcome screen…
+Nothing found
+⌕
+sync to cloud
+✕
+No section mentions that
+The manual covers what this app does offline. There is no cloud sync.
+Browse all topics
+08 · Settings
+one scrolling page, shown in two halves
+Settings — top half
+<div
+
+===== M Settings top =====
+9:41
+‹
+Settings
+Appearance
+Theme
+Light
+Dark
+Auto
+Node size
+Comfortable ›
+Generation colours
+Tree behaviour
+Remember pinned positions
+Show placeholders for unknown parents
+Animate layout changes
+Dates
+Format
+14 Sep 1946 ›
+Approximate dates
+Show as “c. 1892” ›
+Settings — storage, backups, sample data, danger zone
+<div
+
+===== M Settings bottom =====
+9:41
+‹
+Settings
+Storage
+Storage persisted
+The browser has promised not to clear this data. 18.4 MB used, mostly photos.
+Backups
+Weekly automatic backup
+Last backup
+28 Aug 2026 · 4.1 MB
+Export
+Restore from a file
+›
+Sample data
+The demo family is still here. Removing it deletes those 15 people and leaves your own trees alone.
+Remove sample family
+Danger zone
+Erasing removes every tree, person, photo and note on this device. Export a backup first.
+Erase everything
+09 · Dialogs &amp; confirmations
+merge · alerts · tree dialogs · restore
+Merge duplicates — conflicts to resolve (full screen)
+<div
+
+===== M Merge duplicates =====
+9:41
+Cancel
+Merge records
+Merge
+Keeping
+Suresh Nair
+. The other record is removed and its relationships move across.
+Keep
+Suresh Nair
+b. 1944 · 4 links
+Discard
+Sureshbabu Nair
+b. 1944 · 1 link
+3 fields disagree
+Given name
+Suresh
+Sureshbabu
+Birthplace
+Kochi
+Ernakulam
+Note
+Keep both
+Longer one
+After merging
+1 marriage, 2 children and 3 photos move to Suresh Nair. This cannot be undone.
+Merge refused — the two are related
+<div
+
+===== M Merge refused =====
+9:41
+These two can’t be merged
+Rohan Sawant is recorded as Meera Nair’s brother. Merging siblings would create a person who is their own sibling.
+If the sibling link is wrong, remove it first, then merge.
+Open the sibling link
+Close
+Alerts — delete person · blocked (root) · remove from tree
+<div
+
+===== M Alert sheets =====
+9:41
+Delete Suniti Sawant?
+She is removed from every tree, along with her 2 photos and her note. Her relationships are unlinked. This cannot be undone.
+Delete person
+Cancel
+Ravi Sawant is the root
+Pick a different root for Sample family before deleting him.
+Change root person
+Cancel
+Remove Meera from this tree?
+She stays in The Nair Family and in your people library. Only her place in Sample family goes.
+Remove from tree
+Cancel
+Tree dialogs — rename · change root · add existing person · delete tree
+<div
+
+===== M Tree dialogs =====
+9:41
+Rename tree
+Save
+Cancel
+Change root person
+The tree is drawn outward from the root. Generations renumber.
+Anil Sawant
+▾
+Set as root
+Cancel
+Add existing person to this tree
+⌕
+Search your people
+Latha Sawant
+not in tree
+Meera Nair
+already here
+Delete “The Nair Family”?
+The tree goes; the 4 people in it stay in your library.
+Delete tree
+Cancel
+Restore &amp; sample-removal alerts
+<div
+
+===== M Restore alerts =====
+9:41
+Restore this backup?
+family-tree-28-08-2026.json · 2 trees · 19 people. Everything currently on this device is replaced.
+✓
+Export what I have first
+Restore
+Cancel
+Remove the sample family?
+15 demo people and their photos are deleted. Your own trees are untouched.
+Remove sample data
+Keep it
+Erase everything?
+Type ERASE to confirm. There is no undo and no copy anywhere else.
+Erase everything
+10 · Global chrome
+search overlay (the ⌘K palette) · banners · toast · prompts
+Search overlay — results and no-match state
+<div
+
+===== M Search overlay =====
+9:41
+⌕
+sawant
+Done
+People · 6
+Ravi Sawant
+1888 – 1961 · root
+Anil Sawant
+1915 – 1990
+Rohan Sawant
+b. 1949
+Actions
+Add a person called “sawant”
+Open Sawant family tree
+If nothing matched
+“No one and nothing matches. Search covers names, places, notes and every tree.”
+Banners, toast and prompts
+<div
+
+===== M Banners and prompts =====
+9:41
+Storage warning banner (under the topbar)
+Storage is not persisted. The browser may clear your trees if space runs low.
+Allow persistence
+Another tab notice
+Also open in another tab. Edits appear in both; automatic backups run in one of them.
+Toast — undoable action
+Suniti removed from this tree
+Undo
+Install prompt
+Keep Family Tree on your home screen
+It opens full screen and works with no connection.
+Add to home screen
+Later
+Offline strip
+Offline — everything still works. Nothing needs a connection.
+11 · Add / edit person
+full-screen form · validation &amp; staged photo · disabled add-parent
+Add person — the dialog becomes a full-screen form
+<div
+
+===== M Add person =====
+9:41
+Cancel
+Add person
+Save
+Photo
+Optional. Shown on the node and in the photo wall.
+Given name
+Family name
+Also known as
+Born
+Died
+Birthplace
+Occupation
+Relationships
++ Add parent
+0 of 2
++ Add partner
++ Add child
+Validation errors · staged photo · add-parent disabled with its reason
+<div
+
+===== M Add person validation =====
+9:41
+Cancel
+Edit Ishaan Sawant
+Save
+Two things need fixing before this can be saved.
+ishaan-1998.jpg staged · saved when you save the person.
+Replace
+Discard
+Given name
+A given name is needed — it is what the node shows.
+Born
+Died
+Died before born. Check both dates.
+Relationships
++ Add parent
+2 of 2
+Two parents are already recorded. Remove one first.
+Rohan Sawant
+father
+Latha Sawant
+mother

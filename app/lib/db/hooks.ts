@@ -3,13 +3,21 @@ import { useEffect, useState } from "react"
 
 import { listSnapshots, type SnapshotSummary } from "~/lib/backup/snapshots"
 import { db } from "~/lib/db/db"
+import { listDismissals } from "~/lib/db/dismissals"
 import {
   getTreesForPerson,
   searchPeople,
   type SearchPeopleOptions,
   type TreeRef,
 } from "~/lib/db/people"
-import type { Person, Photo, Relationship, Tree, TreeMember } from "~/lib/types"
+import type {
+  Dismissal,
+  Person,
+  Photo,
+  Relationship,
+  Tree,
+  TreeMember,
+} from "~/lib/types"
 
 export function usePerson(id: string | undefined): Person | undefined {
   return useLiveQuery(() => (id ? db.people.get(id) : undefined), [id])
@@ -120,6 +128,10 @@ export function useSearchPeople(
     () => searchPeople(query, options),
     [query, options?.includePlaceholders]
   )
+}
+
+export function useDismissals(): Dismissal[] | undefined {
+  return useLiveQuery(() => listDismissals(), [])
 }
 
 export function useMembers(): TreeMember[] | undefined {

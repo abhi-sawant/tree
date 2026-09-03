@@ -86,6 +86,23 @@ export interface TreeMember {
   y?: number
 }
 
+// A health finding or duplicate pair the reader has looked at and rejected.
+// Identified by content rather than by an id, because neither findings nor
+// duplicate pairs are stored — both are recomputed from the graph on every
+// render. See lib/analysis/dismissals.ts for how the key is built and what it
+// therefore can and cannot silence (D36).
+export type DismissalKind = "finding" | "duplicate"
+
+export interface Dismissal {
+  key: string
+  kind: DismissalKind
+  // Denormalised from the key so deleting a person can take their dismissals
+  // with them: a multi-entry index over this is a real query, where matching
+  // on the key's text would be a table scan.
+  personIds: string[]
+  dismissedAt: number
+}
+
 export interface Photo {
   id: string
   blob: Blob

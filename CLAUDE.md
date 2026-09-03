@@ -25,7 +25,28 @@ npm run format        # prettier --write, ONLY on files you touched — see belo
 - **Prefer injecting `now`/`Date` over reading the clock** in anything under `app/lib/`, so tests can
   pin behaviour.
 - **Dexie versions indexes, not fields.** A new optional `Person`/`Relationship` field needs no
-  `version()` bump. A new *table* does.
+  `version()` bump. A new _table_ does.
+
+## Responsive
+
+Three tiers (ADR D37), expressed as Tailwind variants in markup and by
+`app/lib/ui/viewport-tier.ts` where JavaScript has to branch:
+
+| Tier    | Width        | Variant      | What changes                                     |
+| ------- | ------------ | ------------ | ------------------------------------------------ |
+| mobile  | `<768px`     | `max-md:`    | bottom bar, no sidebar, sheets instead of panels |
+| tablet  | `768–1023px` | `md:max-lg:` | icon rail, detail panel as a sheet               |
+| desktop | `≥1024px`    | `lg:`        | unchanged                                        |
+
+- **Reach for CSS first.** Use `useIsMobile()` / `useIsCompact()` only where the branch decides
+  _which component renders_ — an `<aside>` versus a `<Sheet>` — not where a class would do.
+- **A new dialog needs no mobile work.** `ui/dialog.tsx` and `ui/alert-dialog.tsx` already present
+  as bottom sheets below `md`. Reach for `ui/sheet.tsx` only when the surface wants a drag handle, a
+  snap point, or a live background behind it.
+- **Small buttons are already handled.** `size="xs"`/`"icon-xs"`/`"sm"`/`"icon-sm"` carry a 44px
+  floor below `md`; don't add per-call-site touch sizing.
+- **A tooltip carries nothing on touch.** If a tooltip is the only place something is explained —
+  why a control is disabled, what a toggle does — write it into the markup for `max-md:` too.
 
 ## Before making a judgement call
 

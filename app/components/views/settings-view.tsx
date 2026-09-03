@@ -14,6 +14,7 @@ import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Label } from "~/components/ui/label"
+import { MobileScreenHeader } from "~/components/shell/mobile-screen-header"
 import { SectionHeading } from "~/components/ui/section-heading"
 import { Select } from "~/components/ui/select"
 import { BackupFolderPanel } from "~/components/views/backup-folder-panel"
@@ -211,241 +212,254 @@ export function SettingsView({
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto p-6">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-7 rounded-lg border border-border bg-card p-6 shadow-card">
-        <section className="flex flex-col gap-2">
-          <SectionHeading>Storage</SectionHeading>
-          <div className="flex items-center gap-2 rounded-md border border-border p-3">
-            <span
-              className={
-                persisted
-                  ? "size-2 rounded-full bg-success"
-                  : "size-2 rounded-full bg-muted-foreground"
-              }
-            />
-            <span className="font-heading text-10 font-semibold">
-              {persisted === undefined
-                ? "Checking…"
-                : persisted
-                  ? "Persistent storage granted"
-                  : "Not persisted"}
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground">
-              Last export{" "}
-              {lastExport ? new Date(lastExport).toLocaleString() : "never"}
-            </span>
-          </div>
-          <StoragePanel />
-        </section>
-
-        <section className="flex flex-col gap-2.5">
-          <SectionHeading>Appearance</SectionHeading>
-          <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
-            Theme
-            <Select
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as ThemePreference)}
-            >
-              {THEME_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-          </Label>
-          <p className="text-12-5 leading-relaxed text-muted-foreground">
-            Saved in this browser and applied before the page paints, so
-            switching to dark doesn&apos;t flash white on every load.
-          </p>
-        </section>
-
-        <section className="flex flex-col gap-2.5">
-          <SectionHeading>Sample family</SectionHeading>
-          <SampleTreePanel />
-        </section>
-
-        <section className="flex flex-col gap-2.5">
-          <SectionHeading>Backup folder</SectionHeading>
-          <BackupFolderPanel />
-        </section>
-
-        <section className="flex flex-col gap-2.5">
-          <SectionHeading>Snapshots</SectionHeading>
-          <SnapshotsPanel tabId={tabId} />
-        </section>
-
-        <section className="flex flex-col gap-2.5">
-          <SectionHeading>Export</SectionHeading>
-          <p className="text-12-5 leading-relaxed text-muted-foreground">
-            The backup is a .zip holding every person, relationship, tree, photo
-            and document — restore it here to move everything to another browser
-            or device. GEDCOM is for other genealogy software: the .zip carries
-            photos alongside the .ged, the plain .ged is text only. Documents
-            aren't carried either way: GEDCOM 5.5.1's media formats don't
-            include PDF, and importers tend to drop an OBJE they can't classify
-            rather than keep it. PNG and PDF capture the open canvas — export
-            those from the Tree view's Export menu. The .ics file holds
-            birthdays and wedding anniversaries as yearly repeating all-day
-            events, for any calendar app; it needs a full date, so people
-            recorded with only a year are left out.
-          </p>
-          <div className="flex flex-col gap-1.5 rounded-md border border-border p-3">
-            <Label className="flex-row items-center gap-2 text-sm font-normal normal-case">
-              <Checkbox
-                checked={redactLiving}
-                onCheckedChange={(checked) => setRedactLiving(checked === true)}
+    <>
+      <MobileScreenHeader title="Settings" />
+      {/* p-6 inside p-6 left 294px of a 390px screen for the content. On a
+          phone the card gives up its own frame — a border drawn 12px from the
+          screen edge is decoration the content cannot afford. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 max-md:p-0">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-7 rounded-lg border border-border bg-card p-6 shadow-card max-md:gap-8 max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:p-4 max-md:pb-8 max-md:shadow-none">
+          <section className="flex flex-col gap-2">
+            <SectionHeading>Storage</SectionHeading>
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3">
+              <span
+                className={
+                  persisted
+                    ? "size-2 rounded-full bg-success"
+                    : "size-2 rounded-full bg-muted-foreground"
+                }
               />
-              Redact living people
+              <span className="font-heading text-10 font-semibold">
+                {persisted === undefined
+                  ? "Checking…"
+                  : persisted
+                    ? "Persistent storage granted"
+                    : "Not persisted"}
+              </span>
+              <span className="ml-auto text-xs text-muted-foreground">
+                Last export{" "}
+                {lastExport ? new Date(lastExport).toLocaleString() : "never"}
+              </span>
+            </div>
+            <StoragePanel />
+          </section>
+
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>Appearance</SectionHeading>
+            <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
+              Theme
+              <Select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as ThemePreference)}
+              >
+                {THEME_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
             </Label>
-            <p className="text-11 leading-relaxed text-muted-foreground">
-              Anyone with no recorded death — and no birth date old enough to
-              presume one — is written out as &ldquo;Living&rdquo; with their
-              surname, and without dates, notes or photos. Someone with no dates
-              at all is treated as living: the file is the thing that gets
-              emailed around, so an unanswerable case is withheld rather than
-              published. Right now that is {presumedLivingCount}{" "}
-              {presumedLivingCount === 1 ? "person" : "people"}. It applies to
-              GEDCOM, the family book and the canvas image — not to the backup,
-              which is your own complete copy.
+            <p className="text-12-5 leading-relaxed text-muted-foreground">
+              Saved in this browser and applied before the page paints, so
+              switching to dark doesn&apos;t flash white on every load.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button disabled={exportingBackup} onClick={onExportBackup}>
-              {exportingBackup ? "Exporting…" : "Backup (.zip)"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => void handleExportGedcomZip()}
-            >
-              GEDCOM + photos (.zip)
-            </Button>
-            <Button variant="outline" onClick={() => void handleExportGedcom()}>
-              GEDCOM 5.5.1 (no photos)
-            </Button>
-            <Button variant="outline" onClick={() => void handleExportIcs()}>
-              Anniversaries (.ics)
-            </Button>
-          </div>
-        </section>
+          </section>
 
-        <section className="flex flex-col gap-2.5">
-          <SectionHeading>Spreadsheet (CSV)</SectionHeading>
-          <p className="text-12-5 leading-relaxed text-muted-foreground">
-            One row per person, with parents and spouses referred to by name —
-            the shape families already keep this data in. Importing{" "}
-            <em>adds</em> to what's here: rows create people or update ones they
-            carry an id for, and links are only ever added, never removed. It
-            carries names, sex, dates and notes only, so photos, custom fields,
-            marriage dates and how a parent-child link came about stay untouched
-            by a round trip. For a complete copy, use the backup below.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => void handleExportCsv()}>
-              Export people (.csv)
-            </Button>
-            <Label className="flex-col items-start gap-2 text-sm font-normal normal-case">
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>Sample family</SectionHeading>
+            <SampleTreePanel />
+          </section>
+
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>Backup folder</SectionHeading>
+            <BackupFolderPanel />
+          </section>
+
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>Snapshots</SectionHeading>
+            <SnapshotsPanel tabId={tabId} />
+          </section>
+
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>Export</SectionHeading>
+            <p className="text-12-5 leading-relaxed text-muted-foreground">
+              The backup is a .zip holding every person, relationship, tree,
+              photo and document — restore it here to move everything to another
+              browser or device. GEDCOM is for other genealogy software: the
+              .zip carries photos alongside the .ged, the plain .ged is text
+              only. Documents aren't carried either way: GEDCOM 5.5.1's media
+              formats don't include PDF, and importers tend to drop an OBJE they
+              can't classify rather than keep it. PNG and PDF capture the open
+              canvas — export those from the Tree view's Export menu. The .ics
+              file holds birthdays and wedding anniversaries as yearly repeating
+              all-day events, for any calendar app; it needs a full date, so
+              people recorded with only a year are left out.
+            </p>
+            <div className="flex flex-col gap-1.5 rounded-md border border-border p-3">
+              <Label className="flex-row items-center gap-2 text-sm font-normal normal-case">
+                <Checkbox
+                  checked={redactLiving}
+                  onCheckedChange={(checked) =>
+                    setRedactLiving(checked === true)
+                  }
+                />
+                Redact living people
+              </Label>
+              <p className="text-11 leading-relaxed text-muted-foreground">
+                Anyone with no recorded death — and no birth date old enough to
+                presume one — is written out as &ldquo;Living&rdquo; with their
+                surname, and without dates, notes or photos. Someone with no
+                dates at all is treated as living: the file is the thing that
+                gets emailed around, so an unanswerable case is withheld rather
+                than published. Right now that is {presumedLivingCount}{" "}
+                {presumedLivingCount === 1 ? "person" : "people"}. It applies to
+                GEDCOM, the family book and the canvas image — not to the
+                backup, which is your own complete copy.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button disabled={exportingBackup} onClick={onExportBackup}>
+                {exportingBackup ? "Exporting…" : "Backup (.zip)"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void handleExportGedcomZip()}
+              >
+                GEDCOM + photos (.zip)
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void handleExportGedcom()}
+              >
+                GEDCOM 5.5.1 (no photos)
+              </Button>
+              <Button variant="outline" onClick={() => void handleExportIcs()}>
+                Anniversaries (.ics)
+              </Button>
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>Spreadsheet (CSV)</SectionHeading>
+            <p className="text-12-5 leading-relaxed text-muted-foreground">
+              One row per person, with parents and spouses referred to by name —
+              the shape families already keep this data in. Importing{" "}
+              <em>adds</em> to what's here: rows create people or update ones
+              they carry an id for, and links are only ever added, never
+              removed. It carries names, sex, dates and notes only, so photos,
+              custom fields, marriage dates and how a parent-child link came
+              about stay untouched by a round trip. For a complete copy, use the
+              backup below.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={() => void handleExportCsv()}>
+                Export people (.csv)
+              </Button>
+              <Label className="flex-col items-start gap-2 text-sm font-normal normal-case">
+                <Input
+                  key={csvInputKey}
+                  type="file"
+                  accept=".csv,text/csv"
+                  disabled={csvImporting}
+                  onChange={(e) => void handleCsvSelected(e)}
+                />
+              </Label>
+            </div>
+            {csvImporting && (
+              <p className="text-sm text-muted-foreground">Importing…</p>
+            )}
+            {csvError && (
+              <p className="max-w-md text-sm text-destructive">{csvError}</p>
+            )}
+            {csvResult && <CsvImportReport result={csvResult} />}
+          </section>
+
+          <section className="flex flex-col gap-2.5">
+            <SectionHeading>Import backup</SectionHeading>
+            <p className="text-12-5 leading-relaxed text-muted-foreground">
+              Restoring replaces everything currently stored — people, photos
+              and documents alike. This can't be undone. Accepts a .zip backup,
+              or a .json backup from an older version.
+            </p>
+            <Label className="max-w-sm flex-col items-start gap-2 text-sm font-normal normal-case">
+              Choose backup file
               <Input
-                key={csvInputKey}
+                key={inputKey}
                 type="file"
-                accept=".csv,text/csv"
-                disabled={csvImporting}
-                onChange={(e) => void handleCsvSelected(e)}
+                accept=".zip,.json,application/zip,application/json"
+                onChange={handleFileSelected}
               />
             </Label>
-          </div>
-          {csvImporting && (
-            <p className="text-sm text-muted-foreground">Importing…</p>
-          )}
-          {csvError && (
-            <p className="max-w-md text-sm text-destructive">{csvError}</p>
-          )}
-          {csvResult && <CsvImportReport result={csvResult} />}
-        </section>
+            {error && (
+              <p className="max-w-md text-sm text-destructive">{error}</p>
+            )}
+          </section>
+        </div>
 
-        <section className="flex flex-col gap-2.5">
-          <SectionHeading>Import backup</SectionHeading>
-          <p className="text-12-5 leading-relaxed text-muted-foreground">
-            Restoring replaces everything currently stored — people, photos and
-            documents alike. This can't be undone. Accepts a .zip backup, or a
-            .json backup from an older version.
-          </p>
-          <Label className="max-w-sm flex-col items-start gap-2 text-sm font-normal normal-case">
-            Choose backup file
-            <Input
-              key={inputKey}
-              type="file"
-              accept=".zip,.json,application/zip,application/json"
-              onChange={handleFileSelected}
-            />
-          </Label>
-          {error && (
-            <p className="max-w-md text-sm text-destructive">{error}</p>
-          )}
-        </section>
+        <AlertDialog
+          open={!!result}
+          onOpenChange={(open) => !open && window.location.reload()}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Restored, with some files missing
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Restored {result?.counts.people} people, {result?.counts.photos}{" "}
+                photos and {result?.counts.attachments} documents.{" "}
+                {(result?.missingPhotoIds.length ?? 0) > 0 && (
+                  <>
+                    {result?.missingPhotoIds.length} photos couldn't be read
+                    from this file and were skipped — those people now show the
+                    default avatar.{" "}
+                  </>
+                )}
+                {(result?.missingAttachmentIds.length ?? 0) > 0 && (
+                  <>
+                    {result?.missingAttachmentIds.length} documents couldn't be
+                    read and were skipped.{" "}
+                  </>
+                )}
+                Everything else came through intact.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => window.location.reload()}>
+                Done
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={!!pendingFile && !result}
+          onOpenChange={(open) => !open && closeImportDialog()}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Replace all current data?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Importing "{pendingFile?.name}" wipes every person,
+                relationship, tree, photo and document currently stored and
+                replaces them with the contents of this file. This can't be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={importing}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={importing}
+                onClick={handleConfirmImport}
+              >
+                {importing ? "Importing…" : "Replace data"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-
-      <AlertDialog
-        open={!!result}
-        onOpenChange={(open) => !open && window.location.reload()}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Restored, with some files missing
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Restored {result?.counts.people} people, {result?.counts.photos}{" "}
-              photos and {result?.counts.attachments} documents.{" "}
-              {(result?.missingPhotoIds.length ?? 0) > 0 && (
-                <>
-                  {result?.missingPhotoIds.length} photos couldn't be read from
-                  this file and were skipped — those people now show the default
-                  avatar.{" "}
-                </>
-              )}
-              {(result?.missingAttachmentIds.length ?? 0) > 0 && (
-                <>
-                  {result?.missingAttachmentIds.length} documents couldn't be
-                  read and were skipped.{" "}
-                </>
-              )}
-              Everything else came through intact.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => window.location.reload()}>
-              Done
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={!!pendingFile && !result}
-        onOpenChange={(open) => !open && closeImportDialog()}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Replace all current data?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Importing "{pendingFile?.name}" wipes every person, relationship,
-              tree, photo and document currently stored and replaces them with
-              the contents of this file. This can't be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={importing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={importing}
-              onClick={handleConfirmImport}
-            >
-              {importing ? "Importing…" : "Replace data"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </>
   )
 }
 

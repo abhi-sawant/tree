@@ -31,6 +31,14 @@ interface PersonFormProps {
   submitLabel?: string
   cancelLabel?: string
   section?: PersonFormSection
+  // Set when something outside the form owns its submit button — a full-screen
+  // sheet's header bar, on a phone. The button carries `form={formId}`, which
+  // is how HTML associates a control with a form it isn't inside; that works
+  // across the sheet's portal boundary, where a ref or a callback would need
+  // the form to expose its internals.
+  formId?: string
+  // Suppresses the form's own footer, for the same case.
+  hideActions?: boolean
   // Bumped to move the cursor into the first field. A signal rather than a
   // plain autoFocus flag because the canvas's Enter shortcut has to be able to
   // re-focus a form that is already mounted, and remounting it to do that would
@@ -45,6 +53,8 @@ export function PersonForm({
   submitLabel = "Save",
   cancelLabel = "Cancel",
   section = "all",
+  formId,
+  hideActions,
   focusSignal = 0,
 }: PersonFormProps) {
   const showIdentity = section !== "notes"
@@ -174,9 +184,23 @@ export function PersonForm({
   const unhandledIssues = (error?.issues ?? []).filter(
     (issue) => String(issue.path[0]) !== "givenName"
   )
+  const issueCount = error?.issues.length ?? 0
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* Said once at the top, because on a phone the field that failed can be
+          a screen away from the Save button that refused. The messages
+          themselves still sit with their fields. */}
+      {issueCount > 0 && (
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-13 text-destructive"
+        >
+          {issueCount === 1
+            ? "One thing needs fixing before this can be saved."
+            : `${issueCount} things need fixing before this can be saved.`}
+        </p>
+      )}
       {showIdentity && (
         <>
           <div className="flex flex-col gap-1">
@@ -387,14 +411,16 @@ export function PersonForm({
         </p>
       )}
 
-      <div className="flex justify-end gap-2">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            {cancelLabel}
-          </Button>
-        )}
-        <Button type="submit">{submitLabel}</Button>
-      </div>
+      {!hideActions && (
+        <div className="flex justify-end gap-2">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              {cancelLabel}
+            </Button>
+          )}
+          <Button type="submit">{submitLabel}</Button>
+        </div>
+      )}
     </form>
   )
 }

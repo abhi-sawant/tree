@@ -59,6 +59,14 @@ interface CanvasUIState {
 
   // Generations the canvas is currently hiding, by zero-based generation
   // index (the same index person-node uses to pick its --level-N colour).
+  // Touch has no shift-click, so the only way to build a multi-selection on a
+  // phone is to say so first. While this is on, tapping a card toggles it in
+  // and out of the selection instead of replacing it. Off on every tier by
+  // default: a mouse already has a modifier for this, and a mode that is
+  // silently on is a mode that surprises someone.
+  selectMode: boolean
+  setSelectMode: (selectMode: boolean) => void
+
   hiddenGenerations: number[]
   toggleGeneration: (generation: number) => void
   resetHiddenGenerations: () => void
@@ -134,6 +142,18 @@ export const useCanvasUIStore = create<CanvasUIState>((set) => ({
       state.focus ? { focus: { ...state.focus, generations } } : state
     ),
   clearFocus: () => set({ focus: null }),
+
+  selectMode: false,
+  setSelectMode: (selectMode) =>
+    set((state) => ({
+      selectMode,
+      // Leaving the mode with several cards held would strand the reader in
+      // the multi-select panel with no gesture to get out of it.
+      selectedNodeIds:
+        !selectMode && state.selectedNodeIds.length > 1
+          ? []
+          : state.selectedNodeIds,
+    })),
 
   hiddenGenerations: [],
   toggleGeneration: (generation) =>

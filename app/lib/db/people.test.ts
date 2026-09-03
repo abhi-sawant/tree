@@ -290,3 +290,32 @@ describe("deletePerson", () => {
     expect(await db.members.where("personId").equals(root.id).count()).toBe(1)
   })
 })
+
+describe("searchPeople beyond names", () => {
+  it("finds someone by a word in their note", async () => {
+    // Notes are where anything the fixed schema has no column for ends up.
+    await createPerson({ givenName: "Meera", notes: "Taught in Kochi" })
+    await createPerson({ givenName: "Rohan" })
+    const found = await searchPeople("kochi")
+    expect(found.map((p) => p.givenName)).toEqual(["Meera"])
+  })
+
+  it("finds someone by a custom field's value", async () => {
+    await createPerson({
+      givenName: "Anil",
+      customFields: [{ label: "Occupation", value: "Schoolteacher" }],
+    })
+    const found = await searchPeople("schoolteacher")
+    expect(found.map((p) => p.givenName)).toEqual(["Anil"])
+  })
+
+  it("finds someone by a custom field's label", async () => {
+    await createPerson({
+      givenName: "Sushila",
+      customFields: [{ label: "Birthplace", value: "Ernakulam" }],
+    })
+    expect((await searchPeople("birthplace")).map((p) => p.givenName)).toEqual([
+      "Sushila",
+    ])
+  })
+})

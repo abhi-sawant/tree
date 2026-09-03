@@ -41,6 +41,12 @@ export function UnionNode({ id, data }: NodeProps<UnionNodeType>) {
     <div
       className={cn(
         "h-full w-full rounded-full",
+        // A marriage dot is drawn about 10px across, which is right on a
+        // canvas and impossible to hit with a finger. Under a coarse pointer
+        // an invisible pad extends the target to roughly 44px without moving
+        // anything: the dot stays where the edges meet, which is the only
+        // place it means anything.
+        "coarse:before:absolute coarse:before:-inset-4 coarse:before:content-['']",
         onBloodline && !selected && "ring-2 ring-primary/40",
         selected && "ring-3 ring-primary"
       )}

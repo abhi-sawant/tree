@@ -1,5 +1,12 @@
-import { useEffect, useMemo, useState } from "react"
-import { XIcon } from "lucide-react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
+import { MoreHorizontal, XIcon } from "lucide-react"
 
 import {
   AddRelativeMenu,
@@ -18,6 +25,15 @@ import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { PartialDateFields } from "~/components/people/partial-date-fields"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import { Button } from "~/components/ui/button"
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetHandle,
+  SheetHeader,
+  SheetItem,
+  SheetTitle,
+} from "~/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import {
   useCanvasUIStore,
@@ -57,6 +73,8 @@ import type { PersonFormValues } from "~/lib/schemas"
 import { toast } from "~/lib/ui/toast-store"
 import type { ParentChildSubtype, Person, Relationship } from "~/lib/types"
 import { coverPhotoId } from "~/lib/person-photos"
+import { useIsCompact } from "~/lib/ui/viewport-tier"
+import { cn } from "~/lib/utils"
 
 type DetailTab = "details" | "family" | "media" | "notes"
 
@@ -109,6 +127,8 @@ export function DetailPanel({
   )
   const pendingEditNodeId = useCanvasUIStore((s) => s.pendingEditNodeId)
   const clearPendingEdit = useCanvasUIStore((s) => s.clearPendingEdit)
+
+  const compact = useIsCompact()
 
   const peopleById = useMemo(
     () => new Map(people.map((p) => [p.id, p])),
@@ -165,27 +185,25 @@ export function DetailPanel({
   // what is selected and how to get back to one person.
   if (selectedCount > 1) {
     return (
-      <aside
-        data-print="hide"
-        className="flex h-full w-78 shrink-0 flex-col overflow-y-auto border-l border-border"
-      >
+      <DetailContainer width="w-78">
         <div className="p-4">
           <p className="text-13 leading-relaxed text-muted-foreground">
             {selectedCount} cards selected. Use the bar at the top of the canvas
-            to align them or change which trees they belong to. Click any card
-            on its own to go back to one person.
+            to align them or change which trees they belong to. Tap any card on
+            its own to go back to one person.
           </p>
         </div>
-      </aside>
+      </DetailContainer>
     )
   }
 
   if (!selection) {
+    // Nothing to peek at, so on a compact screen there is no sheet at all —
+    // the canvas gets the whole viewport until something is selected, which is
+    // the entire point of moving the panel off the side.
+    if (compact) return null
     return (
-      <aside
-        data-print="hide"
-        className="flex h-full w-90 shrink-0 flex-col overflow-y-auto border-l border-border"
-      >
+      <DetailContainer width="w-90">
         <div className="p-4">
           <p className="text-13 leading-relaxed text-muted-foreground">
             Select a person or a marriage dot on the canvas. Drag a card to pin
@@ -197,16 +215,12 @@ export function DetailPanel({
             <Key>S</Key> <Key>C</Key> start a new parent, spouse or child.
           </p>
         </div>
-      </aside>
+      </DetailContainer>
     )
   }
 
   return (
-    <aside
-      data-print="hide"
-      key={selectedNodeId}
-      className="flex h-full w-90 shrink-0 flex-col overflow-hidden border-l border-border"
-    >
+    <DetailContainer width="w-90" scroll="hidden" key={selectedNodeId}>
       {selection.kind === "person" ? (
         <PersonDetail
           treeId={treeId}
@@ -230,7 +244,98 @@ export function DetailPanel({
           setAction={setAction}
         />
       )}
-    </aside>
+    </DetailContainer>
+  )
+}
+
+// Peek height. Enough for the header, the action row and the tab strip — the
+// three things a reader wants before deciding whether to open the whole record
+// — and no more, so most of the canvas stays visible behind it.
+const PEEK = "15rem"
+const SNAP_POINTS = [PEEK, 1]
+
+// Lets the panel's own contents raise the sheet to full height. A peek that
+// only opens by dragging the handle is a trap when the gesture misfires, and
+// every action inside it — tapping a tab, starting an edit — is a statement
+// that the reader wants the whole record. A no-op on a wide screen, where the
+// panel is a rail and there is nothing to expand.
+const ExpandDetailSheet = createContext<() => void>(() => {})
+
+function useExpandDetailSheet(): () => void {
+  return useContext(ExpandDetailSheet)
+}
+
+// The same contents, in a rail on a wide screen and a bottom sheet on anything
+// narrower. Below 1024px there is no room for a 360px rail beside a canvas, so
+// the panel goes under it instead of beside it (ADR D37).
+function DetailContainer({
+  children,
+  width,
+  scroll = "auto",
+}: {
+  children: React.ReactNode
+  width: "w-78" | "w-90"
+  scroll?: "auto" | "hidden"
+}) {
+  const compact = useIsCompact()
+  const select = useCanvasUIStore((s) => s.select)
+  // Opens at the peek every time, rather than remembering the last height: a
+  // sheet that reopens full-height hides the card that was just tapped.
+  const [snap, setSnap] = useState<string | number | null>(PEEK)
+  const selectedNodeId = useSelectedNodeId()
+  useEffect(() => setSnap(PEEK), [selectedNodeId])
+  const expand = useCallback(() => setSnap(1), [])
+
+  if (!compact) {
+    return (
+      <aside
+        data-print="hide"
+        className={cn(
+          "flex h-full shrink-0 flex-col border-l border-border",
+          width,
+          scroll === "auto" ? "overflow-y-auto" : "overflow-hidden"
+        )}
+      >
+        {children}
+      </aside>
+    )
+  }
+
+  return (
+    <Sheet
+      open
+      // Not modal: the canvas behind the peek stays pannable and tappable, so
+      // a reader can walk the tree with the sheet up. A modal sheet would make
+      // every step a close-then-reopen.
+      modal={false}
+      swipeDirection="down"
+      snapPoints={SNAP_POINTS}
+      snapPoint={snap}
+      onSnapPointChange={setSnap}
+      onOpenChange={(next) => {
+        if (!next) select(null)
+      }}
+    >
+      <SheetContent
+        variant="snap"
+        data-print="hide"
+        // Focus stays on the canvas: selecting a card must not move the cursor
+        // into the sheet, or every arrow-key step would need a tab back out.
+        initialFocus={false}
+      >
+        <button
+          type="button"
+          aria-label="Expand details"
+          className="flex flex-none cursor-grab touch-none justify-center pt-2.5 pb-1"
+          onClick={() => setSnap(1)}
+        >
+          <SheetHandle />
+        </button>
+        <ExpandDetailSheet.Provider value={expand}>
+          {children}
+        </ExpandDetailSheet.Provider>
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -286,6 +391,11 @@ function PersonDetail({
   focusSignal,
 }: PersonDetailProps) {
   const select = useCanvasUIStore((s) => s.select)
+  const requestAddRelative = useCanvasUIStore((s) => s.requestAddRelative)
+  const requestEdit = useCanvasUIStore((s) => s.requestEdit)
+  const compact = useIsCompact()
+  const expandSheet = useExpandDetailSheet()
+  const [overflowOpen, setOverflowOpen] = useState(false)
   // Bumping this remounts PersonForm, which is how "Revert" throws away
   // unsaved edits — the form owns its own field state.
   const [formKey, setFormKey] = useState(0)
@@ -322,25 +432,82 @@ function PersonDetail({
 
   return (
     <>
-      <div className="flex flex-none items-center gap-3 border-b border-border p-4">
+      <div className="flex flex-none items-center gap-3 border-b border-border p-4 max-md:gap-3.5 max-md:py-3">
         <PersonAvatar photoId={coverPhotoId(person)} size="panel" />
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-2">
-            <h2 className="truncate font-heading text-sm font-semibold">
+            <h2 className="truncate font-heading text-sm font-semibold max-md:text-15">
               {personName(person)}
             </h2>
             {person.isPlaceholder && <PlaceholderBadge />}
           </div>
-          <span className="flex items-center gap-2 text-11 text-muted-foreground">
+          <span className="flex items-center gap-2 text-11 text-muted-foreground max-md:text-12-5">
             {lifeSpan(person)}
             <GenerationChip generation={generation} />
           </span>
         </div>
+        {compact && (
+          <Button
+            variant="secondary"
+            size="icon-sm"
+            aria-label="Close"
+            className="ml-auto"
+            onClick={() => select(null)}
+          >
+            <XIcon />
+          </Button>
+        )}
       </div>
+
+      {/* The row the peek height lands on. What a reader wants one tap away
+          having just chosen someone is the two things they came to do — not
+          Delete, which is what a sticky destructive footer put under the thumb.
+          Remove and Delete move into the overflow, still one tap away but not
+          the tap you make by accident. */}
+      {compact && (
+        <div className="flex flex-none touch-none items-center gap-2 border-b border-border px-4 py-2.5">
+          <Button
+            size="sm"
+            className="flex-1"
+            onClick={() => {
+              expandSheet()
+              setTab("family")
+              requestAddRelative(personNodeId(person.id), "add-child")
+            }}
+          >
+            Add relative
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={() => {
+              expandSheet()
+              setTab("details")
+              requestEdit(personNodeId(person.id))
+            }}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="More actions"
+            onClick={() => setOverflowOpen(true)}
+          >
+            <MoreHorizontal />
+          </Button>
+        </div>
+      )}
 
       <Tabs
         value={tab}
-        onValueChange={(value) => setTab(value as DetailTab)}
+        onValueChange={(value) => {
+          setTab(value as DetailTab)
+          // Choosing a tab is asking to read it, and at the peek height a tab
+          // panel is a two-pixel sliver.
+          expandSheet()
+        }}
         className="flex min-h-0 flex-1 flex-col"
       >
         <TabsList>
@@ -603,18 +770,63 @@ function PersonDetail({
         </div>
       </Tabs>
 
-      <div className="flex flex-none justify-between gap-2 border-t border-border px-4 py-3">
-        <Button variant="outline" size="sm" onClick={() => setRemoveOpen(true)}>
-          Remove from tree
-        </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => setDeleteOpen(true)}
-        >
-          Delete
-        </Button>
-      </div>
+      {!compact && (
+        <div className="flex flex-none justify-between gap-2 border-t border-border px-4 py-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setRemoveOpen(true)}
+          >
+            Remove from tree
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setDeleteOpen(true)}
+          >
+            Delete
+          </Button>
+        </div>
+      )}
+
+      {compact && (
+        <Sheet open={overflowOpen} onOpenChange={setOverflowOpen}>
+          <SheetContent>
+            <SheetHeader className="border-b border-border">
+              <SheetTitle>{personName(person)}</SheetTitle>
+            </SheetHeader>
+            <SheetBody className="flex flex-col gap-0.5 pt-2">
+              <SheetItem
+                label="Add whole family"
+                detail="A partner and their children, in one step"
+                onClick={() => {
+                  setOverflowOpen(false)
+                  expandSheet()
+                  setTab("family")
+                  setFamilyOpen(true)
+                }}
+              />
+              <SheetItem
+                label="Remove from this tree"
+                detail="Stays in your people library"
+                onClick={() => {
+                  setOverflowOpen(false)
+                  setRemoveOpen(true)
+                }}
+              />
+              <SheetItem
+                destructive
+                label="Delete person"
+                detail="From every tree. Cannot be undone"
+                onClick={() => {
+                  setOverflowOpen(false)
+                  setDeleteOpen(true)
+                }}
+              />
+            </SheetBody>
+          </SheetContent>
+        </Sheet>
+      )}
 
       <RemoveFromTreeDialog
         open={removeOpen}
