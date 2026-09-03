@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/readex-pro";
 
 @custom-variant dark (&:is(.dark *));
 /* Touch and stylus, as distinct from a mouse. Used where the right answer
@@ -105,8 +105,8 @@
 }
 
 @theme inline {
-  --font-sans: "Geist Variable", sans-serif;
-  --font-heading: "Geist Variable", sans-serif;
+  --font-sans: "Readex Pro Variable", sans-serif;
+  --font-heading: "Readex Pro Variable", sans-serif;
   --color-canvas-dot: var(--canvas-dot);
   --color-edge-spouse: var(--edge-spouse);
   --color-edge-parent-child: var(--edge-parent-child);

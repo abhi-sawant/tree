@@ -81,7 +81,10 @@ export default defineConfig({
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
       },
-      devOptions: { enabled: false },
+      // suppressWarnings avoids a workbox-build warning: the dev service
+      // worker's precache glob runs against dev-dist, which has none of the
+      // real build output, so a real globPatterns scan always comes up empty.
+      devOptions: { enabled: true, suppressWarnings: true },
     }),
   ],
 })
