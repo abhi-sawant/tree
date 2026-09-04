@@ -13,7 +13,6 @@ import {
   type AddAction,
   type AddActionKind,
 } from "~/components/canvas/add-relative-menu"
-import { AddFamilyForm } from "~/components/canvas/add-family-form"
 import { RelativeForm } from "~/components/canvas/relative-form"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
@@ -60,7 +59,6 @@ import {
   updateRelationshipSubtype,
   type RelationshipDates,
 } from "~/lib/db/relationship-actions"
-import { addFamily } from "~/lib/db/add-family"
 import { removeRelationship } from "~/lib/db/relationships"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Label } from "~/components/ui/label"
@@ -279,11 +277,13 @@ function DetailContainer({
 }) {
   const compact = useIsCompact()
   const select = useCanvasUIStore((s) => s.select)
-  // Opens at the peek every time, rather than remembering the last height: a
-  // sheet that reopens full-height hides the card that was just tapped.
-  const [snap, setSnap] = useState<string | number | null>(PEEK)
+  // Opens full every time, rather than at the peek or the last height: the
+  // point of tapping a card is to read its record, not to drag a handle
+  // first. A reader can still swipe down to the peek if they want the canvas
+  // back.
+  const [snap, setSnap] = useState<string | number | null>(1)
   const selectedNodeId = useSelectedNodeId()
-  useEffect(() => setSnap(PEEK), [selectedNodeId])
+  useEffect(() => setSnap(1), [selectedNodeId])
   const expand = useCallback(() => setSnap(1), [])
 
   if (!compact) {
@@ -391,8 +391,6 @@ function PersonDetail({
   focusSignal,
 }: PersonDetailProps) {
   const select = useCanvasUIStore((s) => s.select)
-  const requestAddRelative = useCanvasUIStore((s) => s.requestAddRelative)
-  const requestEdit = useCanvasUIStore((s) => s.requestEdit)
   const compact = useIsCompact()
   const expandSheet = useExpandDetailSheet()
   const [overflowOpen, setOverflowOpen] = useState(false)
@@ -401,7 +399,6 @@ function PersonDetail({
   const [formKey, setFormKey] = useState(0)
   const [removeOpen, setRemoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [familyOpen, setFamilyOpen] = useState(false)
   // Notes read as prose by default and edit on request. Leaving the textarea
   // permanently open would mean the [[links]] were never clickable, which is
   // the whole point of writing them.
@@ -430,6 +427,63 @@ function PersonDetail({
     toast("Changes saved")
   }
 
+  // Shared between the desktop inline panel and the mobile full sheet, so the
+  // submit handlers exist in exactly one place.
+  const relativeForm = action && (
+    <RelativeForm
+      key={`${action.kind}:${action.mode}`}
+      mode={action.mode}
+      excludeIds={
+        action.kind === "add-parent"
+          ? [person.id, ...parentRels.map((r) => r.from)]
+          : [person.id]
+      }
+      showDates={action.kind === "add-spouse"}
+      // Every kind except a spouse: a marriage has no subtype to choose. A
+      // sibling's subtype is their own link to the shared parents, which is
+      // as ordinary a thing to record as a child's.
+      showSubtype={action.kind !== "add-spouse"}
+      onSubmitNew={async (values, dates, photoAction, subtype) => {
+        let created: Person | undefined
+        if (action.kind === "add-parent")
+          created = await addParentNew(person.id, treeId, values, subtype)
+        else if (action.kind === "add-spouse")
+          created = await addSpouseNew(person.id, treeId, values, dates)
+        else if (action.kind === "add-child")
+          created = await addChildNew(
+            { kind: "person", personId: person.id },
+            treeId,
+            values,
+            subtype
+          )
+        else if (action.kind === "add-sibling")
+          created = await addSiblingNew(person.id, treeId, values, subtype)
+        if (created && photoAction.kind === "staged")
+          await setPersonPhoto(created.id, photoAction.blob, photoAction.mime)
+        setAction(undefined)
+        toast("Relative added")
+      }}
+      onSubmitExisting={async (picked, dates, subtype) => {
+        if (action.kind === "add-parent")
+          await addParentExisting(person.id, treeId, picked.id, subtype)
+        else if (action.kind === "add-spouse")
+          await addSpouseExisting(person.id, treeId, picked.id, dates)
+        else if (action.kind === "add-child")
+          await addChildExisting(
+            { kind: "person", personId: person.id },
+            treeId,
+            picked.id,
+            subtype
+          )
+        else if (action.kind === "add-sibling")
+          await addSiblingExisting(person.id, treeId, picked.id, subtype)
+        setAction(undefined)
+        toast("Relative linked")
+      }}
+      onCancel={() => setAction(undefined)}
+    />
+  )
+
   return (
     <>
       <div className="flex flex-none items-center gap-3 border-b border-border p-4 max-md:gap-3.5 max-md:py-3">
@@ -447,58 +501,26 @@ function PersonDetail({
           </span>
         </div>
         {compact && (
-          <Button
-            variant="secondary"
-            size="icon-sm"
-            aria-label="Close"
-            className="ml-auto"
-            onClick={() => select(null)}
-          >
-            <XIcon />
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="icon-sm"
+              aria-label="More actions"
+              onClick={() => setOverflowOpen(true)}
+            >
+              <MoreHorizontal />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon-sm"
+              aria-label="Close"
+              onClick={() => select(null)}
+            >
+              <XIcon />
+            </Button>
+          </div>
         )}
       </div>
-
-      {/* The row the peek height lands on. What a reader wants one tap away
-          having just chosen someone is the two things they came to do — not
-          Delete, which is what a sticky destructive footer put under the thumb.
-          Remove and Delete move into the overflow, still one tap away but not
-          the tap you make by accident. */}
-      {compact && (
-        <div className="flex flex-none touch-none items-center gap-2 border-b border-border px-4 py-2.5">
-          <Button
-            size="sm"
-            className="flex-1"
-            onClick={() => {
-              expandSheet()
-              setTab("family")
-              requestAddRelative(personNodeId(person.id), "add-child")
-            }}
-          >
-            Add relative
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={() => {
-              expandSheet()
-              setTab("details")
-              requestEdit(personNodeId(person.id))
-            }}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label="More actions"
-            onClick={() => setOverflowOpen(true)}
-          >
-            <MoreHorizontal />
-          </Button>
-        </div>
-      )}
 
       <Tabs
         value={tab}
@@ -582,6 +604,13 @@ function PersonDetail({
           </TabsContent>
 
           <TabsContent value="family">
+            {compact && (
+              <MobileAddRelativeButtons
+                parentCount={parentRels.length}
+                givenName={person.givenName}
+                onOpenAction={setAction}
+              />
+            )}
             <RelationshipList
               showSubtype
               title="Parents"
@@ -612,163 +641,66 @@ function PersonDetail({
               relationships={relationships}
               people={people}
             />
-
-            <AddRelativeMenu
-              selection={{ kind: "person", person }}
-              parentCount={parentRels.length}
-              onOpenAction={(next) => {
-                setFamilyOpen(false)
-                setAction(next)
-              }}
-            />
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start"
-              onClick={() => {
-                setAction(undefined)
-                setFamilyOpen(true)
-              }}
-            >
-              Add whole family…
-            </Button>
-
-            {familyOpen && (
-              <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-muted/40 p-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-heading text-10 font-semibold">
-                    Add whole family
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => setFamilyOpen(false)}
-                  >
-                    <XIcon />
-                    <span className="sr-only">Close</span>
-                  </Button>
-                </div>
-                <AddFamilyForm
-                  anchor={person}
-                  currentSpouses={spouseRels
-                    .map((r) =>
-                      people.get(r.from === person.id ? r.to : r.from)
-                    )
-                    .filter((p): p is Person => p !== undefined)}
-                  onSubmit={async (spouse, marriage, children) => {
-                    const result = await addFamily({
-                      anchorPersonId: person.id,
-                      treeId,
-                      spouse,
-                      marriage,
-                      children,
-                    })
-                    setFamilyOpen(false)
-                    const added =
-                      (result.spouse ? 1 : 0) + result.children.length
-                    toast(
-                      added === 1 ? "1 person added" : `${added} people added`
-                    )
-                  }}
-                  onCancel={() => setFamilyOpen(false)}
-                />
-              </div>
-            )}
           </TabsContent>
 
-          {action && (
+          {!compact && action && (
             <AddRelativePanel
               action={action}
               onModeChange={(mode) => setAction({ kind: action.kind, mode })}
               onCancel={() => setAction(undefined)}
             >
-              <RelativeForm
-                key={`${action.kind}:${action.mode}`}
-                mode={action.mode}
-                excludeIds={
-                  action.kind === "add-parent"
-                    ? [person.id, ...parentRels.map((r) => r.from)]
-                    : [person.id]
-                }
-                showDates={action.kind === "add-spouse"}
-                // Every kind except a spouse: a marriage has no subtype to
-                // choose. A sibling's subtype is their own link to the shared
-                // parents, which is as ordinary a thing to record as a child's.
-                showSubtype={action.kind !== "add-spouse"}
-                onSubmitNew={async (values, dates, photoAction, subtype) => {
-                  let created: Person | undefined
-                  if (action.kind === "add-parent")
-                    created = await addParentNew(
-                      person.id,
-                      treeId,
-                      values,
-                      subtype
-                    )
-                  else if (action.kind === "add-spouse")
-                    created = await addSpouseNew(
-                      person.id,
-                      treeId,
-                      values,
-                      dates
-                    )
-                  else if (action.kind === "add-child")
-                    created = await addChildNew(
-                      { kind: "person", personId: person.id },
-                      treeId,
-                      values,
-                      subtype
-                    )
-                  else if (action.kind === "add-sibling")
-                    created = await addSiblingNew(
-                      person.id,
-                      treeId,
-                      values,
-                      subtype
-                    )
-                  if (created && photoAction.kind === "staged")
-                    await setPersonPhoto(
-                      created.id,
-                      photoAction.blob,
-                      photoAction.mime
-                    )
-                  setAction(undefined)
-                  toast("Relative added")
-                }}
-                onSubmitExisting={async (picked, dates, subtype) => {
-                  if (action.kind === "add-parent")
-                    await addParentExisting(
-                      person.id,
-                      treeId,
-                      picked.id,
-                      subtype
-                    )
-                  else if (action.kind === "add-spouse")
-                    await addSpouseExisting(person.id, treeId, picked.id, dates)
-                  else if (action.kind === "add-child")
-                    await addChildExisting(
-                      { kind: "person", personId: person.id },
-                      treeId,
-                      picked.id,
-                      subtype
-                    )
-                  else if (action.kind === "add-sibling")
-                    await addSiblingExisting(
-                      person.id,
-                      treeId,
-                      picked.id,
-                      subtype
-                    )
-                  setAction(undefined)
-                  toast("Relative linked")
-                }}
-                onCancel={() => setAction(undefined)}
-              />
+              {relativeForm}
             </AddRelativePanel>
           )}
         </div>
       </Tabs>
+
+      {/* On mobile the form opens as its own full sheet rather than a div
+          appended below the Family tab — the tap that opened it was a
+          statement of intent, not a request to keep browsing the record
+          behind a growing scroll. */}
+      {compact && (
+        <Sheet
+          open={!!action}
+          onOpenChange={(open) => {
+            if (!open) setAction(undefined)
+          }}
+        >
+          <SheetContent variant="full">
+            {action && (
+              <>
+                <div className="flex h-14 flex-none items-center justify-between border-b border-border px-4">
+                  <span className="truncate font-heading text-15 font-semibold">
+                    {action.mode === "record-marriage"
+                      ? "Record marriage"
+                      : ADD_TITLES[action.kind]}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Close"
+                    onClick={() => setAction(undefined)}
+                  >
+                    <XIcon />
+                  </Button>
+                </div>
+                <SheetBody className="pt-4">
+                  {action.mode !== "record-marriage" && (
+                    <AddRelativeModeToggle
+                      mode={action.mode}
+                      onChange={(mode) =>
+                        setAction({ kind: action.kind, mode })
+                      }
+                    />
+                  )}
+                  <div className="pt-3">{relativeForm}</div>
+                </SheetBody>
+              </>
+            )}
+          </SheetContent>
+        </Sheet>
+      )}
 
       {!compact && (
         <div className="flex flex-none justify-between gap-2 border-t border-border px-4 py-3">
@@ -796,16 +728,6 @@ function PersonDetail({
               <SheetTitle>{personName(person)}</SheetTitle>
             </SheetHeader>
             <SheetBody className="flex flex-col gap-0.5 pt-2">
-              <SheetItem
-                label="Add whole family"
-                detail="A partner and their children, in one step"
-                onClick={() => {
-                  setOverflowOpen(false)
-                  expandSheet()
-                  setTab("family")
-                  setFamilyOpen(true)
-                }}
-              />
               <SheetItem
                 label="Remove from this tree"
                 detail="Stays in your people library"
@@ -877,25 +799,90 @@ function AddRelativePanel({
           <span className="sr-only">Close</span>
         </Button>
       </div>
-      {!isMarriage && (
-        <div className="flex gap-1.5">
-          <Button
-            variant={action.mode === "new" ? "secondary" : "outline"}
-            size="xs"
-            onClick={() => onModeChange("new")}
-          >
-            New person
-          </Button>
-          <Button
-            variant={action.mode === "existing" ? "secondary" : "outline"}
-            size="xs"
-            onClick={() => onModeChange("existing")}
-          >
-            Existing
-          </Button>
-        </div>
+      {action.mode !== "record-marriage" && (
+        <AddRelativeModeToggle mode={action.mode} onChange={onModeChange} />
       )}
       {children}
+    </div>
+  )
+}
+
+// Shared by the desktop inline panel and the mobile full sheet.
+function AddRelativeModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: "new" | "existing"
+  onChange: (mode: "new" | "existing") => void
+}) {
+  return (
+    <div className="flex gap-1.5">
+      <Button
+        variant={mode === "new" ? "default" : "outline"}
+        size="xs"
+        onClick={() => onChange("new")}
+      >
+        New person
+      </Button>
+      <Button
+        variant={mode === "existing" ? "default" : "outline"}
+        size="xs"
+        onClick={() => onChange("existing")}
+      >
+        Existing
+      </Button>
+    </div>
+  )
+}
+
+const MOBILE_ADD_RELATIVE_ACTIONS: Array<{
+  kind: AddActionKind
+  label: string
+}> = [
+  { kind: "add-spouse", label: "Add spouse" },
+  { kind: "add-child", label: "Add child" },
+  { kind: "add-parent", label: "Add parent" },
+  { kind: "add-sibling", label: "Add sibling" },
+]
+
+// The Family tab's mobile counterpart to the canvas's own quick-add toolbar
+// (person-node.tsx) — the same four actions, since there is no node toolbar
+// to float under on a phone. Each one opens straight into the full sheet
+// above, always starting on "new" the way the canvas quick-add does.
+function MobileAddRelativeButtons({
+  parentCount,
+  givenName,
+  onOpenAction,
+}: {
+  parentCount: number
+  givenName: string
+  onOpenAction: (action: AddAction) => void
+}) {
+  const parentsFull = parentCount >= 2
+
+  return (
+    <div className="flex flex-col gap-1.5 border-b pb-4">
+      <p className="font-heading text-xs font-semibold text-muted-foreground">
+        Add relative
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {MOBILE_ADD_RELATIVE_ACTIONS.map(({ kind, label }) => (
+          <Button
+            key={kind}
+            variant="outline"
+            size="sm"
+            disabled={kind === "add-parent" && parentsFull}
+            onClick={() => onOpenAction({ kind, mode: "new" })}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      {parentsFull && (
+        <p className="text-12-5 leading-snug text-muted-foreground">
+          {givenName} already has two parents recorded. Remove one first.
+        </p>
+      )}
     </div>
   )
 }
@@ -1132,8 +1119,8 @@ function RelationshipList({
   const [editingId, setEditingId] = useState<string | undefined>(undefined)
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="font-heading text-9-5 font-semibold text-muted-foreground">
+    <div className="flex flex-col gap-1.5 border-b pb-4 not-first-of-type:mt-4">
+      <p className="font-heading text-xs font-semibold text-muted-foreground">
         {title}
       </p>
       {relationships.length === 0 && (
@@ -1146,20 +1133,18 @@ function RelationshipList({
         return (
           <div
             key={r.id}
-            className="flex flex-col gap-2 border border-border/60 p-2"
+            className="flex flex-col gap-2 rounded-md border border-border/60 p-2"
           >
             <div className="flex items-center gap-2">
               <PersonAvatar photoId={coverPhotoId(other)} size="xs" />
               <div className="flex min-w-0 flex-col">
-                <Button
+                <button
                   type="button"
-                  variant="link"
-                  size="xs"
-                  className="h-auto justify-start truncate p-0 text-xs tracking-normal normal-case"
+                  className="mb-1 text-xs text-primary"
                   onClick={() => onSelect(personNodeId(otherId))}
                 >
                   {personName(other)}
-                </Button>
+                </button>
                 {showDates && (r.start || r.end) && (
                   <span className="text-11 text-muted-foreground">
                     {formatPartialDate(r.start)}
@@ -1260,8 +1245,8 @@ function MultipleBirthEditor({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="font-heading text-9-5 font-semibold text-muted-foreground">
+    <div className="flex flex-col gap-1.5 border-b py-3">
+      <p className="font-heading text-xs font-semibold text-muted-foreground">
         Born alongside
       </p>
       {siblingIds.map((siblingId) => (
@@ -1301,7 +1286,7 @@ function SubtypeSelect({
       aria-label="How this parent-child link came about"
       value={relationship.subtype ?? "biological"}
       onChange={(e) => void handleChange(e.target.value)}
-      className="h-6 text-11"
+      className="h-6 py-0 text-xs md:text-xs"
     >
       {SUBTYPE_OPTIONS.map(({ value, label }) => (
         <option key={value} value={value}>

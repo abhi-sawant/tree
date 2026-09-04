@@ -64,8 +64,8 @@ export function AddRelativeMenu({
       : "Two parents are already recorded."
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold text-muted-foreground">
+    <div className="flex flex-col gap-2 pt-4">
+      <p className="text-sm font-semibold text-muted-foreground">
         Add relative
         {parentsFull && (
           <span className="ml-1.5 font-normal">· 2 of 2 parents</span>

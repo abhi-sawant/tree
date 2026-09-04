@@ -2,6 +2,7 @@
 .env*
 node_modules
 dist
+dev-dist
 
 # typescript
 *.tsbuildinfo

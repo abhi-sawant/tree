@@ -238,20 +238,10 @@ export function SidebarContent({
                   active ? "bg-primary/10" : "bg-transparent"
                 )}
               >
-                <span
-                  className={cn(
-                    "truncate text-xs font-semibold",
-                    page && "text-15"
-                  )}
-                >
+                <span className={cn("truncate text-xs font-semibold")}>
                   {tree.name}
                 </span>
-                <span
-                  className={cn(
-                    "ml-auto text-11 text-muted-foreground",
-                    page && "text-12-5"
-                  )}
-                >
+                <span className={cn("ml-auto text-xs text-muted-foreground")}>
                   {memberCount(tree.id)}
                 </span>
               </button>
@@ -333,8 +323,8 @@ export function SidebarContent({
         </div>
         <p
           className={cn(
-            "text-11 leading-snug text-muted-foreground",
-            page && "text-12-5"
+            "text-xs leading-snug text-muted-foreground",
+            page && "text-xs"
           )}
         >
           Last backup{" "}

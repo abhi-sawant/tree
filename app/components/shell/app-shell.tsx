@@ -6,6 +6,8 @@ import { MobileBottomNav } from "~/components/shell/mobile-bottom-nav"
 import { BackupNudgeBanner } from "~/components/shell/backup-nudge"
 import { TabNotice } from "~/components/shell/tab-notice"
 import { CommandPalette } from "~/components/shell/command-palette"
+import { useExportActions } from "~/components/shell/export-actions"
+import { ExportSheet } from "~/components/shell/topbar-sheets"
 import { CreateTreeDialog } from "~/components/trees/create-tree-dialog"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
 import { Toaster } from "~/components/ui/toast"
@@ -176,6 +178,20 @@ export function AppShell({
     exportToken,
   }
 
+  // Lifted above the topbar (which only mounts on a phone while the tree
+  // canvas is on screen) so Export stays reachable from every mobile screen
+  // via the bottom bar, not just from the canvas.
+  const exportActions = useExportActions({
+    treeName: tree.name,
+    // PNG and PDF capture the live React Flow viewport, so they only mean
+    // anything while the canvas is on screen.
+    canvasAvailable: view === "tree",
+    onExportBackup: () => void handleExportBackup(),
+    exportingBackup,
+    onExportFamilyBook: () => void handleExportFamilyBook(),
+    exportingFamilyBook: exportingBook,
+  })
+
   return (
     // h-dvh rather than h-svh: with a bottom bar in the layout, sizing to the
     // *small* viewport leaves the bar permanently under the browser's own
@@ -184,11 +200,12 @@ export function AppShell({
       <AppSidebar {...sidebarProps} />
 
       <div data-print="flow" className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {/* On a phone the topbar is the *canvas* chrome — the tree's name, the
-            view switch, export. Every other view owns its own header there
+        {/* On a phone the topbar is the *canvas* chrome — the tree's name,
+            search, add person. Every other view owns its own header there
             (People its count and add button, Settings a back arrow), because a
             tree title above the photo wall names something the reader is not
-            looking at. On a wide screen it is the shell's header as before. */}
+            looking at. On a wide screen it is the shell's header as before,
+            with the view switch and Export dropdown it has room for. */}
         {(!isMobile || view === "tree") && (
           <AppTopbar
             tree={tree}
@@ -197,10 +214,7 @@ export function AppShell({
             generationCount={generationCount}
             rootName={rootName}
             onCreateTree={() => setCreateTreeOpen(true)}
-            onExportBackup={() => void handleExportBackup()}
-            exportingBackup={exportingBackup}
-            onExportFamilyBook={() => void handleExportFamilyBook()}
-            exportingFamilyBook={exportingBook}
+            exportActions={exportActions}
           />
         )}
 
@@ -265,6 +279,7 @@ export function AppShell({
       </div>
 
       {isMobile && <MobileBottomNav />}
+      {isMobile && <ExportSheet actions={exportActions} />}
 
       <CommandPalette
         generations={generations}

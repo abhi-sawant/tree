@@ -1,11 +1,8 @@
-import { ChevronDown, MoreHorizontal, Plus, Search } from "lucide-react"
+import { ChevronDown, Plus, Search } from "lucide-react"
 import { useState } from "react"
 
-import { useExportActions } from "~/components/shell/export-actions"
-import {
-  ExportSheet,
-  TreeSwitcherSheet,
-} from "~/components/shell/topbar-sheets"
+import { TreeSwitcherSheet } from "~/components/shell/topbar-sheets"
+import type { ExportAction } from "~/components/shell/export-actions"
 import { PersonFormDialog } from "~/components/people/person-form-dialog"
 import { AddExistingPersonDialog } from "~/components/trees/add-existing-person-dialog"
 import { ChangeRootDialog } from "~/components/trees/change-root-dialog"
@@ -38,10 +35,7 @@ interface AppTopbarProps {
   generationCount: number
   rootName: string
   onCreateTree: () => void
-  onExportBackup: () => void
-  exportingBackup?: boolean
-  onExportFamilyBook: () => void
-  exportingFamilyBook?: boolean
+  exportActions: ExportAction[]
 }
 
 export function AppTopbar({
@@ -51,10 +45,7 @@ export function AppTopbar({
   generationCount,
   rootName,
   onCreateTree,
-  onExportBackup,
-  exportingBackup,
-  onExportFamilyBook,
-  exportingFamilyBook,
+  exportActions,
 }: AppTopbarProps) {
   const view = useAppShellStore((s) => s.view)
   const setView = useAppShellStore((s) => s.setView)
@@ -67,19 +58,6 @@ export function AppTopbar({
 
   const [dialog, setDialog] = useState<TreeDialog>(undefined)
   const [addPersonOpen, setAddPersonOpen] = useState(false)
-
-  // PNG and PDF capture the live React Flow viewport, so they only mean
-  // anything while the canvas is on screen.
-  const canvasExportsAvailable = view === "tree"
-
-  const exportActions = useExportActions({
-    treeName: tree.name,
-    canvasAvailable: canvasExportsAvailable,
-    onExportBackup,
-    exportingBackup,
-    onExportFamilyBook,
-    exportingFamilyBook,
-  })
 
   // The tree's identity, shared by both layouts. The root name is dropped on a
   // phone: three facts don't fit one line at 390px, and which tree is open
@@ -159,61 +137,40 @@ export function AppTopbar({
   )
 
   // ── Phone ────────────────────────────────────────────────────────────────
-  // Two rows instead of one, because the three groups the desktop bar holds
-  // side by side measure well over 390px together. Row one is identity and
-  // the two things worth a permanent button (search, add); row two is the
-  // view switch and the overflow. Every menu becomes a sheet.
+  // One row: identity and the two things worth a permanent button (search,
+  // add). The view switch, Export and view-options overflow used to live in a
+  // second row here, but each duplicated a control that already exists
+  // elsewhere on a phone — People in the bottom bar, Export there too, and
+  // view-options in the canvas's own corner stack — so the row is gone.
   if (isMobile) {
     return (
       <header
         data-print="hide"
-        className="relative z-30 flex flex-none flex-col border-b border-border"
+        className="relative z-30 flex h-14 flex-none items-center gap-1 border-b border-border pr-2 pl-4"
       >
-        <div className="flex h-14 items-center gap-1 pr-2 pl-4">
-          <button
-            type="button"
-            onClick={() => setMobileSheet("tree-switcher")}
-            className="flex min-w-0 cursor-pointer flex-col gap-0.5 text-left"
-          >
-            {treeTitle}
-          </button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Search ${people?.length ?? 0} people`}
-            className="ml-auto"
-            onClick={() => setPaletteOpen(true)}
-          >
-            <Search />
-          </Button>
-          <Button
-            size="icon-sm"
-            aria-label="Add person"
-            onClick={() => setAddPersonOpen(true)}
-          >
-            <Plus />
-          </Button>
-        </div>
-
-        <div className="flex h-12 items-center gap-2 border-t border-border px-3">
-          {viewSwitch}
-          <Button
-            variant="outline"
-            size="sm"
-            className="ml-auto"
-            onClick={() => setMobileSheet("export")}
-          >
-            Export <ChevronDown />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label="View options"
-            onClick={() => setMobileSheet("view-options")}
-          >
-            <MoreHorizontal />
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setMobileSheet("tree-switcher")}
+          className="flex min-w-0 cursor-pointer flex-col gap-0.5 text-left"
+        >
+          {treeTitle}
+        </button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Search ${people?.length ?? 0} people`}
+          className="ml-auto"
+          onClick={() => setPaletteOpen(true)}
+        >
+          <Search />
+        </Button>
+        <Button
+          size="icon-sm"
+          aria-label="Add person"
+          onClick={() => setAddPersonOpen(true)}
+        >
+          <Plus />
+        </Button>
 
         <TreeSwitcherSheet
           tree={tree}
@@ -225,7 +182,6 @@ export function AppTopbar({
           onCreateTree={onCreateTree}
           onDelete={() => setDialog("delete")}
         />
-        <ExportSheet actions={exportActions} />
         {treeDialogs}
       </header>
     )
@@ -343,7 +299,7 @@ function ViewTab({
       type="button"
       onClick={onClick}
       className={cn(
-        "h-7 cursor-pointer rounded-full px-3 font-heading text-xs font-semibold",
+        "h-7.5 cursor-pointer rounded-full px-3 font-heading text-xs font-semibold",
         active
           ? "bg-foreground text-background"
           : "bg-transparent text-muted-foreground hover:text-foreground"

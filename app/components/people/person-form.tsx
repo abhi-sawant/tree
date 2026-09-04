@@ -202,30 +202,96 @@ export function PersonForm({
         </p>
       )}
       {showIdentity && (
-        <>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="givenName">Given name</Label>
-            <Input
-              id="givenName"
-              ref={givenNameRef}
-              value={givenName}
-              onChange={(e) => setGivenName(e.target.value)}
-              aria-invalid={!!fieldErrors.givenName}
-            />
-            {fieldErrors.givenName && (
-              <p className="mt-1 text-xs text-destructive">
-                {fieldErrors.givenName}
-              </p>
+        <div className="flex flex-col gap-1">
+          <Label>{otherPhotoCount > 0 ? "Cover photo" : "Photo"}</Label>
+          <div className="flex items-center gap-3">
+            {stagedPreviewUrl ? (
+              <img
+                src={stagedPreviewUrl}
+                alt=""
+                className="size-26 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <PersonAvatar
+                photoId={
+                  photoAction.kind === "unchanged" ? initialCoverId : undefined
+                }
+                size="lg"
+              />
             )}
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={processingPhoto}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {processingPhoto
+                    ? "Processing…"
+                    : hasPhoto
+                      ? "Change photo"
+                      : "Add photo"}
+                </Button>
+                {hasPhoto && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemovePhoto}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+              {otherPhotoCount > 0 && (
+                <p className="text-11 leading-snug text-muted-foreground">
+                  {otherPhotoCount === 1
+                    ? "1 more photo in the Photos tab — untouched by this."
+                    : `${otherPhotoCount} more photos in the Photos tab — untouched by this.`}
+                </p>
+              )}
+              {photoError && (
+                <p className="text-sm text-destructive">{photoError}</p>
+              )}
+            </div>
           </div>
-
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="familyName">Family name</Label>
-            <Input
-              id="familyName"
-              value={familyName}
-              onChange={(e) => setFamilyName(e.target.value)}
-            />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoSelected}
+          />
+        </div>
+      )}
+      {showIdentity && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="givenName">Given name</Label>
+              <Input
+                id="givenName"
+                ref={givenNameRef}
+                value={givenName}
+                onChange={(e) => setGivenName(e.target.value)}
+                aria-invalid={!!fieldErrors.givenName}
+              />
+              {fieldErrors.givenName && (
+                <p className="mt-1 text-xs text-destructive">
+                  {fieldErrors.givenName}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="familyName">Family name</Label>
+              <Input
+                id="familyName"
+                value={familyName}
+                onChange={(e) => setFamilyName(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-x-3 gap-y-4">
@@ -282,7 +348,9 @@ export function PersonForm({
 
       {showIdentity && (
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-xs font-semibold">Other details</legend>
+          <legend className="mb-2 text-xs font-semibold text-primary">
+            Other details
+          </legend>
           {customFields.map((field, index) => (
             <div key={index} className="flex items-end gap-2">
               <div className="flex min-w-0 flex-1 basis-32 flex-col gap-1">
@@ -337,72 +405,6 @@ export function PersonForm({
             </Button>
           </div>
         </fieldset>
-      )}
-
-      {showIdentity && (
-        <div className="flex flex-col gap-1">
-          <Label>{otherPhotoCount > 0 ? "Cover photo" : "Photo"}</Label>
-          <div className="flex items-center gap-3">
-            {stagedPreviewUrl ? (
-              <img
-                src={stagedPreviewUrl}
-                alt=""
-                className="size-16 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <PersonAvatar
-                photoId={
-                  photoAction.kind === "unchanged" ? initialCoverId : undefined
-                }
-                size="lg"
-              />
-            )}
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-col gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={processingPhoto}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {processingPhoto
-                    ? "Processing…"
-                    : hasPhoto
-                      ? "Change photo"
-                      : "Add photo"}
-                </Button>
-                {hasPhoto && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRemovePhoto}
-                  >
-                    Remove
-                  </Button>
-                )}
-              </div>
-              {otherPhotoCount > 0 && (
-                <p className="text-11 leading-snug text-muted-foreground">
-                  {otherPhotoCount === 1
-                    ? "1 more photo in the Photos tab — untouched by this."
-                    : `${otherPhotoCount} more photos in the Photos tab — untouched by this.`}
-                </p>
-              )}
-              {photoError && (
-                <p className="text-sm text-destructive">{photoError}</p>
-              )}
-            </div>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handlePhotoSelected}
-          />
-        </div>
       )}
 
       {unhandledIssues.length > 0 && (

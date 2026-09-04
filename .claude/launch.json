@@ -9,7 +9,8 @@
         "dev"
       ],
       "port": 5173,
-      "autoPort": true
+      "autoPort": true,
+      "url": "https://localhost:5173"
     }
   ]
 }

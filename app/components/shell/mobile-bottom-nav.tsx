@@ -1,4 +1,4 @@
-import { Images, Menu, Network, Users } from "lucide-react"
+import { Download, Images, Menu, Network, Users } from "lucide-react"
 
 import { useAppShellStore, type ShellView } from "~/lib/ui/app-shell-store"
 import { cn } from "~/lib/utils"
@@ -22,6 +22,7 @@ export function MobileBottomNav() {
   const view = useAppShellStore((s) => s.view)
   const previousView = useAppShellStore((s) => s.previousView)
   const setView = useAppShellStore((s) => s.setView)
+  const setMobileSheet = useAppShellStore((s) => s.setMobileSheet)
 
   // On a sub-screen the highlighted tab is the one we came from — otherwise
   // opening Health would leave the bar with nothing lit.
@@ -31,7 +32,7 @@ export function MobileBottomNav() {
     <nav
       data-print="hide"
       aria-label="Main"
-      className="grid flex-none grid-cols-4 gap-1 border-t border-border bg-sidebar px-2.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]"
+      className="grid flex-none grid-cols-5 gap-1 border-t border-border bg-sidebar px-2.5 pt-1 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]"
     >
       {TABS.map(({ label, target, icon: Icon }) => {
         const active = current === target
@@ -42,17 +43,27 @@ export function MobileBottomNav() {
             aria-current={active ? "page" : undefined}
             onClick={() => setView(target)}
             className={cn(
-              "flex h-13 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl text-11",
+              "flex h-9 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl text-11",
               active
                 ? "bg-primary/10 font-semibold text-primary"
                 : "font-medium text-muted-foreground"
             )}
           >
             <Icon className="size-4.5" />
-            {label}
           </button>
         )
       })}
+      {/* Not a destination — nothing here lights up or changes what "current"
+          means — just the one action that used to live in the topbar's now-
+          removed second row. */}
+      <button
+        type="button"
+        aria-label="Export"
+        onClick={() => setMobileSheet("export")}
+        className="flex h-9 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl text-11 font-medium text-muted-foreground"
+      >
+        <Download className="size-4.5" />
+      </button>
     </nav>
   )
 }
