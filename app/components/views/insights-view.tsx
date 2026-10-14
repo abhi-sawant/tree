@@ -1,3 +1,4 @@
+import { PageHeader } from "~/components/shell/page-header"
 import { useMemo } from "react"
 
 import { Button } from "~/components/ui/button"
@@ -14,7 +15,7 @@ import {
 } from "~/lib/analysis/statistics"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { personNodeId } from "~/lib/graph/node-ids"
-import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView } from "~/lib/ui/use-shell-view"
 import {
   ANNIVERSARY_WINDOWS,
   anniversaryWindowLabel,
@@ -42,7 +43,7 @@ export function InsightsView({
   relationships,
   today,
 }: InsightsViewProps) {
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
   const requestCenter = useCanvasUIStore((s) => s.requestCenter)
   const windowDays = useInsightsStore((s) => s.anniversaryWindowDays)
   const setWindowDays = useInsightsStore((s) => s.setAnniversaryWindowDays)
@@ -88,12 +89,12 @@ export function InsightsView({
   return (
     <>
       <MobileScreenHeader title="Insights" detail={tree.name} />
-      <div className="flex min-h-0 flex-1 flex-col gap-7 overflow-y-auto p-6 max-md:gap-6 max-md:p-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-7 overflow-y-auto px-8 py-7 max-md:gap-6 max-md:p-4 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-6xl">
+        <PageHeader title="Insights" detail={tree.name} />
         <section className="flex flex-col gap-2">
-          <SectionHeading className="max-md:hidden">{tree.name}</SectionHeading>
           {/* A wrapping row of four tiles leaves an orphan on a phone; a
             two-column grid keeps them paired. */}
-          <div className="flex flex-wrap gap-x-8 gap-y-3 rounded-lg border border-border p-3 max-md:grid max-md:grid-cols-2 max-md:gap-4 max-md:p-4">
+          <div className="flex flex-wrap gap-x-8 gap-y-3 rounded-2xl border border-border bg-card p-3 max-md:grid max-md:grid-cols-2 max-md:gap-4 max-md:p-4">
             <Tile value={stats.peopleCount} label="people" />
             <Tile value={stats.generations.length} label="generations" />
             <Tile
@@ -147,7 +148,7 @@ export function InsightsView({
             </div>
           </div>
           {todays.length + upcoming.length === 0 ? (
-            <div className="flex flex-col items-start gap-2.5 border border-border p-3">
+            <div className="flex flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-3">
               <p className="text-13 text-muted-foreground">
                 Nothing in the {anniversaryWindowLabel(windowDays)}. Only exact
                 dates count — a bare year, or one recorded as approximate, has
@@ -297,8 +298,10 @@ function Tile({
         : value
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="font-heading text-xl font-semibold">{shown}</span>
-      <span className="font-heading text-10 font-semibold text-muted-foreground">
+      <span className="font-heading text-3xl leading-none font-semibold">
+        {shown}
+      </span>
+      <span className="text-13 font-semibold text-muted-foreground">
         {label}
       </span>
     </div>

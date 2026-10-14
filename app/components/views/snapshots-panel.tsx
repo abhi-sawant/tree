@@ -99,7 +99,7 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-12-5 leading-relaxed text-muted-foreground">
+      <p className="text-sm leading-relaxed text-muted-foreground">
         A snapshot is a rollback point kept inside this browser, taken
         automatically as you work and pruned to the last {MAX_SNAPSHOTS}. It
         covers names, dates, relationships and trees — not photos, which would
@@ -113,7 +113,7 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
       </p>
 
       {snapshots && snapshots.length > 0 ? (
-        <ul className="flex flex-col overflow-hidden rounded-lg border border-border">
+        <ul className="flex flex-col overflow-hidden rounded-2xl border border-border bg-background">
           {snapshots.map((snapshot) => (
             <li
               key={snapshot.id}
@@ -123,7 +123,7 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
                 <span className="text-13 font-medium">
                   {formatWhen(snapshot.createdAt)}
                 </span>
-                <span className="text-11 text-muted-foreground">
+                <span className="text-13 text-muted-foreground">
                   {REASON_LABEL[snapshot.reason]} · {snapshot.counts.people}{" "}
                   {snapshot.counts.people === 1 ? "person" : "people"} ·{" "}
                   {snapshot.counts.relationships} links ·{" "}
@@ -133,14 +133,14 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
               <div className="ml-auto flex gap-1.5">
                 <Button
                   variant="outline"
-                  size="xs"
+                  size="sm"
                   onClick={() => setPending(snapshot)}
                 >
                   Restore
                 </Button>
                 <Button
                   variant="ghost"
-                  size="xs"
+                  size="sm"
                   onClick={() => void handleDelete(snapshot)}
                 >
                   Delete
@@ -150,22 +150,22 @@ export function SnapshotsPanel({ tabId }: SnapshotsPanelProps) {
           ))}
         </ul>
       ) : (
-        <p className="rounded-lg border border-border p-3 text-13">
+        <p className="rounded-2xl border border-border bg-background p-4 text-13">
           No snapshots yet. One is taken shortly after your next edit.
         </p>
       )}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <Button
           variant="outline"
-          size="sm"
+
           disabled={taking}
           onClick={() => void handleSnapshotNow()}
         >
           {taking ? "Saving…" : "Snapshot now"}
         </Button>
         {totalBytes > 0 && (
-          <span className="text-xs text-muted-foreground">
+          <span className="text-13 text-muted-foreground">
             {formatBytes(totalBytes)} in total
           </span>
         )}

@@ -21,6 +21,14 @@ interface CanvasUIState {
   // claiming something the selection doesn't say.
   selectedNodeIds: string[]
   select: (nodeId: string | null) => void
+  // Whether the full record is open beside the canvas on a wide screen. A
+  // selection alone only raises the peek bar under the canvas; the record is
+  // for reading and editing, and opens when asked for — by "Open profile", or
+  // by anything that is itself a request to edit (Enter, add a relative).
+  // Compact screens ignore it: their sheet is the peek and the record at once.
+  profileOpen: boolean
+  openProfile: () => void
+  closeProfile: () => void
   // Shift/⌘-click. Toggling rather than adding, so the same gesture takes a
   // card back out of the selection.
   toggleSelected: (nodeId: string) => void
@@ -98,7 +106,14 @@ interface CanvasUIState {
 
 export const useCanvasUIStore = create<CanvasUIState>((set) => ({
   selectedNodeIds: [],
-  select: (nodeId) => set({ selectedNodeIds: nodeId ? [nodeId] : [] }),
+  select: (nodeId) =>
+    set((state) => ({
+      selectedNodeIds: nodeId ? [nodeId] : [],
+      profileOpen: nodeId ? state.profileOpen : false,
+    })),
+  profileOpen: false,
+  openProfile: () => set({ profileOpen: true }),
+  closeProfile: () => set({ profileOpen: false }),
   toggleSelected: (nodeId) =>
     set((state) => ({
       selectedNodeIds: state.selectedNodeIds.includes(nodeId)
@@ -112,11 +127,16 @@ export const useCanvasUIStore = create<CanvasUIState>((set) => ({
 
   pendingAddRelative: null,
   requestAddRelative: (nodeId, kind) =>
-    set({ selectedNodeIds: [nodeId], pendingAddRelative: { nodeId, kind } }),
+    set({
+      selectedNodeIds: [nodeId],
+      profileOpen: true,
+      pendingAddRelative: { nodeId, kind },
+    }),
   clearPendingAddRelative: () => set({ pendingAddRelative: null }),
 
   pendingEditNodeId: null,
-  requestEdit: (nodeId) => set({ pendingEditNodeId: nodeId }),
+  requestEdit: (nodeId) =>
+    set({ pendingEditNodeId: nodeId, profileOpen: true }),
   clearPendingEdit: () => set({ pendingEditNodeId: null }),
 
   pendingCenterNodeId: null,

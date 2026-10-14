@@ -7,6 +7,8 @@ import {
   EmptyTreeState,
 } from "~/components/canvas/canvas-states"
 import { DetailPanel } from "~/components/canvas/detail-panel"
+import { PeekBar } from "~/components/canvas/peek-bar"
+import { useIsCompact } from "~/lib/ui/viewport-tier"
 import { TreeCanvas } from "~/components/canvas/tree-canvas"
 import { bloodlineToRoot } from "~/lib/canvas/bloodline"
 import { computeColorIndices } from "~/lib/canvas/color-groups"
@@ -17,7 +19,10 @@ import {
   useSelectedNodeId,
 } from "~/lib/canvas/canvas-ui-store"
 import { useAppearanceStore } from "~/lib/canvas/appearance-store"
-import { resolveEdgeColor } from "~/lib/canvas/appearance-resolve"
+import {
+  resolveEdgeColor,
+  resolveGenerationColor,
+} from "~/lib/canvas/appearance-resolve"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import { parseNodeId, personNodeId } from "~/lib/graph/node-ids"
 import { toElkGraph } from "~/lib/graph/to-elk-graph"
@@ -60,6 +65,8 @@ export function TreeView({
   const focus = useCanvasUIStore((s) => s.focus)
   const selectedNodeId = useSelectedNodeId()
   const showBloodline = useCanvasUIStore((s) => s.showBloodline)
+  const profileOpen = useCanvasUIStore((s) => s.profileOpen)
+  const compact = useIsCompact()
   const appearance = useAppearanceStore((s) => s.settings)
   const redactLiving = usePrivacyStore((s) => s.redactLiving)
   const treeMembers = useTreeMembers(tree.id)
@@ -252,25 +259,48 @@ export function TreeView({
     return <CanvasLoadingState label="Laying out tree…" />
   }
 
+  const selectedPerson =
+    selectedNodeId && parseNodeId(selectedNodeId)?.kind === "person"
+      ? people.find(
+          (p) =>
+            p.id ===
+            (parseNodeId(selectedNodeId) as { personId: string }).personId
+        )
+      : undefined
+  const showPeek = !compact && !profileOpen && !!selectedPerson
+
   return (
-    <div className="flex min-h-0 flex-1">
-      <div className="h-full min-w-0 flex-1">
-        <TreeCanvas
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1">
+        <div className="h-full min-w-0 flex-1">
+          <TreeCanvas
+            treeId={tree.id}
+            generationCount={generationCount}
+            people={people}
+            relationships={relationships}
+            nodes={visibleGraph.nodes}
+            edges={visibleGraph.edges}
+          />
+        </div>
+        <DetailPanel
           treeId={tree.id}
-          generationCount={generationCount}
           people={people}
           relationships={relationships}
-          nodes={visibleGraph.nodes}
-          edges={visibleGraph.edges}
+          unions={unions}
+          generations={generations}
+          colorIndices={colorIndices}
         />
       </div>
-      <DetailPanel
-        treeId={tree.id}
-        people={people}
-        relationships={relationships}
-        unions={unions}
-        generations={generations}
-      />
+      {showPeek && selectedPerson && (
+        <PeekBar
+          person={selectedPerson}
+          relationships={relationships}
+          color={resolveGenerationColor(
+            colorIndices.get(selectedPerson.id) ?? 0,
+            appearance.generationColors
+          )}
+        />
+      )}
     </div>
   )
 }

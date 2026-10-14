@@ -1,3 +1,4 @@
+import { PageHeader } from "~/components/shell/page-header"
 import { useMemo, useState } from "react"
 
 import { MarkdownView } from "~/components/markdown/markdown-view"
@@ -54,130 +55,136 @@ export function HelpView() {
         detail={current ? undefined : "The bundled manual"}
         onBack={current ? () => setChosenId(undefined) : undefined}
       />
-      <div className="flex min-h-0 flex-1 max-md:flex-col">
-        <nav
-          aria-label="Help topics"
-          className={cn(
-            "flex w-60 flex-none flex-col gap-2 overflow-y-auto border-r border-border p-3",
-            "max-md:w-full max-md:flex-1 max-md:border-r-0 max-md:p-4",
-            current && "max-md:hidden"
-          )}
-        >
-          <Input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              setNarrowed(true)
-            }}
-            placeholder="Search the help…"
-            aria-label="Search the help"
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-8 py-7 max-md:p-0">
+          <PageHeader
+            title="Help"
+            detail="The bundled manual — it works offline too"
           />
-          {results.length === 0 ? (
-            <p className="px-1 py-2 text-11 text-muted-foreground">
-              Nothing here mentions all of that. Try one word.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-0.5">
-              {results.map((result) => {
-                const active = result.topic.id === current?.topic.id
-                return (
-                  <li key={result.topic.id}>
-                    <button
-                      type="button"
-                      // Marks the open page for a screen reader, which otherwise
-                      // has only the background colour to go on.
-                      aria-current={active ? "page" : undefined}
-                      onClick={() => {
-                        setChosenId(result.topic.id)
-                        setNarrowed(true)
-                      }}
-                      className={cn(
-                        "flex w-full cursor-pointer flex-col gap-0.5 border-l-2 px-2 py-1.5 text-left hover:bg-muted",
-                        "max-md:min-h-14 max-md:flex-row max-md:items-center max-md:gap-3 max-md:rounded-xl max-md:border-l-0 max-md:px-3.5",
-                        active
-                          ? "border-primary bg-primary/10"
-                          : "border-transparent"
-                      )}
-                    >
-                      <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-xs font-semibold max-md:text-15">
-                          {result.topic.title}
-                        </span>
-                        <span className="text-10 leading-snug text-muted-foreground max-md:text-12-5">
-                          {result.topic.summary}
-                        </span>
-                      </span>
-                      <span className="hidden text-muted-foreground max-md:ml-auto max-md:block">
-                        ›
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </nav>
-
-        <div
-          className={cn(
-            "flex min-w-0 flex-1 flex-col overflow-y-auto p-6 max-md:p-4",
-            !current && "max-md:hidden"
-          )}
-        >
-          {current && (
-            <article className="flex max-w-2xl flex-col gap-5">
-              <header className="flex flex-col gap-1">
-                <h2 className="font-heading text-sm font-semibold">
-                  {current.topic.title}
-                </h2>
-                <p className="text-13 text-muted-foreground">
-                  {current.topic.summary}
-                </p>
-              </header>
-
-              {hiddenCount > 0 && (
-                <div className="flex flex-wrap items-center gap-2 border border-border p-2.5">
-                  <span className="text-12-5 text-muted-foreground">
-                    {sections.length === 1
-                      ? "Showing the one part of this page that mentions"
-                      : `Showing the ${sections.length} parts of this page that mention`}{" "}
-                    &ldquo;{query.trim()}&rdquo;.
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    className="ml-auto"
-                    onClick={() => setNarrowed(false)}
-                  >
-                    Show the whole page
-                  </Button>
-                </div>
+          <div className="grid grid-cols-[19rem_minmax(0,1fr)] items-start gap-6 max-md:flex max-md:flex-col max-md:gap-0">
+            <nav
+              aria-label="Help topics"
+              className={cn(
+                "sticky top-0 flex flex-col gap-3 rounded-3xl bg-card p-4 shadow-card",
+                "max-md:static max-md:w-full max-md:flex-1 max-md:rounded-none max-md:bg-transparent max-md:p-4 max-md:shadow-none",
+                current && "max-md:hidden"
               )}
-
-              {sections.map((section) => (
-                <section key={section.heading} className="flex flex-col gap-2">
-                  <h3 className="font-heading text-13 font-semibold">
-                    {section.heading}
-                  </h3>
-                  <MarkdownView source={section.body} variant="page" />
-                  {section.shortcuts && (
-                    <ShortcutTable shortcuts={section.shortcuts} />
-                  )}
-                </section>
-              ))}
-              {/* Reached from the list on a phone, where the header's back arrow
-                is the only way out — but a topic is also worth stepping
-                between, which the pager below does on every tier. */}
-              <HelpPager
-                results={results}
-                currentId={current.topic.id}
-                onChoose={(id) => {
-                  setChosenId(id)
+            >
+              <Input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
                   setNarrowed(true)
                 }}
+                placeholder="Search the help…"
+                aria-label="Search the help"
               />
-            </article>
-          )}
+              {results.length === 0 ? (
+                <p className="px-1 py-2 text-sm text-muted-foreground">
+                  Nothing here mentions all of that. Try one word.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {results.map((result) => {
+                    const active = result.topic.id === current?.topic.id
+                    return (
+                      <li key={result.topic.id}>
+                        <button
+                          type="button"
+                          // Marks the open page for a screen reader, which otherwise
+                          // has only the background colour to go on.
+                          aria-current={active ? "page" : undefined}
+                          onClick={() => {
+                            setChosenId(result.topic.id)
+                            setNarrowed(true)
+                          }}
+                          className={cn(
+                            "flex w-full cursor-pointer flex-col gap-0.5 rounded-xl px-3.5 py-2.5 text-left hover:bg-muted",
+                            "max-md:min-h-14 max-md:flex-row max-md:items-center max-md:gap-3 max-md:px-3.5",
+                            active
+                              ? "bg-accent text-accent-foreground"
+                              : "bg-transparent"
+                          )}
+                        >
+                          <span className="flex min-w-0 flex-col gap-0.5">
+                            <span className="font-heading text-15 font-semibold max-md:text-base">
+                              {result.topic.title}
+                            </span>
+                            <span className="text-13 leading-snug text-muted-foreground">
+                              {result.topic.summary}
+                            </span>
+                          </span>
+                          <span className="hidden text-muted-foreground max-md:ml-auto max-md:block">
+                            ›
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </nav>
+
+            <div className={cn("min-w-0", !current && "max-md:hidden")}>
+              {current && (
+                <article className="flex flex-col gap-7 rounded-3xl bg-card p-9 shadow-card max-md:rounded-none max-md:bg-transparent max-md:p-4 max-md:shadow-none">
+                  <header className="flex flex-col gap-1.5">
+                    <h2 className="font-heading text-3xl leading-tight font-semibold tracking-tight max-md:text-2xl">
+                      {current.topic.title}
+                    </h2>
+                    <p className="text-base text-muted-foreground">
+                      {current.topic.summary}
+                    </p>
+                  </header>
+
+                  {hiddenCount > 0 && (
+                    <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-muted p-3.5">
+                      <span className="text-sm text-muted-foreground">
+                        {sections.length === 1
+                          ? "Showing the one part of this page that mentions"
+                          : `Showing the ${sections.length} parts of this page that mention`}{" "}
+                        &ldquo;{query.trim()}&rdquo;.
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-auto"
+                        onClick={() => setNarrowed(false)}
+                      >
+                        Show the whole page
+                      </Button>
+                    </div>
+                  )}
+
+                  {sections.map((section) => (
+                    <section
+                      key={section.heading}
+                      className="flex flex-col gap-3"
+                    >
+                      <h3 className="font-heading text-2xl font-semibold tracking-tight max-md:text-xl">
+                        {section.heading}
+                      </h3>
+                      <MarkdownView source={section.body} variant="page" />
+                      {section.shortcuts && (
+                        <ShortcutTable shortcuts={section.shortcuts} />
+                      )}
+                    </section>
+                  ))}
+                  {/* Reached from the list on a phone, where the header's back arrow
+                is the only way out — but a topic is also worth stepping
+                between, which the pager below does on every tier. */}
+                  <HelpPager
+                    results={results}
+                    currentId={current.topic.id}
+                    onChoose={(id) => {
+                      setChosenId(id)
+                      setNarrowed(true)
+                    }}
+                  />
+                </article>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </>
@@ -207,7 +214,7 @@ function HelpPager({
   return (
     <nav
       aria-label="Help topics, in order"
-      className="flex items-center gap-2 border-t border-border pt-4"
+      className="flex items-center gap-3 border-t border-border pt-6"
     >
       {/* Titles here are whole sentences ("Finding and fixing problems"), and
           a button is whitespace-nowrap by default — so the width has to be
@@ -216,8 +223,8 @@ function HelpPager({
       {previous && (
         <Button
           variant="outline"
-          size="sm"
-          className="h-auto max-w-[48%] py-2 text-left whitespace-normal"
+          size="lg"
+          className="h-auto max-w-[48%] py-3 text-left whitespace-normal"
           onClick={() => onChoose(previous.id)}
         >
           ‹ {previous.title}
@@ -226,8 +233,8 @@ function HelpPager({
       {next && (
         <Button
           variant="outline"
-          size="sm"
-          className="ml-auto h-auto max-w-[48%] py-2 text-right whitespace-normal"
+          size="lg"
+          className="ml-auto h-auto max-w-[48%] py-3 text-right whitespace-normal"
           onClick={() => onChoose(next.id)}
         >
           {next.title} ›
@@ -242,18 +249,18 @@ function HelpPager({
 // without needing column headers that would say nothing.
 function ShortcutTable({ shortcuts }: { shortcuts: HelpShortcut[] }) {
   return (
-    <dl className="flex flex-col border border-border">
+    <dl className="flex flex-col overflow-hidden rounded-2xl border border-border">
       {shortcuts.map((shortcut) => (
         <div
           key={shortcut.keys}
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-2.5 py-1.5 last:border-b-0 max-md:py-2.5"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-3 last:border-b-0"
         >
-          <dt className="w-24 flex-none max-md:w-auto max-md:min-w-24">
-            <kbd className="rounded-lg border border-border bg-muted px-1.5 py-0.5 font-mono text-11">
+          <dt className="w-32 flex-none max-md:w-auto max-md:min-w-24">
+            <kbd className="rounded-lg border border-border bg-muted px-2 py-0.5 font-mono text-13">
               {shortcut.keys}
             </kbd>
           </dt>
-          <dd className="text-12-5">{shortcut.description}</dd>
+          <dd className="text-sm">{shortcut.description}</dd>
         </div>
       ))}
     </dl>

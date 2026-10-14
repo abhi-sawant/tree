@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { computeColorIndices } from "~/lib/canvas/color-groups"
+import { computeColorIndices, surnameLegend } from "~/lib/canvas/color-groups"
 import type { Person, Relationship } from "~/lib/types"
 
 let clock = 0
@@ -174,6 +174,35 @@ describe("computeColorIndices — branch", () => {
         rootPersonId: "root",
       })
       for (const p of people) expect(result.has(p.id)).toBe(true)
+    }
+  })
+})
+
+describe("surnameLegend", () => {
+  it("lists surnames in the same order the cards are coloured", () => {
+    const people = [
+      person("a", { familyName: "Nair" }),
+      person("b", { familyName: "Sawant" }),
+      person("c", { familyName: "sawant" }),
+      person("d", { familyName: "Pereira" }),
+      person("e"),
+    ]
+    const legend = surnameLegend(people)
+    expect(legend).toEqual([
+      { label: "Sawant", index: 0, count: 2 },
+      { label: "Nair", index: 1, count: 1 },
+      { label: "Pereira", index: 2, count: 1 },
+    ])
+    const indices = computeColorIndices({
+      people,
+      relationships: [],
+      mode: "surname",
+    })
+    for (const row of legend) {
+      const holder = people.find(
+        (p) => p.familyName?.toLowerCase() === row.label.toLowerCase()
+      )!
+      expect(indices.get(holder.id)).toBe(row.index)
     }
   })
 })

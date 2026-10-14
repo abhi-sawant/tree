@@ -27,9 +27,9 @@ const HEADING_CLASS: Record<MarkdownVariant, Record<1 | 2 | 3, string>> = {
     3: "font-heading text-11 font-semibold text-muted-foreground",
   },
   page: {
-    1: "mt-1.5 font-heading text-base font-semibold",
-    2: "mt-1.5 font-heading text-sm font-semibold",
-    3: "font-heading text-13 font-semibold text-muted-foreground",
+    1: "mt-2 font-heading text-xl font-semibold",
+    2: "mt-2 font-heading text-lg font-semibold",
+    3: "font-heading text-base font-semibold text-muted-foreground",
   },
 }
 
@@ -62,8 +62,10 @@ export function MarkdownView({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2.5 text-13 leading-relaxed",
-        variant === "page" && "gap-3 text-sm",
+        "flex flex-col",
+        variant === "page"
+          ? "max-w-prose gap-4 text-base leading-7"
+          : "gap-2.5 text-13 leading-relaxed",
         className
       )}
     >
@@ -109,7 +111,7 @@ function BlockView({
     return (
       <Tag
         className={cn(
-          "flex flex-col gap-1 pl-4",
+          "flex flex-col gap-1.5 pl-5",
           block.ordered ? "list-decimal" : "list-disc"
         )}
       >
@@ -186,7 +188,7 @@ function InlineView({
       )
     case "code":
       return (
-        <code className="bg-muted px-1 py-0.5 font-mono text-11">
+        <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-13">
           {node.text}
         </code>
       )

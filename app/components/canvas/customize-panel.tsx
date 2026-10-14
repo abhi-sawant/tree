@@ -45,7 +45,6 @@ const NUMERIC_FIELDS: Array<{
 }> = [
   { key: "personWidth", label: "Card width", min: 120 },
   { key: "personHeight", label: "Card height", min: 80 },
-  { key: "avatarSize", label: "Avatar size", min: 24 },
   { key: "edgeStrokeWidth", label: "Connector width", min: 1 },
   { key: "horizontalSpacing", label: "Horizontal spacing", min: 0 },
   { key: "verticalSpacing", label: "Vertical spacing", min: 0 },

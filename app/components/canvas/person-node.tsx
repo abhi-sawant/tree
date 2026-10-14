@@ -11,7 +11,7 @@ import { useState } from "react"
 import type { AddActionKind } from "~/components/canvas/add-relative-menu"
 import { NodeActionsSheet } from "~/components/canvas/node-actions-sheet"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
-import { PersonAvatar } from "~/components/people/person-avatar"
+import { PrintPhoto } from "~/components/people/print-photo"
 import { PlaceholderBadge } from "~/components/people/placeholder-badge"
 import { RemoveFromTreeDialog } from "~/components/trees/remove-from-tree-dialog"
 import { Button } from "~/components/ui/button"
@@ -33,7 +33,7 @@ import { personDisplayName } from "~/lib/person-name"
 import { HANDLE, directionGeometry } from "~/lib/canvas/layout-direction"
 import { coverPhotoId } from "~/lib/person-photos"
 import { useLongPress } from "~/lib/canvas/use-long-press"
-import { useIsMobile } from "~/lib/ui/viewport-tier"
+import { useIsCompact, useIsMobile } from "~/lib/ui/viewport-tier"
 
 export type PersonNodeType = Node<PersonNodeData, "person">
 
@@ -52,7 +52,6 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   const generationColors = useAppearanceStore(
     (s) => s.settings.generationColors
   )
-  const avatarSize = useAppearanceStore((s) => s.settings.avatarSize)
   const showPhoto = useAppearanceStore((s) => s.settings.showPhoto)
   const showDates = useAppearanceStore((s) => s.settings.showDates)
   const levelColor = resolveGenerationColor(colorIndex, generationColors)
@@ -71,6 +70,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [actionsOpen, setActionsOpen] = useState(false)
   const isMobile = useIsMobile()
+  const compact = useIsCompact()
   const longPress = useLongPress(() => setActionsOpen(true))
   const name = personDisplayName(person)
   const dates = [
@@ -80,6 +80,19 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
     .filter(Boolean)
     .join(" – ")
 
+  const photoId = coverPhotoId(person)
+  const initials = person.isPlaceholder
+    ? "?"
+    : [person.givenName, person.familyName]
+        .map((part) => part?.trim()[0])
+        .filter(Boolean)
+        .join("")
+        .toUpperCase() || "?"
+
+  // A print in the family album: a white mount, a photo (or a coloured tile
+  // with the person's initials where there is none), and the name and dates
+  // underneath. The tile colour is the card's colour group — surname,
+  // generation or branch, whichever View options picked.
   const card = (
     <div
       // The wrapper React Flow renders around this carries the full spoken
@@ -87,13 +100,16 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
       // card is the selected one, which is otherwise a coloured ring.
       aria-current={selected ? "true" : undefined}
       className={cn(
-        "flex h-full w-full flex-col items-center justify-center gap-2.5 rounded-lg border border-border bg-card px-3 text-center",
+        "flex h-full w-full flex-col rounded-xl bg-card p-2 shadow-card transition-shadow",
+        !showPhoto && "justify-center pt-3",
+        person.isPlaceholder && "border-2 border-dashed border-border-strong",
         // A softer ring than the selection one, so the selected card still
         // reads as the selected card within a highlighted line.
-        onBloodline && !selected && "ring-2 ring-primary/40",
-        selected && "ring-2 ring-primary"
+        onBloodline &&
+          !selected &&
+          "outline-2 outline-offset-2 outline-primary/40",
+        selected && "outline-4 outline-offset-2 outline-primary"
       )}
-      style={{ borderLeftWidth: 3, borderLeftColor: levelColor }}
     >
       {/* Connectable since Phase 5: dragging between handles records a
           relationship. The side pair means a marriage, the in/children pair a
@@ -117,15 +133,13 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
         className="size-2!"
       />
       {showPhoto && (
-        <PersonAvatar
-          photoId={coverPhotoId(person)}
-          size="card"
-          sizePx={avatarSize}
-        />
+        <PrintPhoto photoId={photoId} initials={initials} color={levelColor} />
       )}
-      <div className="flex min-w-0 flex-col gap-px">
-        <div className="flex items-center gap-1.5">
-          <span className="truncate text-xl font-semibold">{name}</span>
+      <div className="flex min-w-0 flex-none flex-col items-center gap-px px-0.5 pt-1.5 pb-1 text-center">
+        <div className="flex max-w-full items-center justify-center gap-1.5">
+          <span className="truncate font-heading text-15 leading-tight font-bold">
+            {name}
+          </span>
           {person.isPlaceholder && <PlaceholderBadge />}
           {/* Both icons are decoration for a screen reader: "one of a multiple
               birth" and "placed by hand" are already in the card's spoken
@@ -143,11 +157,18 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
           )}
         </div>
         {showDates && dates && (
-          <span className="truncate text-sm text-muted-foreground">
+          <span className="max-w-full truncate text-12-5 font-medium text-muted-foreground">
             {dates}
           </span>
         )}
       </div>
+      {!showPhoto && (
+        <span
+          aria-hidden
+          className="absolute inset-x-2 top-2 h-1.5 rounded-full"
+          style={{ background: levelColor }}
+        />
+      )}
       <Handle
         type="source"
         position={geometry.childrenPosition}
@@ -160,7 +181,7 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
   return (
     <>
       <NodeToolbar
-        isVisible={onlySelected}
+        isVisible={onlySelected && compact}
         position={Position.Bottom}
         offset={8}
       >
@@ -169,7 +190,9 @@ export function PersonNode({ id, data }: NodeProps<PersonNodeType>) {
             <Button
               key={kind}
               type="button"
+              variant="outline"
               size="xs"
+              className="shadow-card"
               onClick={() => requestAddRelative(personNodeId(person.id), kind)}
             >
               {label}

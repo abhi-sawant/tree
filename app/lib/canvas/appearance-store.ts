@@ -24,22 +24,22 @@ export interface AppearanceSettings {
   generationColors: (string | null)[]
 }
 
-// Matches the constants/CSS vars this feature replaces (to-elk-graph.ts's
-// PERSON_WIDTH/HEIGHT, run-layout.ts's DEFAULT_LAYOUT_OPTIONS spacing, the
-// hardcoded strokeWidth in to-react-flow-graph.ts) so an unmodified install
-// renders identically to before this store existed.
+// Card size is the footprint of a photo print (a 168×196 mount), not the old
+// 250×200 box; to-elk-graph.ts's PERSON_WIDTH/HEIGHT remain the layout
+// fallbacks for callers that pass no size. Surname colouring is the default
+// because it is what the family-album look is built around.
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
-  personWidth: 250,
-  personHeight: 200,
+  personWidth: 168,
+  personHeight: 196,
   avatarSize: 120,
   horizontalSpacing: 40,
   verticalSpacing: 90,
-  edgeStrokeWidth: 2,
+  edgeStrokeWidth: 2.5,
   layoutDirection: "DOWN",
   edgeRouting: "smoothstep",
   showPhoto: true,
   showDates: true,
-  colorBy: "generation",
+  colorBy: "surname",
   spouseColor: null,
   parentChildColor: null,
   generationColors: Array.from({ length: GENERATION_LEVELS }, () => null),

@@ -13,6 +13,7 @@ import { Label } from "~/components/ui/label"
 import { useMembers } from "~/lib/db/hooks"
 import { useRedaction } from "~/lib/export/use-redaction"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView } from "~/lib/ui/use-shell-view"
 import type { ExportAction } from "~/components/shell/export-actions"
 import type { Person, Tree } from "~/lib/types"
 
@@ -45,7 +46,7 @@ export function TreeSwitcherSheet({
   const open = useAppShellStore((s) => s.mobileSheet === "tree-switcher")
   const setMobileSheet = useAppShellStore((s) => s.setMobileSheet)
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
   const members = useMembers()
 
   const close = () => setMobileSheet(null)

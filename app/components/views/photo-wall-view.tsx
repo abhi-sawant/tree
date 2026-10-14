@@ -1,3 +1,4 @@
+import { PageHeader } from "~/components/shell/page-header"
 import { useMemo, useState } from "react"
 
 import { Button } from "~/components/ui/button"
@@ -13,7 +14,7 @@ import {
   type PhotoWallEntry,
   type PhotoWallSort,
 } from "~/lib/people/photo-wall"
-import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView } from "~/lib/ui/use-shell-view"
 import type { Person, Tree } from "~/lib/types"
 
 interface PhotoWallViewProps {
@@ -29,7 +30,7 @@ interface PhotoWallViewProps {
 export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
   const [sort, setSort] = useState<PhotoWallSort>("birth")
   const [treeOnly, setTreeOnly] = useState(false)
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
 
   const wall = useMemo(
     () =>
@@ -49,9 +50,13 @@ export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
   const missing = wall.considered - wall.withPhoto
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6 max-md:gap-3.5 max-md:p-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-8 py-7 max-md:gap-3.5 max-md:p-4 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-6xl">
+      <PageHeader
+        title="Photos"
+        detail={`${wall.withPhoto} of ${wall.considered} ${wall.considered === 1 ? "person has" : "people have"} a photo`}
+      />
       <div className="flex flex-wrap items-center gap-4 max-md:gap-x-3 max-md:gap-y-2.5">
-        <h2 className="font-heading text-sm font-semibold max-md:basis-full max-md:text-lg">
+        <h2 className="font-heading text-lg font-semibold max-md:basis-full md:hidden">
           Photo wall
         </h2>
         {/* Stated first on a phone: it is the answer to "why are there gaps",
@@ -85,15 +90,11 @@ export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
             ))}
           </Select>
         </div>
-        <span className="ml-auto text-xs text-muted-foreground max-md:hidden">
-          {wall.withPhoto} of {wall.considered}{" "}
-          {wall.considered === 1 ? "person has" : "people have"} a photo
-        </span>
       </div>
 
       {wall.withPhoto === 0 ? (
-        <div className="flex flex-col items-start gap-3">
-          <p className="max-w-md text-13 leading-relaxed text-muted-foreground">
+        <div className="flex flex-col items-start gap-3 rounded-3xl border-2 border-dashed border-border-strong bg-card/60 p-8">
+          <p className="max-w-md text-base leading-relaxed text-muted-foreground">
             No photos yet. Add one from a person&apos;s Media tab and their face
             will appear here.
           </p>
@@ -104,7 +105,7 @@ export function PhotoWallView({ tree, people, memberIds }: PhotoWallViewProps) {
           </Button>
         </div>
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3 max-md:grid-cols-2">
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-x-4.5 gap-y-5 max-md:grid-cols-2">
           {wall.entries.map((entry) => (
             <PhotoTile
               key={entry.personId}
@@ -135,14 +136,14 @@ function PhotoTile({
   entry: PhotoWallEntry
   url: string | undefined
 }) {
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
   const requestCenter = useCanvasUIStore((s) => s.requestCenter)
 
   return (
     <li>
       <button
         type="button"
-        className="flex w-full cursor-pointer flex-col gap-1.5 text-left"
+        className="flex w-full cursor-pointer flex-col gap-1 rounded-xl bg-card p-2 text-left shadow-card transition-all hover:-translate-y-1 hover:shadow-float"
         // The same thing clicking a row in the People table does: take me to
         // this person on the canvas.
         onClick={() => {
@@ -150,7 +151,7 @@ function PhotoTile({
           setView("tree")
         }}
       >
-        <span className="relative block aspect-square w-full overflow-hidden rounded-xl border border-border bg-muted">
+        <span className="relative block aspect-square w-full overflow-hidden rounded-md bg-muted">
           <img
             // Lazy, because a family with three hundred photos would otherwise
             // decode all of them before the first row is on screen.
@@ -165,9 +166,11 @@ function PhotoTile({
             </span>
           )}
         </span>
-        <span className="truncate text-12-5 font-semibold">{entry.name}</span>
+        <span className="truncate pt-1 text-center font-heading text-15 font-bold">
+          {entry.name}
+        </span>
         {entry.lifespan && (
-          <span className="truncate text-11 text-muted-foreground">
+          <span className="truncate pb-1 text-center text-12-5 font-medium text-muted-foreground">
             {entry.lifespan}
           </span>
         )}

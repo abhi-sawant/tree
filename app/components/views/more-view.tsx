@@ -2,7 +2,7 @@ import {
   SidebarContent,
   type SidebarContentProps,
 } from "~/components/shell/sidebar-content"
-import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useGoBack } from "~/lib/ui/use-shell-view"
 
 type MoreViewProps = Omit<SidebarContentProps, "variant" | "onClose">
 
@@ -10,7 +10,7 @@ type MoreViewProps = Omit<SidebarContentProps, "variant" | "onClose">
 // the desktop sidebar's content at phone scale, from the same component, so a
 // destination can't exist on one and not the other (D23).
 export function MoreView(props: MoreViewProps) {
-  const goBack = useAppShellStore((s) => s.goBack)
+  const goBack = useGoBack()
 
   return (
     <div

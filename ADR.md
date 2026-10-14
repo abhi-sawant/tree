@@ -353,6 +353,52 @@ sidebar that does.
 flows cover the same outcome. Whether `birthplace` and `occupation` deserve real columns is a
 schema question this pass deliberately did not answer.
 
+## v4 — the Family Album redesign (`D38`)
+
+### D38 — One top bar, photo-print cards, colour by family
+
+**Status:** Accepted. Supersedes the shell layout in `D37` for tablet and desktop; the phone layout
+(bottom bar, More page, sheets) is unchanged.
+**Decision:** The whole app is restyled as a family album. Tablet and desktop get one top bar (logo,
+tree switcher, tabs for Tree / People / Photos / Insights / Health check, search, export, settings,
+help, add person) instead of a sidebar plus a header. The desktop keeps a side panel, but it holds only
+the tree list, a colour legend and backup status. The tablet icon rail is gone: the top bar carries every
+destination. Canvas cards are photo prints — a white mount, the photo (or an initials tile in the
+card's colour when there is none) and the name and dates beneath. The default colour grouping is now
+**surname**, so a relative's side of the family reads at a glance.
+**Why:** The rail, header and detail panel competed for the same few hundred pixels at laptop width,
+and a generation-coloured left border said little to someone who just wants to see whose side a person
+is on. A prototype comparison (since removed) picked this direction.
+**Consequences:**
+
+- Palette and type are tokens in `app/app.css` (Funnel Display and Albert Sans, bundled — `D1`/`D18`
+  stand). `--level-0…5` are the print tints and are all dark enough for white text.
+- An existing install keeps whatever card size and colour grouping it had saved; only new installs
+  get 168×196 cards and surname colouring.
+- No face is ever drawn for a person without a photo (`D31` for the sample family): the tile shows
+  initials. `PersonAvatar`'s old stock silhouette image is a neutral icon tile now.
+- Selecting a person on a wide screen now raises a **peek bar** under the canvas (who they are, add
+  parent / partner / child / sibling, Open profile) instead of opening the docked panel at once. The
+  record (`D2`'s panel) opens from "Open profile", and also from anything that is itself a request to
+  edit — Enter, or any add-relative action. A marriage dot has no peek, so selecting one opens its
+  record directly. `profileOpen` in the canvas UI store holds this; compact screens are unchanged.
+- People is a page of prints with surname filter chips and a Prints / List switch; the List keeps the
+  inline-editable table. Photos, Insights, Health check, Settings and Help share a large page title.
+
+### D39 — Every screen is a URL; the tree is not
+
+- The current view is the path (`/tree`, `/people`, `/photos`, `/insights`, `/health`, `/settings`,
+  `/help`, `/more`), read by `useView()` and written by `useSetView()` in `lib/ui/use-shell-view.ts`.
+  `react-router` in declarative mode (`BrowserRouter`); no view state remains in the shell store.
+- A sub-screen's "came from" hint travels in the history entry's `state`, not the store, so it
+  survives a reload and a link opened cold falls back to More.
+- **The active tree stays out of the URL.** Tree ids exist only in this browser's IndexedDB, so a
+  link carrying one means nothing anywhere else (`D1`); the last-opened tree is still remembered
+  locally. Help's list → topic step is still component state.
+- Unknown paths and `/more` on a wide screen redirect to `/tree`.
+- Hosting needs a fallback to `index.html` for unknown paths: `public/.htaccess` carries it for
+  Apache. The service worker's `navigateFallback` covers it once installed, offline.
+
 ---
 
 ## Where to look next

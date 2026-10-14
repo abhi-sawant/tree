@@ -84,12 +84,10 @@ export function StoragePanel() {
   return (
     <div className="flex flex-col gap-2.5">
       {usage ? (
-        <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-background p-4">
           <div className="flex items-baseline gap-2">
-            <span className="font-heading text-10 font-semibold">
-              Browser storage
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="text-sm font-semibold">Browser storage</span>
+            <span className="ml-auto text-13 text-muted-foreground">
               {formatBytes(usage.usage)} of {formatBytes(usage.quota)} —{" "}
               {usedPercent(usage.usage, usage.quota)}%
             </span>
@@ -104,23 +102,23 @@ export function StoragePanel() {
           </div>
         </div>
       ) : (
-        <p className="rounded-lg border border-border p-3 text-12-5 text-muted-foreground">
+        <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground">
           This browser doesn&apos;t report a storage quota.
         </p>
       )}
 
       {breakdown && (
-        <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-background p-4">
           <div className="flex items-baseline gap-2">
-            <span className="font-heading text-10 font-semibold">Photos</span>
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="text-sm font-semibold">Photos</span>
+            <span className="ml-auto text-13 text-muted-foreground">
               {breakdown.photoCount}{" "}
               {breakdown.photoCount === 1 ? "photo" : "photos"},{" "}
               {formatBytes(breakdown.photoBytes)}
             </span>
           </div>
           {breakdown.orphanCount > 0 && (
-            <p className="text-11 leading-snug text-muted-foreground">
+            <p className="text-13 leading-snug text-muted-foreground">
               {breakdown.orphanCount} of them{" "}
               {breakdown.orphanCount === 1 ? "belongs" : "belong"} to nobody (
               {formatBytes(breakdown.orphanBytes)}) — most likely left behind by
@@ -132,7 +130,7 @@ export function StoragePanel() {
               {breakdown.largest.map((photo) => (
                 <li
                   key={photo.photoId}
-                  className="flex items-baseline gap-2 border-t border-border py-1 text-12-5 first:border-t-0"
+                  className="flex items-baseline gap-2 border-t border-border py-1 text-sm first:border-t-0"
                 >
                   <span className="truncate">
                     {photo.name ?? (
@@ -152,12 +150,10 @@ export function StoragePanel() {
       )}
 
       {breakdown && breakdown.attachmentCount > 0 && (
-        <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-background p-4">
           <div className="flex items-baseline gap-2">
-            <span className="font-heading text-10 font-semibold">
-              Documents
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="text-sm font-semibold">Documents</span>
+            <span className="ml-auto text-13 text-muted-foreground">
               {breakdown.attachmentCount}{" "}
               {breakdown.attachmentCount === 1 ? "file" : "files"},{" "}
               {formatBytes(breakdown.attachmentBytes)}
@@ -167,11 +163,11 @@ export function StoragePanel() {
             {breakdown.largestAttachments.map((attachment) => (
               <li
                 key={attachment.attachmentId}
-                className="flex items-baseline gap-2 border-t border-border py-1 text-12-5 first:border-t-0"
+                className="flex items-baseline gap-2 border-t border-border py-1 text-sm first:border-t-0"
               >
                 <span className="truncate">{attachment.name}</span>
                 {attachment.ownerName && (
-                  <span className="shrink-0 text-11 text-muted-foreground">
+                  <span className="shrink-0 text-13 text-muted-foreground">
                     {attachment.ownerName}
                   </span>
                 )}
@@ -184,7 +180,7 @@ export function StoragePanel() {
         </div>
       )}
 
-      <p className="text-12-5 leading-relaxed text-muted-foreground">
+      <p className="text-sm leading-relaxed text-muted-foreground">
         Everything lives in this browser. Nothing is uploaded — export a backup
         regularly. The quota above is the browser&apos;s own estimate for this
         whole site, padded on purpose and covering more than the family data;
@@ -200,7 +196,7 @@ export function StoragePanel() {
         <div>
           <Button
             variant="outline"
-            size="sm"
+
             disabled={!!recompressing}
             onClick={() => void handleRecompress()}
           >

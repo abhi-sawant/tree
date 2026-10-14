@@ -146,7 +146,12 @@ export function TreeCanvas({
     },
     {
       color: resolveGenerationColor(0, appearance.generationColors),
-      label: "Generation colour",
+      label:
+        appearance.colorBy === "surname"
+          ? "Surname colour"
+          : appearance.colorBy === "branch"
+            ? "Branch colour"
+            : "Generation colour",
     },
   ]
 

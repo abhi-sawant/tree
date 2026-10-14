@@ -47,6 +47,25 @@ function surnameIndices(people: Person[]): Map<string, number> {
   )
 }
 
+// The legend for "surname" colouring: one row per surname, in palette order,
+// with how many people carry it. Shares surnameIndices' ranking so the swatch
+// beside a name is exactly the colour that name's people are drawn in.
+export function surnameLegend(
+  people: Person[]
+): Array<{ label: string; index: number; count: number }> {
+  const groups = new Map<string, { label: string; count: number }>()
+  for (const person of people) {
+    const key = normalizeSurname(person)
+    if (!key) continue
+    const entry = groups.get(key)
+    if (entry) entry.count += 1
+    else groups.set(key, { label: (person.familyName ?? "").trim(), count: 1 })
+  }
+  return [...groups.entries()]
+    .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+    .map(([, group], index) => ({ ...group, index }))
+}
+
 // "Which branch of the family is this person from" means, concretely, which of
 // the root person's children they descend from. That is well defined and is what
 // people actually mean, unlike "their root ancestor" — with two parents each

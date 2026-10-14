@@ -1,7 +1,7 @@
 import { ChevronLeft } from "lucide-react"
 
 import { Button } from "~/components/ui/button"
-import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useGoBack } from "~/lib/ui/use-shell-view"
 import { useIsMobile } from "~/lib/ui/viewport-tier"
 
 // The header a pushed screen wears on a phone. Insights, Health, Settings and
@@ -26,7 +26,7 @@ export function MobileScreenHeader({
   onBack?: () => void
 }) {
   const isMobile = useIsMobile()
-  const goBack = useAppShellStore((s) => s.goBack)
+  const goBack = useGoBack()
   if (!isMobile) return null
 
   return (

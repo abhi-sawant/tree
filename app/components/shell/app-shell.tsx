@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { Navigate, useLocation } from "react-router"
 
 import { AppSidebar } from "~/components/shell/app-sidebar"
 import { AppTopbar } from "~/components/shell/app-topbar"
@@ -32,6 +33,8 @@ import { exportBackup } from "~/lib/export/json"
 import type { UnionNode } from "~/lib/graph/derive-unions"
 import type { TabPresenceState } from "~/lib/db/use-tab-presence"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView, useView } from "~/lib/ui/use-shell-view"
+import { VIEW_PATHS, viewFromPath } from "~/lib/ui/routes"
 import { useIsMobile } from "~/lib/ui/viewport-tier"
 import { toast } from "~/lib/ui/toast-store"
 import type { Person, Relationship, Tree } from "~/lib/types"
@@ -55,11 +58,12 @@ export function AppShell({
   generations,
   tabs,
 }: AppShellProps) {
-  const view = useAppShellStore((s) => s.view)
+  const view = useView()
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
   const treeMembers = useTreeMembers(tree.id)
   const isMobile = useIsMobile()
+  const { pathname } = useLocation()
   // "?" opens the help from wherever the reader is, not only the canvas.
   useHelpShortcut()
 
@@ -192,90 +196,98 @@ export function AppShell({
     exportingFamilyBook: exportingBook,
   })
 
+  // An unknown path ("/") or the phone-only More page opened on a wide screen
+  // has no screen to show; land on the tree rather than rendering the wrong one.
+  if (viewFromPath(pathname) === undefined || (view === "more" && !isMobile)) {
+    return <Navigate to={VIEW_PATHS.tree} replace />
+  }
+
   return (
     // h-dvh rather than h-svh: with a bottom bar in the layout, sizing to the
     // *small* viewport leaves the bar permanently under the browser's own
     // chrome on a phone.
-    <div data-print="flow" className="flex h-dvh w-full max-md:flex-col">
-      <AppSidebar {...sidebarProps} />
-
-      <div data-print="flow" className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {/* On a phone the topbar is the *canvas* chrome — the tree's name,
-            search, add person. Every other view owns its own header there
-            (People its count and add button, Settings a back arrow), because a
-            tree title above the photo wall names something the reader is not
-            looking at. On a wide screen it is the shell's header as before,
-            with the view switch and Export dropdown it has room for. */}
-        {(!isMobile || view === "tree") && (
-          <AppTopbar
-            tree={tree}
-            trees={trees}
-            memberCount={memberIds.size}
-            generationCount={generationCount}
-            rootName={rootName}
-            onCreateTree={() => setCreateTreeOpen(true)}
-            exportActions={exportActions}
-          />
-        )}
-
-        <TabNotice
-          peerCount={tabs.peerCount}
-          dataReplaced={tabs.dataReplaced}
+    <div data-print="flow" className="flex h-dvh w-full flex-col">
+      {/* On a phone the topbar is the *canvas* chrome — the tree's name,
+          search, add person. Every other view owns its own header there
+          (People its count and add button, Settings a back arrow), because a
+          tree title above the photo wall names something the reader is not
+          looking at. On a wide screen it is the shell's header, spanning the
+          whole window above the side panel. */}
+      {(!isMobile || view === "tree") && (
+        <AppTopbar
+          tree={tree}
+          trees={trees}
+          memberCount={memberIds.size}
+          generationCount={generationCount}
+          rootName={rootName}
+          onCreateTree={() => setCreateTreeOpen(true)}
+          exportActions={exportActions}
         />
+      )}
 
-        <BackupNudgeBanner
-          verdict={backupNudge.verdict}
-          exporting={exportingBackup}
-          onExport={() => void handleExportBackup()}
-          onDismiss={backupNudge.dismiss}
-        />
+      <div data-print="flow" className="flex min-h-0 flex-1">
+        <AppSidebar {...sidebarProps} />
 
-        {view === "tree" && (
-          <TreeView
-            tree={tree}
-            people={people}
-            relationships={relationships}
-            unions={unions}
-            generations={generations}
-            generationCount={generationCount}
-            onAddPerson={() => setAddPersonOpen(true)}
+        <div data-print="flow" className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <TabNotice
+            peerCount={tabs.peerCount}
+            dataReplaced={tabs.dataReplaced}
           />
-        )}
-        {view === "table" && (
-          <TableView
-            relationships={relationships}
-            generations={generations}
-            totalPeople={people.length}
+
+          <BackupNudgeBanner
+            verdict={backupNudge.verdict}
+            exporting={exportingBackup}
+            onExport={() => void handleExportBackup()}
+            onDismiss={backupNudge.dismiss}
           />
-        )}
-        {view === "photos" && (
-          <PhotoWallView tree={tree} people={people} memberIds={memberIds} />
-        )}
-        {view === "insights" && (
-          <InsightsView
-            tree={tree}
-            people={people.filter((person) => memberIds.has(person.id))}
-            relationships={relationships}
-          />
-        )}
-        {view === "health" && (
-          <HealthView
-            people={people}
-            relationships={relationships}
-            memberIds={memberIds}
-          />
-        )}
-        {view === "help" && <HelpView />}
-        {view === "more" && <MoreView {...sidebarProps} />}
-        {view === "settings" && (
-          <SettingsView
-            onExportBackup={() => void handleExportBackup()}
-            exportingBackup={exportingBackup}
-            exportToken={exportToken}
-            tabId={tabs.tabId}
-            treeId={tree.id}
-          />
-        )}
+
+          {view === "tree" && (
+            <TreeView
+              tree={tree}
+              people={people}
+              relationships={relationships}
+              unions={unions}
+              generations={generations}
+              generationCount={generationCount}
+              onAddPerson={() => setAddPersonOpen(true)}
+            />
+          )}
+          {view === "table" && (
+            <TableView
+              relationships={relationships}
+              generations={generations}
+              totalPeople={people.length}
+            />
+          )}
+          {view === "photos" && (
+            <PhotoWallView tree={tree} people={people} memberIds={memberIds} />
+          )}
+          {view === "insights" && (
+            <InsightsView
+              tree={tree}
+              people={people.filter((person) => memberIds.has(person.id))}
+              relationships={relationships}
+            />
+          )}
+          {view === "health" && (
+            <HealthView
+              people={people}
+              relationships={relationships}
+              memberIds={memberIds}
+            />
+          )}
+          {view === "help" && <HelpView />}
+          {view === "more" && <MoreView {...sidebarProps} />}
+          {view === "settings" && (
+            <SettingsView
+              onExportBackup={() => void handleExportBackup()}
+              exportingBackup={exportingBackup}
+              exportToken={exportToken}
+              tabId={tabs.tabId}
+              treeId={tree.id}
+            />
+          )}
+        </div>
       </div>
 
       {isMobile && <MobileBottomNav />}

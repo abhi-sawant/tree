@@ -7,7 +7,12 @@ function SectionHeading({
   className,
   ...props
 }: React.ComponentProps<"h2"> & { as?: "h2" | "h3" }) {
-  return <Tag className={cn("text-sm font-semibold", className)} {...props} />
+  return (
+    <Tag
+      className={cn("font-heading text-lg font-semibold", className)}
+      {...props}
+    />
+  )
 }
 
 export { SectionHeading }

@@ -16,6 +16,7 @@ import {
 import { RelativeForm } from "~/components/canvas/relative-form"
 import { DeletePersonDialog } from "~/components/people/delete-person-dialog"
 import { PersonAvatar } from "~/components/people/person-avatar"
+import { PrintPhoto } from "~/components/people/print-photo"
 import { PersonAttachmentsPanel } from "~/components/people/person-attachments-panel"
 import { PersonPhotosPanel } from "~/components/people/person-photos-panel"
 import { PersonForm, type PhotoAction } from "~/components/people/person-form"
@@ -92,6 +93,19 @@ interface DetailPanelProps {
   relationships: Relationship[]
   unions: UnionNode[]
   generations: Map<string, number>
+  // Colour group per person id, so the header tile matches the card.
+  colorIndices: Map<string, number>
+}
+
+function initialsOf(person: Person): string {
+  if (person.isPlaceholder) return "?"
+  return (
+    [person.givenName, person.familyName]
+      .map((part) => part?.trim()[0])
+      .filter(Boolean)
+      .join("")
+      .toUpperCase() || "?"
+  )
 }
 
 function personName(person: Person | undefined): string {
@@ -114,6 +128,7 @@ export function DetailPanel({
   relationships,
   unions,
   generations,
+  colorIndices,
 }: DetailPanelProps) {
   const selectedNodeId = useSelectedNodeId()
   const selectedCount = useCanvasUIStore((s) => s.selectedNodeIds.length)
@@ -127,6 +142,7 @@ export function DetailPanel({
   const clearPendingEdit = useCanvasUIStore((s) => s.clearPendingEdit)
 
   const compact = useIsCompact()
+  const profileOpen = useCanvasUIStore((s) => s.profileOpen)
 
   const peopleById = useMemo(
     () => new Map(people.map((p) => [p.id, p])),
@@ -178,10 +194,11 @@ export function DetailPanel({
     clearPendingAddRelative()
   }, [pendingAddRelative, selectedNodeId, clearPendingAddRelative])
 
-  // A multi-selection has no one person to describe. The bulk actions live in
-  // the canvas panel, next to the cards they act on, so this only has to say
-  // what is selected and how to get back to one person.
+  // A multi-selection has no one person to describe, and its bulk actions
+  // live in the canvas bar above the cards. On a wide screen there is nothing
+  // to show; on a compact one the sheet says what is selected.
   if (selectedCount > 1) {
+    if (!compact) return null
     return (
       <DetailContainer width="w-78">
         <div className="p-4">
@@ -195,30 +212,15 @@ export function DetailPanel({
     )
   }
 
-  if (!selection) {
-    // Nothing to peek at, so on a compact screen there is no sheet at all —
-    // the canvas gets the whole viewport until something is selected, which is
-    // the entire point of moving the panel off the side.
-    if (compact) return null
-    return (
-      <DetailContainer width="w-90">
-        <div className="p-4">
-          <p className="text-13 leading-relaxed text-muted-foreground">
-            Select a person or a marriage dot on the canvas. Drag a card to pin
-            it in place; right-click for more actions.
-          </p>
-          <p className="mt-3 text-13 leading-relaxed text-muted-foreground">
-            With a person selected, the arrow keys step through their family the
-            way the tree is drawn, <Key>Enter</Key> edits them, and <Key>P</Key>{" "}
-            <Key>S</Key> <Key>C</Key> start a new parent, spouse or child.
-          </p>
-        </div>
-      </DetailContainer>
-    )
-  }
+  // Nothing to peek at, so there is no panel at all: the canvas gets the whole
+  // width until something is selected. A selected person raises the peek bar
+  // (see PeekBar); this record opens beside the canvas only on request. A
+  // marriage dot has no peek, so selecting one opens its record straight away.
+  if (!selection) return null
+  if (!compact && selection.kind === "person" && !profileOpen) return null
 
   return (
-    <DetailContainer width="w-90" scroll="hidden" key={selectedNodeId}>
+    <DetailContainer width="w-96" scroll="hidden" key={selectedNodeId}>
       {selection.kind === "person" ? (
         <PersonDetail
           treeId={treeId}
@@ -226,6 +228,7 @@ export function DetailPanel({
           people={peopleById}
           relationships={relationships}
           generation={generations.get(selection.person.id)}
+          colorIndex={colorIndices.get(selection.person.id) ?? 0}
           action={action}
           setAction={setAction}
           tab={tab}
@@ -272,11 +275,12 @@ function DetailContainer({
   scroll = "auto",
 }: {
   children: React.ReactNode
-  width: "w-78" | "w-90"
+  width: "w-78" | "w-96"
   scroll?: "auto" | "hidden"
 }) {
   const compact = useIsCompact()
   const select = useCanvasUIStore((s) => s.select)
+  const closeProfile = useCanvasUIStore((s) => s.closeProfile)
   // Opens full every time, rather than at the peek or the last height: the
   // point of tapping a card is to read its record, not to drag a handle
   // first. A reader can still swipe down to the peek if they want the canvas
@@ -290,12 +294,22 @@ function DetailContainer({
     return (
       <aside
         data-print="hide"
+        aria-label="Profile"
         className={cn(
-          "flex h-full shrink-0 flex-col border-l border-border",
+          "relative flex h-full shrink-0 flex-col border-l border-border bg-card",
           width,
           scroll === "auto" ? "overflow-y-auto" : "overflow-hidden"
         )}
       >
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Close profile"
+          className="absolute top-3 right-3 z-10"
+          onClick={closeProfile}
+        >
+          <XIcon />
+        </Button>
         {children}
       </aside>
     )
@@ -371,6 +385,7 @@ interface PersonDetailProps {
   people: Map<string, Person>
   relationships: Relationship[]
   generation: number | undefined
+  colorIndex: number
   action: AddAction | undefined
   setAction: (action: AddAction | undefined) => void
   tab: DetailTab
@@ -384,6 +399,7 @@ function PersonDetail({
   people,
   relationships,
   generation,
+  colorIndex,
   action,
   setAction,
   tab,
@@ -392,6 +408,9 @@ function PersonDetail({
 }: PersonDetailProps) {
   const select = useCanvasUIStore((s) => s.select)
   const compact = useIsCompact()
+  const generationColors = useAppearanceStore(
+    (s) => s.settings.generationColors
+  )
   const expandSheet = useExpandDetailSheet()
   const [overflowOpen, setOverflowOpen] = useState(false)
   // Bumping this remounts PersonForm, which is how "Revert" throws away
@@ -486,16 +505,23 @@ function PersonDetail({
 
   return (
     <>
-      <div className="flex flex-none items-center gap-3 border-b border-border p-4 max-md:gap-3.5 max-md:py-3">
-        <PersonAvatar photoId={coverPhotoId(person)} size="panel" />
+      <div className="flex flex-none items-center gap-4 border-b border-border p-5 pr-12 max-md:gap-3.5 max-md:py-3">
+        <div className="flex h-16 w-16 flex-none flex-col rounded-lg bg-card p-1 shadow-card">
+          <PrintPhoto
+            small
+            photoId={coverPhotoId(person)}
+            initials={initialsOf(person)}
+            color={resolveGenerationColor(colorIndex, generationColors)}
+          />
+        </div>
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-2">
-            <h2 className="truncate font-heading text-sm font-semibold max-md:text-15">
+            <h2 className="truncate font-heading text-xl leading-tight font-semibold max-md:text-lg">
               {personName(person)}
             </h2>
             {person.isPlaceholder && <PlaceholderBadge />}
           </div>
-          <span className="flex items-center gap-2 text-11 text-muted-foreground max-md:text-12-5">
+          <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-13 font-medium text-muted-foreground max-md:text-12-5">
             {lifeSpan(person)}
             <GenerationChip generation={generation} />
           </span>
@@ -1140,7 +1166,7 @@ function RelationshipList({
               <div className="flex min-w-0 flex-col">
                 <button
                   type="button"
-                  className="mb-1 text-xs text-primary"
+                  className="mb-1 text-xs font-medium text-primary"
                   onClick={() => onSelect(personNodeId(otherId))}
                 >
                   {personName(other)}

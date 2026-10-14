@@ -20,12 +20,13 @@ import {
 } from "~/lib/demo/load-sample-tree"
 import { SAMPLE_PERSON_COUNT, SAMPLE_TREE_NAME } from "~/lib/demo/sample-tree"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView } from "~/lib/ui/use-shell-view"
 import { toast } from "~/lib/ui/toast-store"
 
 export function SampleTreePanel() {
   const status = useLiveQuery(() => getSampleTreeStatus(), [])
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
 
   const [loading, setLoading] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
@@ -80,7 +81,7 @@ export function SampleTreePanel() {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-12-5 leading-relaxed text-muted-foreground">
+      <p className="text-sm leading-relaxed text-muted-foreground">
         {SAMPLE_PERSON_COUNT} invented people across four generations, in a tree
         called &ldquo;
         {SAMPLE_TREE_NAME}&rdquo;, to look around before you enter anything of
@@ -92,7 +93,7 @@ export function SampleTreePanel() {
         goes in its own tree so nothing of yours is mixed in with it.
       </p>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-background p-4">
         <span className="text-13">
           {present
             ? `Loaded — ${personCount} sample ${personCount === 1 ? "person" : "people"} in this browser.`
@@ -103,7 +104,7 @@ export function SampleTreePanel() {
         <div className="ml-auto flex gap-1.5">
           <Button
             variant="outline"
-            size="sm"
+
             disabled={loading}
             onClick={() => void handleLoad()}
           >
@@ -116,7 +117,7 @@ export function SampleTreePanel() {
           {personCount > 0 && (
             <Button
               variant="ghost"
-              size="sm"
+
               onClick={() => setConfirmRemove(true)}
             >
               Remove
@@ -158,14 +159,14 @@ export function SampleTreePanel() {
       </AlertDialog>
 
       {removed && (
-        <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-2 rounded-2xl border border-border bg-background p-4">
           <p className="text-13">
             Removed {removed.peopleRemoved}{" "}
             {removed.peopleRemoved === 1 ? "person" : "people"}.
           </p>
           <ul className="flex list-disc flex-col gap-1 pl-4">
             {removed.linksToOwnDataRemoved > 0 && (
-              <li className="text-12-5 text-muted-foreground">
+              <li className="text-sm text-muted-foreground">
                 {removed.linksToOwnDataRemoved}{" "}
                 {removed.linksToOwnDataRemoved === 1
                   ? "relationship joining one of your people to a sample person was"
@@ -174,7 +175,7 @@ export function SampleTreePanel() {
               </li>
             )}
             {removed.photosRemoved > 0 && (
-              <li className="text-12-5 text-muted-foreground">
+              <li className="text-sm text-muted-foreground">
                 {removed.photosRemoved}{" "}
                 {removed.photosRemoved === 1 ? "photo" : "photos"} you had added
                 to a sample person{" "}
@@ -182,7 +183,7 @@ export function SampleTreePanel() {
               </li>
             )}
             {removed.documentsRemoved > 0 && (
-              <li className="text-12-5 text-muted-foreground">
+              <li className="text-sm text-muted-foreground">
                 {removed.documentsRemoved}{" "}
                 {removed.documentsRemoved === 1 ? "document" : "documents"} you
                 had added to a sample person{" "}
@@ -190,7 +191,7 @@ export function SampleTreePanel() {
               </li>
             )}
             {removed.keptPeople.map((kept) => (
-              <li key={kept.id} className="text-12-5 text-muted-foreground">
+              <li key={kept.id} className="text-sm text-muted-foreground">
                 {kept.name} was kept — {kept.reason}. Change that tree&apos;s
                 root person, or delete the tree, and remove again.
               </li>
@@ -198,7 +199,7 @@ export function SampleTreePanel() {
           </ul>
           <Button
             variant="ghost"
-            size="xs"
+            size="sm"
             className="self-start"
             onClick={() => setRemoved(undefined)}
           >

@@ -348,7 +348,7 @@ export function PersonForm({
 
       {showIdentity && (
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-xs font-semibold text-primary">
+          <legend className="mb-2 text-xs font-bold text-foreground">
             Other details
           </legend>
           {customFields.map((field, index) => (

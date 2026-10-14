@@ -367,7 +367,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           "how you move to a new machine or recover from a loss, not how you",
           "merge two collections.",
           "",
-          "The sidebar shows the date of your last backup. If it goes more",
+          "The side panel on a wide screen, and Settings, show the date of your last backup. If it goes more",
           "than 30 days without one, a banner says so; *Later* quiets it for",
           "7 days, and exporting clears it.",
         ]),

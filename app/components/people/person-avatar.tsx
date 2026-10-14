@@ -47,16 +47,19 @@ export function PersonAvatar({
     )
   }
 
+  // No photo: a quiet tile rather than a stand-in face. Nobody is shown a
+  // likeness the app made up.
   return (
-    <img
-      src={"/user.png"}
-      alt=""
+    <span
+      aria-hidden
       style={style}
       className={cn(
         sizeClasses[size],
-        "shrink-0 rounded-full object-cover",
+        "grid shrink-0 place-items-center rounded-full bg-muted text-muted-foreground",
         className
       )}
-    />
+    >
+      <UserRound className="size-1/2" />
+    </span>
   )
 }

@@ -1,3 +1,4 @@
+import { BrandMark } from "~/components/shell/brand-mark"
 import { ReactFlowProvider } from "@xyflow/react"
 import { useEffect, useMemo, useState } from "react"
 
@@ -17,6 +18,7 @@ import { computeGenerations } from "~/lib/graph/compute-generations"
 import { deriveUnions } from "~/lib/graph/derive-unions"
 import { getLastTreeId } from "~/lib/last-tree"
 import { resolveActiveTreeId, useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView } from "~/lib/ui/use-shell-view"
 import { watchSystemTheme } from "~/lib/ui/theme-store"
 import { toast } from "~/lib/ui/toast-store"
 
@@ -155,6 +157,7 @@ function WelcomeState() {
   const [createOpen, setCreateOpen] = useState(false)
   const [loadingSample, setLoadingSample] = useState(false)
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
+  const setView = useSetView()
 
   // The one moment the sample family is most worth offering: there is nothing
   // here yet, so there is nothing it could be confused with, and "what does a
@@ -165,6 +168,7 @@ function WelcomeState() {
     try {
       const { treeId } = await loadSampleTree()
       setActiveTree(treeId)
+      setView("tree")
     } catch {
       toast("Couldn't add the sample family")
       setLoadingSample(false)
@@ -173,12 +177,10 @@ function WelcomeState() {
 
   return (
     <div className="flex h-dvh w-full flex-col items-center justify-center p-6 max-md:justify-between max-md:px-7 max-md:pt-16 max-md:pb-9">
-      <div className="flex max-w-sm flex-col items-center gap-4 text-center max-md:my-auto max-md:w-full max-md:gap-4.5">
-        <div className="flex size-8.5 items-center justify-center rounded-lg bg-primary font-heading text-13 font-bold text-primary-foreground max-md:size-11 max-md:text-15">
-          FT
-        </div>
+      <div className="flex max-w-md flex-col items-center gap-5 rounded-3xl bg-card p-10 text-center shadow-card max-md:my-auto max-md:w-full max-md:bg-transparent max-md:p-0 max-md:shadow-none">
+        <BrandMark className="size-16 rounded-2xl [&>svg]:size-9" />
         <div className="flex flex-col gap-2.5">
-          <h1 className="font-heading text-lg font-semibold max-md:text-2xl max-md:tracking-tight">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight max-md:text-2xl">
             Start your family tree
           </h1>
           <p className="text-sm text-muted-foreground max-md:text-15 max-md:leading-relaxed">
@@ -188,8 +190,9 @@ function WelcomeState() {
         </div>
         {/* Stacked and full-width on a phone: three buttons of different
             widths, centred, read as a pile rather than a set of choices. */}
-        <div className="flex flex-col items-center gap-1 max-md:mt-1.5 max-md:w-full max-md:gap-2.5">
+        <div className="flex flex-col items-center gap-2.5 max-md:mt-1.5 max-md:w-full max-md:gap-2.5">
           <Button
+            size="lg"
             className="max-md:h-13 max-md:w-full"
             onClick={() => setCreateOpen(true)}
           >
@@ -197,7 +200,7 @@ function WelcomeState() {
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            size="lg"
             className="max-md:h-13 max-md:w-full"
             disabled={loadingSample}
             onClick={() => void handleLoadSample()}
@@ -218,7 +221,10 @@ function WelcomeState() {
       <CreateTreeDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreated={(tree) => setActiveTree(tree.id)}
+        onCreated={(tree) => {
+          setActiveTree(tree.id)
+          setView("tree")
+        }}
       />
       <Toaster />
     </div>

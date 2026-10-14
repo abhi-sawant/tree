@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 
 import { isTypingTarget } from "~/lib/canvas/keyboard-navigation"
-import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView } from "~/lib/ui/use-shell-view"
 
 // The key the whole world uses for "explain this". Bound at the shell rather
 // than on the canvas, because being stuck is not something that only happens
@@ -9,7 +9,7 @@ import { useAppShellStore } from "~/lib/ui/app-shell-store"
 export const HELP_KEY = "?"
 
 export function useHelpShortcut(): void {
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

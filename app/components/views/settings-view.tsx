@@ -1,3 +1,4 @@
+import { PageHeader } from "~/components/shell/page-header"
 import { useEffect, useState } from "react"
 
 import {
@@ -217,11 +218,16 @@ export function SettingsView({
       {/* p-6 inside p-6 left 294px of a 390px screen for the content. On a
           phone the card gives up its own frame — a border drawn 12px from the
           screen edge is decoration the content cannot afford. */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 max-md:p-0">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-7 rounded-lg border border-border bg-card p-6 shadow-card max-md:gap-8 max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:p-4 max-md:pb-8 max-md:shadow-none">
-          <section className="flex flex-col gap-2">
-            <SectionHeading>Storage</SectionHeading>
-            <div className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-8 py-7 max-md:p-4">
+        <div className="mx-auto w-full max-w-3xl max-md:hidden">
+          <PageHeader title="Settings" detail="Stored only on this device" />
+        </div>
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 max-md:gap-4 max-md:pb-6">
+          <section className="flex flex-col gap-4 rounded-3xl bg-card p-7 shadow-card max-md:rounded-2xl max-md:p-5">
+            <SectionHeading className="text-2xl tracking-tight">
+              Storage
+            </SectionHeading>
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-4">
               <span
                 className={
                   persisted
@@ -229,14 +235,14 @@ export function SettingsView({
                     : "size-2 rounded-full bg-muted-foreground"
                 }
               />
-              <span className="font-heading text-10 font-semibold">
+              <span className="text-sm font-semibold">
                 {persisted === undefined
                   ? "Checking…"
                   : persisted
                     ? "Persistent storage granted"
                     : "Not persisted"}
               </span>
-              <span className="ml-auto text-xs text-muted-foreground">
+              <span className="ml-auto text-13 text-muted-foreground">
                 Last export{" "}
                 {lastExport ? new Date(lastExport).toLocaleString() : "never"}
               </span>
@@ -244,9 +250,11 @@ export function SettingsView({
             <StoragePanel />
           </section>
 
-          <section className="flex flex-col gap-2.5">
-            <SectionHeading>Appearance</SectionHeading>
-            <Label className="max-w-56 flex-col items-start gap-1.5 text-sm font-normal normal-case">
+          <section className="flex flex-col gap-4 rounded-3xl bg-card p-7 shadow-card max-md:rounded-2xl max-md:p-5">
+            <SectionHeading className="text-2xl tracking-tight">
+              Appearance
+            </SectionHeading>
+            <Label className="max-w-64 flex-col items-start gap-2 text-sm font-semibold normal-case">
               Theme
               <Select
                 value={theme}
@@ -259,30 +267,38 @@ export function SettingsView({
                 ))}
               </Select>
             </Label>
-            <p className="text-12-5 leading-relaxed text-muted-foreground">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               Saved in this browser and applied before the page paints, so
               switching to dark doesn&apos;t flash white on every load.
             </p>
           </section>
 
-          <section className="flex flex-col gap-2.5">
-            <SectionHeading>Sample family</SectionHeading>
+          <section className="flex flex-col gap-4 rounded-3xl bg-card p-7 shadow-card max-md:rounded-2xl max-md:p-5">
+            <SectionHeading className="text-2xl tracking-tight">
+              Sample family
+            </SectionHeading>
             <SampleTreePanel />
           </section>
 
-          <section className="flex flex-col gap-2.5">
-            <SectionHeading>Backup folder</SectionHeading>
+          <section className="flex flex-col gap-4 rounded-3xl bg-card p-7 shadow-card max-md:rounded-2xl max-md:p-5">
+            <SectionHeading className="text-2xl tracking-tight">
+              Backup folder
+            </SectionHeading>
             <BackupFolderPanel />
           </section>
 
-          <section className="flex flex-col gap-2.5">
-            <SectionHeading>Snapshots</SectionHeading>
+          <section className="flex flex-col gap-4 rounded-3xl bg-card p-7 shadow-card max-md:rounded-2xl max-md:p-5">
+            <SectionHeading className="text-2xl tracking-tight">
+              Snapshots
+            </SectionHeading>
             <SnapshotsPanel tabId={tabId} />
           </section>
 
-          <section className="flex flex-col gap-2.5">
-            <SectionHeading>Export</SectionHeading>
-            <p className="text-12-5 leading-relaxed text-muted-foreground">
+          <section className="flex flex-col gap-4 rounded-3xl bg-card p-7 shadow-card max-md:rounded-2xl max-md:p-5">
+            <SectionHeading className="text-2xl tracking-tight">
+              Export
+            </SectionHeading>
+            <p className="text-sm leading-relaxed text-muted-foreground">
               The backup is a .zip holding every person, relationship, tree,
               photo and document — restore it here to move everything to another
               browser or device. GEDCOM is for other genealogy software: the
@@ -295,8 +311,8 @@ export function SettingsView({
               all-day events, for any calendar app; it needs a full date, so
               people recorded with only a year are left out.
             </p>
-            <div className="flex flex-col gap-1.5 rounded-md border border-border p-3">
-              <Label className="flex-row items-center gap-2 text-sm font-normal normal-case">
+            <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-background p-4">
+              <Label className="flex-row items-center gap-2.5 text-sm font-semibold normal-case">
                 <Checkbox
                   checked={redactLiving}
                   onCheckedChange={(checked) =>
@@ -305,7 +321,7 @@ export function SettingsView({
                 />
                 Redact living people
               </Label>
-              <p className="text-11 leading-relaxed text-muted-foreground">
+              <p className="text-13 leading-relaxed text-muted-foreground">
                 Anyone with no recorded death — and no birth date old enough to
                 presume one — is written out as &ldquo;Living&rdquo; with their
                 surname, and without dates, notes or photos. Someone with no
@@ -317,8 +333,12 @@ export function SettingsView({
                 backup, which is your own complete copy.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button disabled={exportingBackup} onClick={onExportBackup}>
+            <div className="flex flex-wrap gap-2.5">
+              <Button
+                size="lg"
+                disabled={exportingBackup}
+                onClick={onExportBackup}
+              >
                 {exportingBackup ? "Exporting…" : "Backup (.zip)"}
               </Button>
               <Button
@@ -339,9 +359,11 @@ export function SettingsView({
             </div>
           </section>
 
-          <section className="flex flex-col gap-2.5">
-            <SectionHeading>Spreadsheet (CSV)</SectionHeading>
-            <p className="text-12-5 leading-relaxed text-muted-foreground">
+          <section className="flex flex-col gap-4 rounded-3xl bg-card p-7 shadow-card max-md:rounded-2xl max-md:p-5">
+            <SectionHeading className="text-2xl tracking-tight">
+              Spreadsheet (CSV)
+            </SectionHeading>
+            <p className="text-sm leading-relaxed text-muted-foreground">
               One row per person, with parents and spouses referred to by name —
               the shape families already keep this data in. Importing{" "}
               <em>adds</em> to what's here: rows create people or update ones
@@ -374,9 +396,11 @@ export function SettingsView({
             {csvResult && <CsvImportReport result={csvResult} />}
           </section>
 
-          <section className="flex flex-col gap-2.5">
-            <SectionHeading>Import backup</SectionHeading>
-            <p className="text-12-5 leading-relaxed text-muted-foreground">
+          <section className="flex flex-col gap-4 rounded-3xl bg-card p-7 shadow-card max-md:rounded-2xl max-md:p-5">
+            <SectionHeading className="text-2xl tracking-tight">
+              Import backup
+            </SectionHeading>
+            <p className="text-sm leading-relaxed text-muted-foreground">
               Restoring replaces everything currently stored — people, photos
               and documents alike. This can't be undone. Accepts a .zip backup,
               or a .json backup from an older version.
@@ -468,14 +492,14 @@ export function SettingsView({
 // anyone noticing — the failure this format is most prone to.
 function CsvImportReport({ result }: { result: CsvImportSummary }) {
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+    <div className="flex flex-col gap-2 rounded-xl border border-border bg-background p-4">
       <p className="text-13">
         {result.created} added · {result.updated} updated · {result.linksAdded}{" "}
         links recorded
       </p>
       {result.problems.length > 0 && (
         <>
-          <p className="font-heading text-9-5 font-semibold text-muted-foreground">
+          <p className="font-heading text-13 font-semibold text-muted-foreground">
             {result.problems.length === 1
               ? "1 thing was skipped"
               : `${result.problems.length} things were skipped`}

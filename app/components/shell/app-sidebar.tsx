@@ -6,29 +6,20 @@ import { useViewportTier } from "~/lib/ui/viewport-tier"
 
 type AppSidebarProps = Omit<SidebarContentProps, "variant" | "onClose">
 
-// The desktop rail, and its tablet form. Not rendered at all on a phone, where
-// the bottom bar and the More screen take over — see MobileBottomNav.
-//
-// The tablet form is a 56px icon strip rather than a narrower version of the
-// full rail: 212px of names is a fifth of a 1024px window, and the detail
-// sheet has already taken the other side. The catalog doesn't cover this
-// width, so the rule chosen was to drop no destination — the tree list and the
-// storage card move behind the two rail buttons that stand for them.
+// The desktop side panel: which tree is open, what the card colours mean, and
+// whether the data is safe. Tablet and phone drop it — the tablet's topbar
+// carries the tree switcher and every destination, and the phone's bottom bar
+// and More screen take over (see MobileBottomNav).
 export function AppSidebar(props: AppSidebarProps) {
   const tier = useViewportTier()
-  if (tier === "mobile") return null
-  const rail = tier === "tablet"
+  if (tier !== "desktop") return null
 
   return (
     <div
       data-print="hide"
-      className={
-        rail
-          ? "flex w-14 flex-none flex-col items-center gap-3 border-r border-border bg-sidebar px-2 py-4"
-          : "flex w-53 flex-none flex-col gap-4.5 border-r border-border bg-sidebar px-3 py-4"
-      }
+      className="flex w-60 flex-none flex-col gap-6 overflow-y-auto border-r border-border bg-sidebar px-3.5 py-5"
     >
-      <SidebarContent {...props} variant={rail ? "rail" : "full"} />
+      <SidebarContent {...props} variant="full" />
     </div>
   )
 }

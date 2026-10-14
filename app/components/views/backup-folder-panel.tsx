@@ -91,7 +91,7 @@ export function BackupFolderPanel() {
 
   if (status === undefined) {
     return (
-      <p className="rounded-lg border border-border p-3 text-13 text-muted-foreground">
+      <p className="rounded-2xl border border-border bg-background p-4 text-13 text-muted-foreground">
         Checking…
       </p>
     )
@@ -99,7 +99,7 @@ export function BackupFolderPanel() {
 
   if (status === "unsupported") {
     return (
-      <p className="rounded-lg border border-border p-3 text-12-5 leading-relaxed text-muted-foreground">
+      <p className="rounded-2xl border border-border bg-background p-4 text-sm leading-relaxed text-muted-foreground">
         This browser can&apos;t write to a folder on your disk — the File System
         Access API is Chromium-only today, so Chrome, Edge, Opera and Arc have
         it, and Firefox and Safari don&apos;t. Exporting a backup by hand does
@@ -110,14 +110,14 @@ export function BackupFolderPanel() {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-background p-4">
         <span
           className={cn(
             "size-2 rounded-full",
             status === "granted" ? "bg-success" : "bg-muted-foreground"
           )}
         />
-        <span className="font-heading text-10 font-semibold">
+        <span className="text-sm font-semibold">
           {status === "none"
             ? "No folder chosen"
             : status === "granted"
@@ -127,7 +127,7 @@ export function BackupFolderPanel() {
                 : `${target?.name} needs reconnecting`}
         </span>
         {target?.lastWriteAt && (
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="ml-auto text-13 text-muted-foreground">
             Last written {formatWhen(target.lastWriteAt)}
             {target.lastWriteBytes
               ? ` · ${formatBytes(target.lastWriteBytes)}`
@@ -137,12 +137,12 @@ export function BackupFolderPanel() {
       </div>
 
       {target?.lastError && (
-        <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-12-5 leading-relaxed text-destructive">
+        <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm leading-relaxed text-destructive">
           The last write failed: {target.lastError}
         </p>
       )}
 
-      <p className="text-12-5 leading-relaxed text-muted-foreground">
+      <p className="text-sm leading-relaxed text-muted-foreground">
         Pick a folder on your disk and the app keeps a full backup — people,
         relationships, trees and photos — mirrored into it as you work. It never
         leaves your machine: this is a local folder, not a cloud service, so it
@@ -160,7 +160,7 @@ export function BackupFolderPanel() {
       </p>
 
       {(status === "prompt" || status === "denied") && (
-        <p className="text-12-5 leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           Browsers drop folder access when they restart, and only give it back
           when you ask for it — the app can&apos;t re-grant it on its own.
           Nothing has been written since.
@@ -169,7 +169,7 @@ export function BackupFolderPanel() {
 
       <div className="flex flex-wrap gap-2">
         {status === "none" ? (
-          <Button size="sm" disabled={busy} onClick={() => void handleChoose()}>
+          <Button disabled={busy} onClick={() => void handleChoose()}>
             Choose a backup folder
           </Button>
         ) : (
@@ -177,24 +177,20 @@ export function BackupFolderPanel() {
             {status === "granted" ? (
               <Button
                 variant="outline"
-                size="sm"
+
                 disabled={busy}
                 onClick={() => void handleWriteNow()}
               >
                 Write now
               </Button>
             ) : (
-              <Button
-                size="sm"
-                disabled={busy}
-                onClick={() => void handleReconnect()}
-              >
+              <Button disabled={busy} onClick={() => void handleReconnect()}>
                 Reconnect
               </Button>
             )}
             <Button
               variant="outline"
-              size="sm"
+
               disabled={busy}
               onClick={() => void handleChoose()}
             >
@@ -202,7 +198,7 @@ export function BackupFolderPanel() {
             </Button>
             <Button
               variant="ghost"
-              size="sm"
+
               disabled={busy}
               onClick={() =>
                 void run(async () => {

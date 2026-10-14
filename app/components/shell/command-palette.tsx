@@ -12,6 +12,7 @@ import { useSearchPeople, useTrees } from "~/lib/db/hooks"
 import { personNodeId } from "~/lib/graph/node-ids"
 import { formatPartialDate } from "~/lib/partial-date"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView } from "~/lib/ui/use-shell-view"
 import type { Person, Tree } from "~/lib/types"
 import { personDisplayName } from "~/lib/person-name"
 import { coverPhotoId } from "~/lib/person-photos"
@@ -33,7 +34,7 @@ export function CommandPalette({
 }: CommandPaletteProps) {
   const open = useAppShellStore((s) => s.paletteOpen)
   const setPaletteOpen = useAppShellStore((s) => s.setPaletteOpen)
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
   const requestCenter = useCanvasUIStore((s) => s.requestCenter)
   const generationColors = useAppearanceStore(

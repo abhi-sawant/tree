@@ -1,3 +1,4 @@
+import { PageHeader } from "~/components/shell/page-header"
 import { useEffect, useMemo, useState } from "react"
 
 import { MergePeopleDialog } from "~/components/people/merge-people-dialog"
@@ -32,7 +33,7 @@ import { useDismissals, useMembers } from "~/lib/db/hooks"
 import { personNodeId } from "~/lib/graph/node-ids"
 import { personDisplayName } from "~/lib/person-name"
 import { formatWhen } from "~/lib/relative-time"
-import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView } from "~/lib/ui/use-shell-view"
 import { toast } from "~/lib/ui/toast-store"
 import type { Dismissal, Person, Relationship } from "~/lib/types"
 
@@ -50,7 +51,7 @@ export function HealthView({
   memberIds,
 }: HealthViewProps) {
   const memberships = useMembers()
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
   const requestCenter = useCanvasUIStore((s) => s.requestCenter)
   const dismissals = useDismissals()
   const dismissedKeys = useMemo(
@@ -155,12 +156,16 @@ export function HealthView({
         title="Health"
         detail={`${counts.error} ${counts.error === 1 ? "error" : "errors"} · ${counts.warning} ${counts.warning === 1 ? "warning" : "warnings"} · ${duplicates.length} ${duplicates.length === 1 ? "duplicate" : "duplicates"}`}
       />
-      <div className="flex min-h-0 flex-1 flex-col gap-7 overflow-y-auto p-6 max-md:gap-6 max-md:p-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-7 overflow-y-auto px-8 py-7 max-md:gap-6 max-md:p-4 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-6xl">
+        <PageHeader
+          title="Health check"
+          detail="Contradictions, gaps and possible duplicates in this tree"
+        />
         <section className="flex flex-col gap-2">
-          <SectionHeading>Summary</SectionHeading>
+          <SectionHeading className="max-md:hidden">Summary</SectionHeading>
           {/* Three tallies plus a count is well over 358px on one line, and
             "possible duplicates" alone is most of it. */}
-          <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border p-3 shadow-card max-md:gap-x-5 max-md:gap-y-2">
+          <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-card max-md:gap-x-5 max-md:gap-y-2">
             <Tally severity="error" count={counts.error} />
             <Tally severity="warning" count={counts.warning} />
             <Tally severity="duplicate" count={duplicates.length} />
@@ -198,7 +203,7 @@ export function HealthView({
         </section>
 
         {findings.length === 0 && duplicates.length === 0 && (
-          <p className="rounded-lg border border-border p-4 text-13">
+          <p className="rounded-2xl border border-border bg-card p-4 text-13">
             Nothing to report. Every recorded date is consistent, every person
             has a birth year and a tree, and no two records look like the same
             person.
@@ -281,7 +286,7 @@ export function HealthView({
               {(dismissals ?? []).map((row) => (
                 <div
                   key={row.key}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border p-3"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-border bg-card p-3"
                 >
                   <p className="min-w-0 flex-1 text-13 leading-snug">
                     {describeDismissal(row, peopleById)}
@@ -354,7 +359,7 @@ function FindingSection({
         {findings.map((finding, index) => (
           <div
             key={`${finding.code}:${finding.personIds.join(",")}:${index}`}
-            className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border p-3"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-border bg-card p-3"
           >
             <span
               className={
@@ -426,7 +431,7 @@ function DuplicateRow({
   onNotADuplicate: () => void
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+    <div className="flex flex-col gap-1.5 rounded-2xl border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className="min-w-0 flex-1 text-13">
           <span className="font-medium">{candidate.labels[0]}</span>

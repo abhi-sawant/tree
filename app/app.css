@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/readex-pro";
+@import "@fontsource-variable/albert-sans";
+@import "@fontsource-variable/funnel-display";
 
 @custom-variant dark (&:is(.dark *));
 /* Touch and stylus, as distinct from a mouse. Used where the right answer
@@ -12,101 +13,104 @@
 @custom-variant coarse (@media (pointer: coarse));
 
 :root {
-  --background: #f7f5f1;
-  --foreground: #1b1a17;
-  --card: #fffdf9;
-  --card-foreground: #1b1a17;
-  --popover: #fffdf9;
-  --popover-foreground: #1b1a17;
-  --primary: #146b54;
-  --primary-foreground: #fffdf9;
-  --secondary: #f0ece3;
-  --secondary-foreground: #1b1a17;
-  --muted: #f0ece3;
-  --muted-foreground: #79746a;
-  --accent: #e9f1ec;
-  --accent-foreground: #0f4c3d;
-  --destructive: #b3421f;
-  --destructive-foreground: #fffdf9;
-  --border: #eae5db;
-  --border-strong: #ded7c9;
-  --input: #eae5db;
-  --ring: #146b54;
-  --chart-1: #146b54;
-  --chart-2: #b3421f;
-  --chart-3: #79746a;
-  --chart-4: #0f4c3d;
-  --chart-5: #1b1a17;
-  --radius: 0.75rem;
-  --sidebar: #f4f1ea;
-  --sidebar-foreground: #1b1a17;
-  --sidebar-primary: #146b54;
-  --sidebar-primary-foreground: #fffdf9;
-  --sidebar-accent: #e9f1ec;
-  --sidebar-accent-foreground: #0f4c3d;
-  --sidebar-border: #eae5db;
-  --sidebar-ring: #146b54;
-  --edge-spouse: oklch(0.645 0.196 20.5);
-  --edge-parent-child: oklch(0.5 0.1 165);
-  --level-0: oklch(0.5 0.1 165);
-  --level-1: oklch(0.55 0.14 260);
-  --level-2: oklch(0.58 0.15 320);
-  --level-3: oklch(0.62 0.13 70);
-  --level-4: oklch(0.55 0.1 220);
-  --level-5: oklch(0.58 0.17 30);
-  --canvas-dot: color-mix(in oklch, var(--border), transparent 20%);
-  --success: #146b54;
+  /* Family Album palette: a cool paper-grey ground, white cards, ink navy, and
+     one poppy red for the things you press. Surname/branch colours (--level-*)
+     are the album's photo-print tints and are all dark enough for white text. */
+  --background: #eef1f6;
+  --foreground: #16213a;
+  --card: #ffffff;
+  --card-foreground: #16213a;
+  --popover: #ffffff;
+  --popover-foreground: #16213a;
+  --primary: #d63a30;
+  --primary-foreground: #ffffff;
+  --secondary: #e6eaf2;
+  --secondary-foreground: #16213a;
+  --muted: #e9edf4;
+  --muted-foreground: #58647f;
+  --accent: #fdeceb;
+  --accent-foreground: #a8281f;
+  --destructive: #b42318;
+  --destructive-foreground: #ffffff;
+  --border: #dde2ec;
+  --border-strong: #c6cddc;
+  --input: #cdd4e2;
+  --ring: #d63a30;
+  --chart-1: #3b5bdb;
+  --chart-2: #c2255c;
+  --chart-3: #0b8a6a;
+  --chart-4: #c77700;
+  --chart-5: #16213a;
+  --radius: 0.875rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #16213a;
+  --sidebar-primary: #d63a30;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef1f6;
+  --sidebar-accent-foreground: #16213a;
+  --sidebar-border: #dde2ec;
+  --sidebar-ring: #d63a30;
+  --edge-spouse: #d63a30;
+  --edge-parent-child: #8d98b5;
+  --level-0: #3b5bdb;
+  --level-1: #c2255c;
+  --level-2: #0b8a6a;
+  --level-3: #c77700;
+  --level-4: #7048c8;
+  --level-5: #0e7490;
+  --canvas-dot: #d4dae6;
+  --success: #0b8a6a;
 }
 
 .dark {
-  --background: #211e1a;
-  --foreground: #f3efe7;
-  --card: #2a2521;
-  --card-foreground: #f3efe7;
-  --popover: #2a2521;
-  --popover-foreground: #f3efe7;
-  --primary: #2e9c7a;
-  --primary-foreground: #0b1f19;
-  --secondary: #35302a;
-  --secondary-foreground: #f3efe7;
-  --muted: #35302a;
-  --muted-foreground: #b0a99c;
-  --accent: #24352e;
-  --accent-foreground: #8fcbb3;
-  --destructive: #e0714a;
-  --destructive-foreground: #241008;
-  --border: rgba(243, 239, 231, 0.1);
-  --border-strong: rgba(243, 239, 231, 0.18);
-  --input: rgba(243, 239, 231, 0.14);
-  --ring: #2e9c7a;
-  --chart-1: #2e9c7a;
-  --chart-2: #e0714a;
-  --chart-3: #b0a99c;
-  --chart-4: #8fcbb3;
-  --chart-5: #f3efe7;
-  --sidebar: #26221d;
-  --sidebar-foreground: #f3efe7;
-  --sidebar-primary: #2e9c7a;
-  --sidebar-primary-foreground: #0b1f19;
-  --sidebar-accent: #24352e;
-  --sidebar-accent-foreground: #8fcbb3;
-  --sidebar-border: rgba(243, 239, 231, 0.1);
-  --sidebar-ring: #2e9c7a;
-  --edge-spouse: oklch(0.7 0.19 20.5);
-  --edge-parent-child: oklch(0.65 0.13 165);
-  --level-0: oklch(0.65 0.13 165);
-  --level-1: oklch(0.68 0.16 260);
-  --level-2: oklch(0.7 0.17 320);
-  --level-3: oklch(0.75 0.14 70);
-  --level-4: oklch(0.68 0.11 220);
-  --level-5: oklch(0.7 0.19 30);
-  --canvas-dot: color-mix(in oklch, var(--border), transparent 20%);
-  --success: #2e9c7a;
+  --background: #0f1626;
+  --foreground: #eef1f8;
+  --card: #18223a;
+  --card-foreground: #eef1f8;
+  --popover: #1c2742;
+  --popover-foreground: #eef1f8;
+  --primary: #ef5a4f;
+  --primary-foreground: #1a0b09;
+  --secondary: #222e4c;
+  --secondary-foreground: #eef1f8;
+  --muted: #1f2a45;
+  --muted-foreground: #a4aec7;
+  --accent: #3a2230;
+  --accent-foreground: #ffb4ae;
+  --destructive: #ff8a7a;
+  --destructive-foreground: #2a0a05;
+  --border: rgba(238, 241, 248, 0.11);
+  --border-strong: rgba(238, 241, 248, 0.2);
+  --input: rgba(238, 241, 248, 0.18);
+  --ring: #ef5a4f;
+  --chart-1: #7b93ff;
+  --chart-2: #ff7aa6;
+  --chart-3: #3ccfa5;
+  --chart-4: #f2b04a;
+  --chart-5: #eef1f8;
+  --sidebar: #141d33;
+  --sidebar-foreground: #eef1f8;
+  --sidebar-primary: #ef5a4f;
+  --sidebar-primary-foreground: #1a0b09;
+  --sidebar-accent: #1f2a45;
+  --sidebar-accent-foreground: #eef1f8;
+  --sidebar-border: rgba(238, 241, 248, 0.11);
+  --sidebar-ring: #ef5a4f;
+  --edge-spouse: #ef5a4f;
+  --edge-parent-child: #7783a3;
+  --level-0: #5a78f0;
+  --level-1: #e0487f;
+  --level-2: #1faa86;
+  --level-3: #d98a1a;
+  --level-4: #8e6be0;
+  --level-5: #2a9bb8;
+  --canvas-dot: rgba(238, 241, 248, 0.12);
+  --success: #3ccfa5;
 }
 
 @theme inline {
-  --font-sans: "Readex Pro Variable", sans-serif;
-  --font-heading: "Readex Pro Variable", sans-serif;
+  --font-sans: "Albert Sans Variable", system-ui, sans-serif;
+  --font-heading: "Funnel Display Variable", "Albert Sans Variable", system-ui, sans-serif;
   --color-canvas-dot: var(--canvas-dot);
   --color-edge-spouse: var(--edge-spouse);
   --color-edge-parent-child: var(--edge-parent-child);
@@ -158,18 +162,18 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   /* Micro type scale for dense UI labels (table cells, chrome, badges) that
        fall between the default text-* steps. */
-  --text-9-5: 0.59375rem;
-  --text-10: 0.625rem;
-  --text-11: 0.6875rem;
-  --text-12-5: 0.78125rem;
-  --text-13: 0.8125rem;
+  --text-9-5: 0.75rem;
+  --text-10: 0.75rem;
+  --text-11: 0.78125rem;
+  --text-12-5: 0.8125rem;
+  --text-13: 0.875rem;
   --text-15: 0.9375rem;
   --blur-2xs: 2px;
   /* Two-step elevation system: a resting shadow for plain cards, a bigger
        soft one for anything that floats above the page (dialogs, menus,
        toasts, PWA prompts). Never tinted with the brand color. */
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-float: 0 18px 40px -20px rgb(0 0 0 / 0.35);
+  --shadow-card: 0 1px 2px rgb(22 33 58 / 0.08), 0 6px 16px rgb(22 33 58 / 0.07);
+  --shadow-float: 0 18px 40px -16px rgb(22 33 58 / 0.35);
 }
 
 .dark {

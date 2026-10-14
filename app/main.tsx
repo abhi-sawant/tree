@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react"
 import { createRoot } from "react-dom/client"
+import { BrowserRouter } from "react-router"
 
 import { InstallPrompt } from "~/components/pwa/install-prompt"
 import { UpdatePrompt } from "~/components/pwa/update-prompt"
@@ -41,7 +42,9 @@ class ErrorBoundary extends Component<
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
     <InstallPrompt />
     <UpdatePrompt />
   </ErrorBoundary>

@@ -1,28 +1,28 @@
 import { useEffect, useState } from "react"
 
 import { Button } from "~/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip"
 import { useCanvasUIStore } from "~/lib/canvas/canvas-ui-store"
 import { useMembers, usePeople } from "~/lib/db/hooks"
 import { getLastExportDate } from "~/lib/db/app-meta"
 import { isStoragePersisted } from "~/lib/storage"
-import { useAppShellStore, type ShellView } from "~/lib/ui/app-shell-store"
+import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView, useView } from "~/lib/ui/use-shell-view"
+import type { ShellView } from "~/lib/ui/routes"
 import { cn } from "~/lib/utils"
 import type { Tree } from "~/lib/types"
 import {
   BarChart3,
+  CirclePlus,
   HeartPulse,
   HelpCircle,
   Images,
   Search,
   Settings,
-  TreeDeciduous,
+  ShieldCheck,
+  Trees as TreesIcon,
   Users,
 } from "lucide-react"
+import { ColorLegend } from "~/components/shell/color-legend"
 
 // One list, three consumers: the desktop rail, the tablet icon rail and the
 // mobile More page all offer the same destinations, and a nav item that exists
@@ -55,10 +55,8 @@ export interface SidebarContentProps {
   // Bumped by whatever last wrote a backup, so the "Last backup" line
   // refreshes without the sidebar having to poll app-meta.
   exportToken: number
-  // "full" is the desktop rail, "rail" the tablet icon strip, "page" the
-  // mobile More screen. The data and the destinations are identical; only how
-  // much room there is to name them differs.
-  variant: "full" | "rail" | "page"
+  // "full" is the desktop side panel, "page" the mobile More screen.
+  variant: "full" | "page"
   // Mobile only: dismiss the More page.
   onClose?: () => void
 }
@@ -75,8 +73,8 @@ export function SidebarContent({
 }: SidebarContentProps) {
   const people = usePeople()
   const members = useMembers()
-  const view = useAppShellStore((s) => s.view)
-  const setView = useAppShellStore((s) => s.setView)
+  const view = useView()
+  const setView = useSetView()
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
   const setPaletteOpen = useAppShellStore((s) => s.setPaletteOpen)
   const setMobileSheet = useAppShellStore((s) => s.setMobileSheet)
@@ -99,64 +97,71 @@ export function SidebarContent({
     setView("tree")
   }
 
-  // The icon rail has no room to name anything, so the tree list and the
-  // storage card move behind the two buttons that stand for them. Everything
-  // stays one tap away; nothing is dropped.
-  if (variant === "rail") {
+  if (variant === "full") {
     return (
       <>
-        <div className="flex size-5.5 items-center justify-center rounded-lg bg-primary font-heading text-11 font-bold text-primary-foreground">
-          FT
-        </div>
-        <RailButton
-          label={`Search ${people?.length ?? 0} people`}
-          icon={Search}
-          onClick={() => setPaletteOpen(true)}
-        />
-        <RailButton
-          label="Switch tree"
-          icon={TreeDeciduous}
-          onClick={() => setMobileSheet("tree-switcher")}
-        />
-        <div className="flex flex-col items-center gap-1">
-          {NAV_ITEMS.map(({ label, target, icon }) => (
-            <RailButton
-              key={target}
-              label={label}
-              icon={icon}
-              active={view === target}
-              onClick={() => setView(target)}
-            />
-          ))}
-        </div>
-        <Tooltip>
-          <TooltipTrigger
-            render={
+        <div className="flex flex-col gap-0.5">
+          <SidebarLabel>Your trees</SidebarLabel>
+          {trees.map((tree) => {
+            const active = tree.id === activeTreeId
+            return (
               <button
+                key={tree.id}
                 type="button"
-                aria-label="Storage and backups"
-                onClick={() => setView("settings")}
-                className="mt-auto flex size-9 cursor-pointer items-center justify-center rounded-full hover:bg-muted"
+                aria-current={active ? "true" : undefined}
+                onClick={() => openTree(tree.id)}
+                className={cn(
+                  "flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-xl px-2.5 text-left text-sm font-semibold hover:bg-muted",
+                  active && "bg-muted"
+                )}
               >
-                <span
-                  className={cn(
-                    "size-2 rounded-full",
-                    persisted ? "bg-success" : "bg-muted-foreground"
-                  )}
-                />
+                <TreesIcon className="size-4.5 flex-none text-muted-foreground" />
+                <span className="truncate">{tree.name}</span>
+                <span className="ml-auto text-xs font-medium text-muted-foreground">
+                  {memberCount(tree.id)}
+                </span>
               </button>
-            }
-          />
-          <TooltipContent>
+            )
+          })}
+          <button
+            type="button"
+            onClick={onCreateTree}
+            className="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-xl px-2.5 text-left text-sm font-semibold text-primary hover:bg-accent"
+          >
+            <CirclePlus className="size-4.5 flex-none" />
+            New tree
+          </button>
+        </div>
+
+        <ColorLegend activeTreeId={activeTreeId} />
+
+        <div className="mt-auto flex flex-col gap-1 px-1 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5 font-semibold text-foreground/80">
+            <ShieldCheck
+              className={cn(
+                "size-4",
+                persisted ? "text-success" : "text-muted-foreground"
+              )}
+            />
             {persisted === undefined
               ? "Checking storage"
               : persisted
-                ? "Storage persisted"
+                ? "Saved on this device"
                 : "Storage not persisted"}
-            {". Last backup "}
-            {lastExport ? new Date(lastExport).toLocaleDateString() : "never"}.
-          </TooltipContent>
-        </Tooltip>
+          </span>
+          <span>
+            Last backup{" "}
+            {lastExport ? new Date(lastExport).toLocaleDateString() : "never"}
+          </span>
+          <button
+            type="button"
+            disabled={exportingBackup}
+            onClick={onExportBackup}
+            className="w-fit cursor-pointer font-semibold text-primary underline underline-offset-4 disabled:opacity-50"
+          >
+            {exportingBackup ? "Exporting…" : "Back up now"}
+          </button>
+        </div>
       </>
     )
   }
@@ -350,7 +355,7 @@ export function SidebarContent({
 // The outline lives in the canvas UI store rather than being a ShellView, so
 // it needs its own row instead of joining NAV_ITEMS.
 function TreeOutlineNavItem() {
-  const setView = useAppShellStore((s) => s.setView)
+  const setView = useSetView()
   return (
     <button
       type="button"
@@ -369,44 +374,9 @@ function TreeOutlineNavItem() {
   )
 }
 
-function RailButton({
-  label,
-  icon: Icon,
-  active,
-  onClick,
-}: {
-  label: string
-  icon: typeof Users
-  active?: boolean
-  onClick: () => void
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <button
-            type="button"
-            aria-label={label}
-            onClick={onClick}
-            className={cn(
-              "flex size-9 cursor-pointer items-center justify-center rounded-full hover:bg-muted",
-              active ? "bg-accent text-accent-foreground" : "bg-transparent"
-            )}
-          >
-            <Icon className="size-4" />
-          </button>
-        }
-      />
-      {/* On a rail the label is the only thing naming the destination, so it
-          is a real tooltip rather than a nicety. */}
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
-  )
-}
-
 function SidebarLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mx-1 mb-1.5 font-heading text-10 font-semibold text-muted-foreground">
+    <p className="mx-1 mb-1.5 text-13 font-bold text-muted-foreground">
       {children}
     </p>
   )

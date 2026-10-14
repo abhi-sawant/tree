@@ -1,6 +1,8 @@
 import { Download, Images, Menu, Network, Users } from "lucide-react"
 
-import { useAppShellStore, type ShellView } from "~/lib/ui/app-shell-store"
+import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { usePreviousView, useSetView, useView } from "~/lib/ui/use-shell-view"
+import type { ShellView } from "~/lib/ui/routes"
 import { cn } from "~/lib/utils"
 
 // Four destinations, because four is what a thumb can hit across a 390px bar
@@ -19,9 +21,9 @@ const TABS: Array<{ label: string; target: ShellView; icon: typeof Users }> = [
 ]
 
 export function MobileBottomNav() {
-  const view = useAppShellStore((s) => s.view)
-  const previousView = useAppShellStore((s) => s.previousView)
-  const setView = useAppShellStore((s) => s.setView)
+  const view = useView()
+  const previousView = usePreviousView()
+  const setView = useSetView()
   const setMobileSheet = useAppShellStore((s) => s.setMobileSheet)
 
   // On a sub-screen the highlighted tab is the one we came from — otherwise

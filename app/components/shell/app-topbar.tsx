@@ -1,4 +1,18 @@
-import { ChevronDown, Plus, Search } from "lucide-react"
+import {
+  BarChart3,
+  ChevronDown,
+  CircleHelp,
+  Download,
+  HeartPulse,
+  Images,
+  Network,
+  Plus,
+  Search,
+  Settings,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from "lucide-react"
 import { useState } from "react"
 
 import { TreeSwitcherSheet } from "~/components/shell/topbar-sheets"
@@ -19,7 +33,10 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { useRedaction } from "~/lib/export/use-redaction"
 import { usePeople } from "~/lib/db/hooks"
+import { BrandMark } from "~/components/shell/brand-mark"
 import { useAppShellStore } from "~/lib/ui/app-shell-store"
+import { useSetView, useView } from "~/lib/ui/use-shell-view"
+import type { ShellView } from "~/lib/ui/routes"
 import { useIsMobile } from "~/lib/ui/viewport-tier"
 import { toast } from "~/lib/ui/toast-store"
 import { cn } from "~/lib/utils"
@@ -47,8 +64,8 @@ export function AppTopbar({
   onCreateTree,
   exportActions,
 }: AppTopbarProps) {
-  const view = useAppShellStore((s) => s.view)
-  const setView = useAppShellStore((s) => s.setView)
+  const view = useView()
+  const setView = useSetView()
   const setActiveTree = useAppShellStore((s) => s.setActiveTree)
   const setPaletteOpen = useAppShellStore((s) => s.setPaletteOpen)
   const setMobileSheet = useAppShellStore((s) => s.setMobileSheet)
@@ -83,21 +100,6 @@ export function AppTopbar({
         {!isMobile && <> · root {rootName}</>}
       </span>
     </>
-  )
-
-  const viewSwitch = (
-    <div className="flex gap-0.5 rounded-full border border-border p-0.5">
-      <ViewTab
-        label="Tree"
-        active={view === "tree"}
-        onClick={() => setView("tree")}
-      />
-      <ViewTab
-        label="Table"
-        active={view === "table"}
-        onClick={() => setView("table")}
-      />
-    </div>
   )
 
   const treeDialogs = (
@@ -188,23 +190,41 @@ export function AppTopbar({
   }
 
   // ── Tablet and desktop ───────────────────────────────────────────────────
+  // One bar carries everything that used to be split between a rail and a
+  // header: where you are (the tabs), who you are looking for (search), and the
+  // two things you do most (export, add). Labels drop to icons below xl, so the
+  // same bar fits a tablet without a second layout.
   return (
     <header
       data-print="hide"
-      className="relative z-30 flex h-15 flex-none items-center justify-between gap-4 border-b border-border px-4"
+      className="relative z-30 flex h-18 flex-none items-center gap-3 border-b border-border bg-card px-5 xl:gap-5"
     >
+      <div className="flex items-center gap-2.5">
+        <BrandMark />
+        <span className="font-heading text-xl font-bold tracking-tight max-[1500px]:hidden">
+          Family Tree
+        </span>
+      </div>
+
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
             <button
               type="button"
-              className="flex min-w-0 cursor-pointer flex-col gap-0.5 text-left"
+              aria-label={`Tree: ${tree.name}`}
+              className="flex h-10 max-w-48 min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-border-strong bg-card px-3 text-sm font-semibold hover:border-foreground/60"
             >
-              {treeTitle}
+              <span className="truncate">{tree.name}</span>
+              <ChevronDown className="size-3.5 flex-none text-muted-foreground" />
             </button>
           }
         />
         <DropdownMenuContent className="min-w-56">
+          <div className="px-2 pt-1 pb-1.5 text-xs text-muted-foreground">
+            {memberCount} people · {generationCount} generations · root{" "}
+            {rootName}
+          </div>
+          <DropdownMenuSeparator />
           {trees.map((t) => (
             <DropdownMenuItem
               key={t.id}
@@ -238,14 +258,49 @@ export function AppTopbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="flex items-center gap-2">
-        {viewSwitch}
+      <nav aria-label="Main" className="flex h-full items-stretch">
+        {TOP_TABS.map(({ label, target, icon: Icon }) => {
+          const active = view === target
+          return (
+            <button
+              key={target}
+              type="button"
+              aria-current={active ? "page" : undefined}
+              aria-label={label}
+              title={label}
+              onClick={() => setView(target)}
+              className={cn(
+                "relative flex cursor-pointer items-center gap-2 px-3 text-15 font-semibold whitespace-nowrap transition-colors",
+                active
+                  ? "text-foreground after:absolute after:inset-x-2.5 after:-bottom-px after:h-1 after:rounded-t-full after:bg-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="size-4.5" />
+              <span className="max-[1360px]:hidden">{label}</span>
+            </button>
+          )
+        })}
+      </nav>
 
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        className="mx-auto flex h-11 max-w-lg min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border-2 border-transparent bg-background px-4 text-left font-medium text-muted-foreground hover:border-border hover:bg-card"
+      >
+        <Search className="size-4.5 flex-none" />
+        <span className="truncate">Find anyone…</span>
+        <kbd className="ml-auto flex-none rounded-md border border-border bg-card px-1.5 text-11 font-bold max-lg:hidden">
+          ⌘K
+        </kbd>
+      </button>
+
+      <div className="flex items-center gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button variant="outline" size="sm">
-                Export <ChevronDown />
+              <Button variant="ghost" size="icon" aria-label="Export">
+                <Download className="size-4.5" />
               </Button>
             }
           />
@@ -274,38 +329,43 @@ export function AppTopbar({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <Button size="sm" onClick={() => setAddPersonOpen(true)}>
-          + Add person
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Settings"
+          title="Settings"
+          className={view === "settings" ? "bg-muted" : undefined}
+          onClick={() => setView("settings")}
+        >
+          <Settings className="size-4.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Help"
+          title="Help (?)"
+          className={view === "help" ? "bg-muted" : undefined}
+          onClick={() => setView("help")}
+        >
+          <CircleHelp className="size-4.5" />
         </Button>
       </div>
+
+      <Button size="lg" onClick={() => setAddPersonOpen(true)}>
+        <UserPlus className="size-4" />
+        <span className="max-[1360px]:hidden">Add person</span>
+      </Button>
 
       {treeDialogs}
     </header>
   )
 }
 
-function ViewTab({
-  label,
-  active,
-  onClick,
-}: {
-  label: string
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "h-7.5 cursor-pointer rounded-full px-3 font-heading text-xs font-semibold",
-        active
-          ? "bg-foreground text-background"
-          : "bg-transparent text-muted-foreground hover:text-foreground"
-      )}
-    >
-      {label}
-    </button>
-  )
-}
+const TOP_TABS: Array<{ label: string; target: ShellView; icon: LucideIcon }> =
+  [
+    { label: "Tree", target: "tree", icon: Network },
+    { label: "People", target: "table", icon: Users },
+    { label: "Photos", target: "photos", icon: Images },
+    { label: "Insights", target: "insights", icon: BarChart3 },
+    { label: "Health check", target: "health", icon: HeartPulse },
+  ]
